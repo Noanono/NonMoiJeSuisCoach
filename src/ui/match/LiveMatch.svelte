@@ -3,6 +3,7 @@
   import Button from '../kit/Button.svelte';
   import { MatchController } from './controller.svelte';
   import { minuteIntervalMs } from './live';
+  import Pitch from './Pitch.svelte';
   import Scoreboard from './Scoreboard.svelte';
 
   interface Props {
@@ -40,6 +41,11 @@
       <Button variant="primary" onclick={() => controller.whistle()}>Coup de sifflet final</Button>
     </div>
   {/if}
+
+  <div class="disposition">
+    <Pitch {controller} />
+    <aside class="cote"></aside>
+  </div>
 </main>
 
 <style>
@@ -54,5 +60,22 @@
   .sifflet {
     display: flex;
     justify-content: center;
+  }
+  .disposition {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+    gap: var(--space-6);
+    align-items: start;
+  }
+  .cote {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    min-width: 0;
+  }
+  @media (max-width: 900px) {
+    .disposition {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 </style>

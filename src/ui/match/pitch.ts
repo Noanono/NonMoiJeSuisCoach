@@ -2,7 +2,7 @@
  * Présentation du terrain en direct (CAP-03, CAP-09, CAP-16, CAP-17) : placement des
  * joueurs par ligne, état de chaque jeton et effets actifs. Fonctions pures, sans Svelte.
  */
-import { activeEffects, type ActiveEffectView, type MatchPlayer, type MatchState, type Side } from '../../domain/match';
+import { activeEffects, previewActivation, type ActiveEffectView, type MatchPlayer, type MatchState, type Side } from '../../domain/match';
 import type { Position } from '../../domain/types';
 
 /** Ordre des lignes du coach, de son but vers l'attaque. L'adversaire est en miroir. */
@@ -61,6 +61,93 @@ export function availability(player: MatchPlayer, elapsed: number): Availability
   if (player.injured) return 'injured';
   if (player.knockedOutUntil >= elapsed) return 'knockedOut';
   return 'active';
+}
+
+export interface TokenFocus {
+  /** Le jeton est un bouton actif (ouvrir le panneau, choisir une cible). */
+  interactive: boolean;
+  /** Cible valide ou joueur éligible : contour scotch épais. */
+  highlighted: boolean;
+  /** Cible déjà choisie. */
+  chosen: boolean;
+  /** Grisé pendant le ciblage : pas une cible valide (CAP-16). */
+  dimmed: boolean;
+}
+
+const IDLE: TokenFocus = { interactive: false, highlighted: false, chosen: false, dimmed: false };
+
+/**
+ * Rôle d'un jeton selon ce que le match attend : ciblage (CAP-16, CAP-17), fenêtre
+ * d'événement (CAP-19) ou jeu courant, où seuls les joueurs du coach se touchent (CAP-03).
+ */
+export function tokenFocus(state: MatchState, player: MatchPlayer, coachSide: Side): TokenFocus {
+  if (state.status === 'finished') return IDLE;
+  const pending = state.pending;
+  if (pending) {
+    const chosen = pending.targetIds.includes(player.id);
+    const valid = !chosen && pending.targetIds.length < pending.required && pending.validTargetIds.includes(player.id);
+    return { interactive: valid, highlighted: valid || chosen, chosen, dimmed: !valid && !chosen && player.id !== pending.playerId };
+  }
+  const own = player.side === coachSide;
+  const window = state.awaiting;
+  const eligible = window !== null && window.side === coachSide && window.eligiblePlayerIds.includes(player.id);
+  return { interactive: own, highlighted: eligible, chosen: false, dimmed: false };
+}
+
+export interface TokenView {
+  id: string;
+  name: string;
+  rating: number;
+  own: boolean;
+  status: Availability;
+  /** Raison affichée sur le jeton grisé (« Exclu », « Banc »…). */
+  reason: string | null;
+  chips: EffectChip[];
+  focus: TokenFocus;
+  /** Coût de la capacité si elle peut partir maintenant, `null` sinon. */
+  readyCost: number | null;
+  /** Libellé complet pour les lecteurs d'écran. */
+  label: string;
+}
+
+const BENCH_REASON = 'Banc';
+
+/** Tout ce qu'un jeton affiche, calculé une fois par minute de jeu. */
+export function tokenView(state: MatchState, player: MatchPlayer, coachSide: Side): TokenView {
+  const own = player.side === coachSide;
+  const status = availability(player, state.elapsed);
+  const benchOnly = player.line === null && player.ability?.position !== 'BENCH';
+  const reason = status !== 'active' ? AVAILABILITY_LABEL[status] : benchOnly ? BENCH_REASON : null;
+  const chips = effectChips(state, player.id);
+  const focus = tokenFocus(state, player, coachSide);
+  const ready = own && state.pending === null && state.status !== 'finished' && previewActivation(state, coachSide, player.id);
+  const readyCost = ready && ready.available ? ready.cost : null;
+  const rating = Math.round(player.rating);
+  const parts = [player.name, player.line ? LINE_LABEL[player.line] : 'remplaçant', `note ${rating}`];
+  if (reason) parts.push(reason);
+  parts.push(...chips.map((chip) => chip.detail));
+  if (readyCost !== null) parts.push(`capacité prête, coût ${readyCost}`);
+  if (focus.chosen) parts.push('cible choisie');
+  else if (focus.highlighted) parts.push(state.pending ? 'cible valide' : 'peut agir maintenant');
+  return { id: player.id, name: shortName(player), rating, own, status, reason, chips, focus, readyCost, label: parts.join(', ') };
+}
+
+export interface PitchView {
+  columns: { key: string; label: string; tokens: TokenView[] }[];
+  bench: TokenView[];
+}
+
+/** Terrain complet et banc du coach, pour un rendu par minute. */
+export function pitchView(state: MatchState, coachSide: Side): PitchView {
+  const toView = (player: MatchPlayer) => tokenView(state, player, coachSide);
+  return {
+    columns: pitchColumns(state, coachSide).map((column) => ({
+      key: column.key,
+      label: `${column.side === coachSide ? 'Ta' : 'Leur'} ligne : ${LINE_LABEL[column.line]}`,
+      tokens: column.players.map(toView),
+    })),
+    bench: benchPlayers(state, coachSide).map(toView),
+  };
 }
 
 /** Nom court du jeton : le nom de famille, le prénom en secours. */

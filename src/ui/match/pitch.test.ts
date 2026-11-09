@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { createMatch } from '../../domain/match';
+import { createMatch, selectTarget, startActivation } from '../../domain/match';
 import { makeSheet, testMatchOptions } from '../../domain/match/fixtures';
-import { availability, benchPlayers, pitchColumns, toChip } from './pitch';
+import { findPlayer } from '../../domain/match/state';
+import { availability, benchPlayers, pitchColumns, pitchView, toChip, tokenFocus } from './pitch';
 
 function match() {
   return createMatch(
@@ -37,6 +38,39 @@ describe('terrain en direct (CAP-03)', () => {
     expect(availability(player, 10)).toBe('injured');
     player.sentOff = true;
     expect(availability(player, 10)).toBe('sentOff');
+  });
+});
+
+describe('ciblage sur le terrain (CAP-16, CAP-17)', () => {
+  function armed() {
+    return createMatch(
+      testMatchOptions(
+        makeSheet({ clubId: 'h' }),
+        makeSheet({ clubId: 'a', isHuman: true, abilities: { 1: 'boucher', 5: 'pilier' }, benchAbilities: ['kebab'] }),
+      ),
+    );
+  }
+
+  test('en jeu, seuls les joueurs du coach se touchent ; les capacités prêtes affichent leur coût', () => {
+    const state = armed();
+    const view = pitchView(state, 'away');
+    const tokens = view.columns.flatMap((column) => column.tokens);
+    expect(tokens.find((token) => token.id === 'h-9')!.focus.interactive).toBe(false);
+    expect(tokens.find((token) => token.id === 'a-5')!.readyCost).toBe(2);
+    expect(tokens.find((token) => token.id === 'a-2')!.readyCost).toBeNull();
+    expect(view.bench.map((token) => [token.id, token.reason])).toEqual([['a-b0', null]]);
+  });
+
+  test('cibles valides en évidence, les autres grisées, choix une à une', () => {
+    const state = armed();
+    startActivation(state, 'away', 'a-1');
+    const focus = (id: string) => tokenFocus(state, findPlayer(state, id)!, 'away');
+    expect(focus('h-9')).toEqual({ interactive: true, highlighted: true, chosen: false, dimmed: false });
+    expect(focus('h-5').dimmed).toBe(true);
+    expect(focus('a-1').dimmed).toBe(false);
+    selectTarget(state, 'h-9');
+    expect(focus('h-9')).toMatchObject({ chosen: true, interactive: false });
+    expect(focus('h-10').interactive).toBe(false);
   });
 });
 
