@@ -33,6 +33,7 @@
 }
 
 .defilant {
+  position: relative;
   overflow-x: auto;
   max-width: 100%;
 }

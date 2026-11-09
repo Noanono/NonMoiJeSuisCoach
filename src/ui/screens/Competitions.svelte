@@ -257,7 +257,7 @@
     border-color: var(--encre-fixe);
   }
   .rencontres {
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
     gap: var(--space-1) var(--space-4);
   }
   .rencontre {
