@@ -22,3 +22,7 @@ coverage/
 .DS_Store
 Thumbs.db
 *.swp
+
+# Outils locaux (worktrees des agents, config de prévisualisation)
+.claude/worktrees/
+.claude/launch.json
