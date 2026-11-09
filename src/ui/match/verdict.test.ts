@@ -13,7 +13,6 @@ function summary(homeGoals: number, awayGoals: number, shootout: MatchSummary['s
     cards: [],
     injuries: [],
     abilities: [],
-    combos: [],
     consequences: { home: [], away: [] },
     xpGains: {},
     players: [],
@@ -38,7 +37,7 @@ describe('résumé de fin de match (MATCH-06)', () => {
     expect(consequenceText({ type: 'suspension', playerId: 'p', matches: 2, reason: 'Rouge direct' }, name)).toBe(
       'Michel suspendu 2 match(s) : Rouge direct',
     );
-    expect(consequenceText({ type: 'seasonUse', playerId: 'p', abilityId: 'x', seasonUses: 1 }, name)).toBeNull();
+    expect(consequenceText({ type: 'abilityRevealed', playerId: 'p', abilityId: 'x' }, name)).toBe('Capacité révélée chez Michel');
   });
 });
 

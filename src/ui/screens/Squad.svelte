@@ -1,6 +1,8 @@
 <script lang="ts">
   import './parts/screens.css';
   import Card from '../kit/Card.svelte';
+  import PlayerAvatar from '../kit/PlayerAvatar.svelte';
+  import type { AvatarPlayer } from '../kit/avatar';
   import PlayerSheet from './parts/PlayerSheet.svelte';
   import { store } from '../store.svelte';
   import { formatEuros } from '../format';
@@ -27,16 +29,15 @@
     age: number;
     overall: number;
     fatigue: number;
-    morale: number;
     availability: string | null;
-    transferRequested: boolean;
+    avatar: AvatarPlayer;
     abilityName: string;
     rarity: string;
     rarityOrder: number;
     value: number;
   }
 
-  type SortKey = 'name' | 'position' | 'age' | 'overall' | 'fatigue' | 'morale' | 'availability' | 'ability' | 'value';
+  type SortKey = 'name' | 'position' | 'age' | 'overall' | 'fatigue' | 'availability' | 'ability' | 'value';
 
   interface Column {
     key: SortKey;
@@ -53,7 +54,6 @@
     { key: 'age', label: 'Âge', numeric: true, sortValue: (row) => row.age, firstDirection: 'asc' },
     { key: 'overall', label: 'Note', numeric: true, sortValue: (row) => row.overall, firstDirection: 'desc' },
     { key: 'fatigue', label: 'Fatigue', numeric: true, sortValue: (row) => row.fatigue, firstDirection: 'desc' },
-    { key: 'morale', label: 'Moral', numeric: true, sortValue: (row) => row.morale, firstDirection: 'asc' },
     { key: 'availability', label: 'Dispo', numeric: false, sortValue: (row) => row.availability ?? '', firstDirection: 'desc' },
     { key: 'ability', label: 'Capacité', numeric: false, sortValue: (row) => row.rarityOrder * 1000 - row.overall, firstDirection: 'desc' },
     { key: 'value', label: 'Valeur', numeric: true, sortValue: (row) => row.value, firstDirection: 'desc' },
@@ -74,9 +74,8 @@
           age: player.age,
           overall: overall(player),
           fatigue: player.fatigue,
-          morale: player.morale,
           availability: availabilityLabel(player),
-          transferRequested: player.transferRequested,
+          avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position },
           abilityName: known ? ability.name : UNKNOWN_ABILITY,
           rarity: known ? RARITY_LABEL[ability.rarity] : '',
           rarityOrder: known ? RARITY_ORDER[ability.rarity] : 0,
@@ -130,15 +129,13 @@
         <tbody>
           {#each sortedRows as row (row.id)}
             <tr>
-              <td><button class="lien" onclick={() => (openPlayerId = row.id)}>{row.name}</button></td>
+              <td><span class="identite"><PlayerAvatar player={row.avatar} size={32} /><button class="lien" onclick={() => (openPlayerId = row.id)}>{row.name}</button></span></td>
               <td><abbr title={row.positionLabel}>{row.position}</abbr></td>
               <td class="num">{row.age}</td>
               <td class="num texte-fort">{row.overall}</td>
               <td class="num">{row.fatigue}</td>
-              <td class="num">{row.morale}</td>
               <td>
                 {#if row.availability}<span class="malus">{row.availability}</span>{:else}<span class="discret">Apte</span>{/if}
-                {#if row.transferRequested}<span class="malus"> · veut partir</span>{/if}
               </td>
               <td>
                 {row.abilityName}
@@ -160,5 +157,10 @@
 <style>
   abbr {
     text-decoration: none;
+  }
+  .identite {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
   }
 </style>

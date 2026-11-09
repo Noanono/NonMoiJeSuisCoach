@@ -10,7 +10,7 @@ import { bookPlayer, injurePlayer, recordGoal } from './actions';
 import { comment } from './commentary';
 import { creditActive, IMPACT } from './impact';
 import { isActive, opponentSide, pushEvent, teamOf, type Run } from './state';
-import { createStrength, measureTeam, shootingValue, type TeamStrength } from './strength';
+import { createStrength, measureTeam, shootingBoost, shootingValue, type TeamStrength } from './strength';
 import type { ChanceKind, MatchPlayer, MatchState, Side, TeamState } from './types';
 import { openTriggers } from './windows';
 
@@ -26,8 +26,6 @@ const MIDFIELD_EXPONENT = 0.5;
 const LONG_BALL_MIDFIELD_SHARE = 0.5;
 const HIGH_PRESS_MIDFIELD = 1.12;
 export const HOME_ADVANTAGE = 1.1;
-/** Match figé (Le Pleureur…) : beaucoup moins d'occasions des deux côtés. */
-const FREEZE_FACTOR = 0.3;
 const MAX_CHANCE_RATE = 0.45;
 export const REGULATION_MINUTES = 90;
 
@@ -48,7 +46,6 @@ const SHOOTING_EXPONENT = 0.7;
 const PENALTY_SKILL_EXPONENT = 0.3;
 const MIN_SKILL_RATIO = 0.4;
 const MAX_SKILL_RATIO = 2.5;
-const EMPTY_NET_CONVERSION = 0.8;
 const MIN_CONVERSION = 0.01;
 const MAX_CONVERSION = 0.97;
 const SAVE_SHARE = 0.5;
@@ -74,6 +71,9 @@ const PENALTY_ON_FOUL = 0.012;
 const DANGEROUS_FREE_KICK = 0.18;
 const FOUL_COMMENT_CHANCE = 0.3;
 const FOULER_WEIGHTS: Record<Position, number> = { GK: 0.1, DEF: 3, MID: 2, ATT: 1 };
+
+/** Un tireur en forme (capacité active) reçoit plus de ballons : +40 % au tir = 1,8 fois plus souvent le tireur. */
+const SHOOTER_BOOST_WEIGHT = 2;
 
 const STARTERS = 11;
 const HOME_SHARE = 0.5;
@@ -105,11 +105,10 @@ export function baseChanceRate(attacking: TacticalSide, defending: TacticalSide)
   );
 }
 
-/** Taux d'occasions de la minute : avantage du terrain et match figé compris. */
-function chanceRate(state: MatchState, attacking: TacticalSide, defending: TacticalSide, side: Side): number {
+/** Taux d'occasions de la minute, avantage du terrain compris. */
+function chanceRate(attacking: TacticalSide, defending: TacticalSide, side: Side): number {
   let rate = baseChanceRate(attacking, defending);
-  if (side === 'home' && state.homeAdvantageCancelledUntil < state.elapsed) rate *= HOME_ADVANTAGE;
-  if (state.frozenUntil >= state.elapsed) rate *= FREEZE_FACTOR;
+  if (side === 'home') rate *= HOME_ADVANTAGE;
   return clamp(rate, 0, MAX_CHANCE_RATE);
 }
 
@@ -123,18 +122,25 @@ export function playChances(run: Run, home: TeamStrength, away: TeamStrength): v
   homeSide.strength = home;
   awaySide.instructions = state.away.instructions;
   awaySide.strength = away;
-  const homeRate = chanceRate(state, homeSide, awaySide, 'home');
-  const awayRate = chanceRate(state, awaySide, homeSide, 'away');
+  const homeRate = chanceRate(homeSide, awaySide, 'home');
+  const awayRate = chanceRate(awaySide, homeSide, 'away');
   const roll = rng.next();
   if (roll < homeRate) playOpenChance(run, state.home, away);
   else if (roll < homeRate + awayRate) playOpenChance(run, state.away, home);
 }
 
 function playOpenChance(run: Run, attacking: TeamState, defense: TeamStrength): void {
-  const shooter = pickWeighted(run.rng, attacking, run.state.elapsed, SHOOTER_WEIGHTS);
+  const shooter = designatedShooter(attacking, run.state.elapsed) ?? pickShooter(run.rng, attacking, run.state.elapsed);
   if (!shooter) return;
   const defending = teamOf(run.state, opponentSide(attacking.side));
   takeShot(run, { attacking, shooter, kind: rollChanceKind(run.rng, attacking, defending), keeper: defense.keeper });
+}
+
+/** Le porteur d'un bonus nominatif (Le Sombrero bourré) tente l'occasion lui-même. */
+function designatedShooter(team: TeamState, elapsed: number): MatchPlayer | undefined {
+  const shooterId = team.chanceBoosts[0]?.shooterId;
+  const shooter = shooterId ? team.players.find((player) => player.id === shooterId) : undefined;
+  return shooter && isActive(shooter, elapsed) ? shooter : undefined;
 }
 
 function chanceShares(attacking: Instructions, defending: Instructions): { counter: number; longShot: number } {
@@ -167,6 +173,8 @@ interface Shot {
   shooter: MatchPlayer;
   kind: ChanceKind;
   keeper: number;
+  /** Probabilité imposée (La Panenka ivre), sans bonus ni malus. */
+  fixedChance?: number;
 }
 
 /** Résout un tir : annulation éventuelle, but, arrêt (parfois corner) ou tir non cadré. */
@@ -181,7 +189,9 @@ function takeShot(run: Run, shot: Shot): void {
     creditActive(state, defending.side, IMPACT.actionCancelled, 'action adverse annulée');
     return;
   }
-  if (rng.chance(conversionChance(state, shot, defending))) {
+  const boost = shot.fixedChance === undefined ? attacking.chanceBoosts.shift() : undefined;
+  if (rng.chance(conversionChance(shot, defending, boost?.value ?? 0))) {
+    if (boost?.shooterId === shooter.id) shooter.cooldownUntil = 0;
     recordGoal(run, attacking.side, shooter, { penalty: kind === 'penalty' });
     return;
   }
@@ -207,22 +217,13 @@ function reportMissedShot(run: Run, shot: Shot, vars: { player: string; team: st
   if (saved && rng.chance(CORNER_AFTER_SAVE)) announceSetPiece(run, side, 'corner');
 }
 
-function conversionChance(state: MatchState, shot: Shot, defending: TeamState): number {
+function conversionChance(shot: Shot, defending: TeamState, boost: number): number {
+  if (shot.fixedChance !== undefined) return shot.fixedChance;
   const exponent = shot.kind === 'penalty' ? PENALTY_SKILL_EXPONENT : SHOOTING_EXPONENT;
   const skill = clamp(shootingValue(shot.shooter) / Math.max(1, shot.keeper), MIN_SKILL_RATIO, MAX_SKILL_RATIO);
-  let chance =
-    defending.emptyNetUntil >= state.elapsed ? EMPTY_NET_CONVERSION : BASE_CONVERSION[shot.kind] * skill ** exponent;
-  chance += consumeChanceBoost(shot.attacking, shot.kind);
+  let chance = BASE_CONVERSION[shot.kind] * skill ** exponent + boost;
   chance *= 1 - consumeShotMalus(defending);
   return clamp(chance, MIN_CONVERSION, MAX_CONVERSION);
-}
-
-/** Consomme le premier bonus d'occasion qui s'applique à ce type d'occasion. */
-function consumeChanceBoost(team: TeamState, kind: ChanceKind): number {
-  const index = team.chanceBoosts.findIndex(({ on }) => on === 'nextChance' || on === kind);
-  if (index < 0) return 0;
-  const [boost] = team.chanceBoosts.splice(index, 1);
-  return boost!.value;
 }
 
 /** Consomme un tir du premier malus infligé par l'équipe qui défend. */
@@ -253,13 +254,29 @@ export function awardPenalty(run: Run, side: Side, takerId: string | null): void
   openTriggers(run, side, 'ownPenalty', 'opponentPenalty');
 }
 
+/** Occasion créée par une capacité : le porteur tire, ou le meilleur tireur s'il est sur le banc. */
+export function playInstantChance(run: Run, side: Side, carrier: MatchPlayer, chance: number): void {
+  const { state } = run;
+  const attacking = teamOf(state, side);
+  const shooter = isActive(carrier, state.elapsed) ? carrier : bestShooter(attacking, state.elapsed);
+  if (!shooter) return;
+  measureOpposition(state, side);
+  takeShot(run, { attacking, shooter, kind: 'open', keeper: scratchStrength.keeper, fixedChance: chance });
+}
+
+/** Force de l'équipe qui défend face à `side`, niveaux inversés compris. */
+function measureOpposition(state: MatchState, side: Side): void {
+  const swapped = state.swappedUntil >= state.elapsed;
+  measureTeam(teamOf(state, swapped ? side : opponentSide(side)), state.elapsed, scratchStrength);
+}
+
 export function resolvePendingPlay(run: Run): void {
   const { state } = run;
   const play = state.pendingPlay;
   if (!play) return;
   state.pendingPlay = null;
   const attacking = teamOf(state, play.side);
-  measureTeam(teamOf(state, opponentSide(play.side)), state.elapsed, scratchStrength);
+  measureOpposition(state, play.side);
   const shooter = chooseTaker(run, attacking, play.kind, play.takerId);
   if (!shooter) return;
   const kind: ChanceKind = play.kind === 'penalty' ? 'penalty' : 'setPiece';
@@ -290,15 +307,15 @@ function bestShooter(team: TeamState, elapsed: number): MatchPlayer | undefined 
 
 // --- Fautes ----------------------------------------------------------------
 
-export function playFouls(run: Run, home: TeamStrength, away: TeamStrength): void {
+export function playFouls(run: Run): void {
   const { state, rng } = run;
-  if (rng.chance(foulRate(state.home, home))) commitFoul(run, state.home);
-  if (rng.chance(foulRate(state.away, away))) commitFoul(run, state.away);
+  if (rng.chance(foulRate(state.home))) commitFoul(run, state.home);
+  if (rng.chance(foulRate(state.away))) commitFoul(run, state.away);
 }
 
-function foulRate(team: TeamState, strength: TeamStrength): number {
+function foulRate(team: TeamState): number {
   const press = team.instructions.highPress ? HIGH_PRESS_FOULS : 1;
-  return clamp(FOUL_RATE * (1 + strength.aggression) * press, 0, 1);
+  return clamp(FOUL_RATE * press, 0, 1);
 }
 
 function commitFoul(run: Run, team: TeamState): void {
@@ -306,11 +323,6 @@ function commitFoul(run: Run, team: TeamState): void {
   const fouler = pickWeighted(rng, team, state.elapsed, FOULER_WEIGHTS);
   if (!fouler) return;
   const vars = { player: fouler.name, team: team.name };
-  if (team.foulsIgnored > 0) {
-    team.foulsIgnored--;
-    pushEvent(run, 'foul', team.side, comment(rng, 'foulIgnored', vars), { playerId: fouler.id });
-    return;
-  }
   const cardRoll = rng.next();
   const card = cardRoll < RED_ON_FOUL ? 'red' : cardRoll < RED_ON_FOUL + YELLOW_ON_FOUL ? 'yellow' : null;
   const booked = card ? bookPlayer(run, fouler, card) : null;
@@ -335,6 +347,23 @@ export function rollInjury(run: Run): void {
 }
 
 // --- Utilitaires -----------------------------------------------------------
+
+/** Tireur selon sa ligne et ses bonus : le joueur boosté reçoit plus de ballons. */
+function pickShooter(rng: Rng, team: TeamState, elapsed: number): MatchPlayer | undefined {
+  const weightOf = (player: MatchPlayer) => SHOOTER_WEIGHTS[player.line!] * (1 + shootingBoost(player) * SHOOTER_BOOST_WEIGHT);
+  let total = 0;
+  for (const player of team.players) {
+    if (player.line !== null && isActive(player, elapsed)) total += weightOf(player);
+  }
+  if (total <= 0) return undefined;
+  let roll = rng.next() * total;
+  for (const player of team.players) {
+    if (player.line === null || !isActive(player, elapsed)) continue;
+    roll -= weightOf(player);
+    if (roll < 0) return player;
+  }
+  return undefined;
+}
 
 /** Tire un joueur actif selon le poids de sa ligne, sans allocation. */
 function pickWeighted(rng: Rng, team: TeamState, elapsed: number, weights: Record<Position, number>) {

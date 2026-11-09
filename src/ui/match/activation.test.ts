@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { createMatch } from '../../domain/match';
 import { makeSheet, testMatchOptions } from '../../domain/match/fixtures';
-import { formatPercent } from '../format';
 import { abilitySheet } from './activation';
 
 function match() {
@@ -13,21 +12,22 @@ function match() {
   );
 }
 
-describe("fiche d'activation (CAP-07)", () => {
-  test('affiche coût, jauge, réussite et chaque risque en pourcentage', () => {
+describe("fiche d'activation", () => {
+  test('affiche la rareté, le coût, la jauge, la cible et ce que fait la capacité', () => {
     const sheet = abilitySheet(match(), 'home', 'h-1');
-    expect(sheet).toMatchObject({ abilityName: 'boucher', cost: 3, gauge: 3, success: formatPercent(1), available: true });
-    expect(sheet.risks).toEqual([{ label: 'Carton jaune', chance: formatPercent(0.3) }]);
-    expect(sheet.targeting).toBe('1 adversaire en vis-à-vis, à choisir sur le terrain');
+    expect(sheet).toMatchObject({ abilityName: 'boucher', cost: 3, gauge: 3, available: true, rarity: { key: 'rare', label: 'Rare' } });
+    expect(sheet.abilityEffects).toEqual(['Hors jeu 15 min : la cible']);
+    expect(sheet.targeting).toBe('1 attaquant, à choisir sur le terrain');
   });
 
   test('une capacité cachée reste « ??? » (CAP-13)', () => {
     const state = match();
     state.home.players[6]!.abilityRevealed = false;
+    state.home.players[6]!.ability!.hidden = true;
     const sheet = abilitySheet(state, 'home', 'h-6');
     expect(sheet.abilityName).toBe('???');
-    expect(sheet.downside).toBeNull();
-    expect(sheet.risks[0]!.label).toBe('Revers inconnu');
+    expect(sheet.abilityEffects).toEqual([]);
+    expect(sheet.rarity).toBeNull();
   });
 
   test('une capacité de zone se déclenche sans choisir de cible (CAP-18)', () => {

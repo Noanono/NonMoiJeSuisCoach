@@ -1,19 +1,17 @@
-import type { AbilityContext } from '../abilities/progression';
 import type { FinanceLine } from '../club/finance';
 import type { ClubOutlook } from '../club/model';
 import type { SeasonObjective } from '../club/president';
 import type { IncomingOffer } from '../club/transfers';
 import type { CupState } from '../league/cup';
-import type { Club, Division, Fixture, HouseRule, Player, PressArticle, TeamNight } from '../types';
+import type { Club, Division, Fixture, Player } from '../types';
 
 /** Version du format de partie, à incrémenter à chaque changement incompatible de la sauvegarde. */
-export const GAME_VERSION = 1;
+export const GAME_VERSION = 2;
 
 export type GameStatus = 'playing' | 'fired';
 
 export interface PendingDialogue {
   dialogueId: string;
-  playerId: string | null;
 }
 
 export interface SeasonRecord {
@@ -45,19 +43,9 @@ export interface GameState {
   cup: CupState;
   outlook: Omit<ClubOutlook, 'budget'>;
   objective: SeasonObjective;
-  houseRules: HouseRule[];
-  /** Soirée d'équipe choisie pour la semaine (FRAS-06). */
-  teamNight: TeamNight;
-  /** Contexte des capacités pour le prochain match (CAP-14). */
-  abilityContext: AbilityContext;
-  press: PressArticle[];
   offers: IncomingOffer[];
   dialogue: PendingDialogue | null;
   recentDialogueIds: string[];
-  /** Amendes infligées aux joueurs cette semaine, encaissées au bilan (FRAS-02). */
-  finesCollected: number;
-  /** Amendes payées par le club cette semaine (streaker, fumigène…). */
-  finesPaid: number;
   lastFinance: FinanceLine[];
   streak: { wins: number; losses: number };
   /** Fil d'actualité de la semaine (messages du staff). */

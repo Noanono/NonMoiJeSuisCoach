@@ -35,21 +35,21 @@ describe('simulation minute par minute', () => {
     expect(other.events).not.toEqual(first.events);
   });
 
-  test('la jauge part de 3, gagne 1 point toutes les 5 minutes et 2 quand on encaisse (CAP-05)', () => {
+  test('la jauge part de 3, gagne 1 point toutes les 10 minutes et 1 quand on encaisse (CAP-05)', () => {
     const state = createMatch(
       testMatchOptions(makeSheet({ clubId: 'h', isHuman: true }), makeSheet({ clubId: 'a', isHuman: true })),
     );
     expect(state.home.gauge).toBe(GAUGE_START);
-    while (state.elapsed < 5) {
+    while (state.elapsed < 10) {
       if (state.awaiting) dismissEventWindow(state);
       tick(state);
     }
     const gaugeBefore = state.away.gauge;
-    expect(gaugeBefore).toBe(GAUGE_START + 1 + 2 * state.home.goals);
+    expect(gaugeBefore).toBe(GAUGE_START + 1 + state.home.goals);
     const run = beginRun(state);
     recordGoal(run, 'home', state.home.players[9]!);
     endRun(run);
-    expect(state.away.gauge).toBe(gaugeBefore + 2);
+    expect(state.away.gauge).toBe(gaugeBefore + 1);
   });
 
   test('l’IA active ses capacités et chaque activation est annoncée (MATCH-07)', () => {

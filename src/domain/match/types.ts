@@ -7,20 +7,16 @@ import type {
   AbilityCategory,
   AbilityPosition,
   AbilityTrigger,
-  Combo,
-  Cooldown,
   Effect,
   Formation,
   Instructions,
   MatchStat,
   Player,
   Position,
-  Range,
-  Risk,
+  Rarity,
   TargetKind,
   Targeting,
 } from '../types';
-import type { AbilityContext } from '../abilities/progression';
 
 export type Side = 'home' | 'away';
 
@@ -37,8 +33,6 @@ export interface TeamSheet {
   formation: Formation;
   instructions: Instructions;
   captainId: string;
-  /** Soirée de la veille et règlement intérieur (CAP-14). */
-  context: AbilityContext;
   isHuman: boolean;
 }
 
@@ -50,8 +44,6 @@ export interface MatchOptions {
   knockout?: boolean;
   /** Source des capacités, `getAbility` par défaut. */
   lookupAbility?: (id: string) => Ability;
-  /** Combos connus, `COMBOS` par défaut. */
-  combos?: readonly Combo[];
 }
 
 // ---------------------------------------------------------------------------
@@ -60,8 +52,8 @@ export interface MatchOptions {
 
 export type MatchStatus = 'firstHalf' | 'halftime' | 'secondHalf' | 'finished';
 
-/** Statistique touchée par un effet actif : stats de jeu, moral ou mise hors jeu. */
-export type ActiveStat = MatchStat | 'morale' | 'knockout';
+/** Statistique touchée par un effet actif : stats de jeu, mise hors jeu ou niveaux inversés. */
+export type ActiveStat = MatchStat | 'knockout' | 'swap';
 
 /** Effet actif visible sur un joueur, avec son compte à rebours (CAP-09). */
 export interface ActiveEffect {
@@ -71,27 +63,25 @@ export interface ActiveEffect {
   value: number;
   /** Dernière minute écoulée (`elapsed`) où l'effet joue : compte à rebours = endsAt − elapsed. */
   endsAt: number;
+  /** Minutes ajoutées à chaque but marqué par l'équipe du joueur. */
+  extendOnGoal?: number;
 }
 
-/** Capacité prête à l'emploi : niveau et contexte déjà appliqués à la création du match. */
+/** Capacité prête à l'emploi : niveau déjà appliqué à la création du match. */
 export interface PreparedAbility {
   id: string;
   name: string;
+  rarity: Rarity;
   category: AbilityCategory;
   position: AbilityPosition;
   targeting: Targeting;
   trigger: AbilityTrigger;
-  condition: { minMinute?: number; whenLeading?: boolean } | null;
+  requiresRecentOpponentGoal: number | null;
   description: string;
-  downside: string;
   hidden: boolean;
   cost: number;
-  successChance: number;
-  cooldown: Cooldown;
-  /** Effets principaux, bonus de contexte appliqué. */
+  cooldown: number;
   effects: Effect[];
-  /** Risques, multiplicateur de contexte appliqué. */
-  risks: Risk[];
 }
 
 export interface MatchPlayer {
@@ -100,9 +90,9 @@ export interface MatchPlayer {
   side: Side;
   /** Ligne occupée sur le terrain, `null` pour un remplaçant. */
   line: Position | null;
-  /** Copie du joueur : fatigue et moral évoluent pendant le match sans toucher l'original. */
+  /** Copie du joueur : la fatigue évolue pendant le match sans toucher l'original. */
   profile: Player;
-  /** Note effective en cache (poste, fatigue, moral), rafraîchie périodiquement. */
+  /** Note effective en cache (poste, fatigue), rafraîchie périodiquement. */
   rating: number;
   yellowCards: number;
   sentOff: boolean;
@@ -112,11 +102,9 @@ export interface MatchPlayer {
   effects: ActiveEffect[];
   ability: PreparedAbility | null;
   abilityRevealed: boolean;
-  seasonUses: number;
-  usesThisMatch: number;
   cooldownUntil: number;
-  /** Numéro du dernier événement sur lequel la capacité a servi (recharge « par événement »). */
-  lastEventUse: number;
+  /** Fatigue effacée par les capacités : elle revient après le match, qui n'a pas de suite. */
+  fatigueRestored: number;
   goals: number;
 }
 
@@ -124,7 +112,8 @@ export type ChanceKind = 'open' | 'counter' | 'longShot' | 'setPiece' | 'penalty
 
 export interface ChanceBoost {
   value: number;
-  on: 'nextChance' | 'setPiece' | 'penalty' | 'counter' | 'longShot';
+  /** Ce joueur tente l'occasion ; s'il marque, sa recharge repart à zéro. */
+  shooterId?: string;
 }
 
 export interface ShotMalus {
@@ -132,17 +121,15 @@ export interface ShotMalus {
   shotsLeft: number;
 }
 
-/** Conséquences hors match, appliquées par la boucle de saison. */
+/** Suites d'un effet, résolues quand le moment arrive. */
+export type DelayedEffect =
+  | { kind: 'cleanSheet'; at: number; points: number; conceded: number; label: string }
+  | { kind: 'chase'; at: number; duration: number; excludedId: string; label: string };
+
+/** Ce qui reste du match pour la suite de la saison. */
 export type Consequence =
-  | { type: 'fine'; amount: number; reason: string }
-  | { type: 'budget'; amount: number; reason: string }
-  | { type: 'presidentConfidence'; value: number; reason: string }
   | { type: 'injury'; playerId: string; weeks: number; reason: string }
   | { type: 'suspension'; playerId: string; matches: number; reason: string }
-  | { type: 'squadFatigue'; value: number; reason: string }
-  | { type: 'press'; headline: string; reason: string }
-  /** Utilisation d'une capacité limitée à la saison (CAP-12) : nouveau total. */
-  | { type: 'seasonUse'; playerId: string; abilityId: string; seasonUses: number }
   /** Capacité cachée révélée à sa première activation (CAP-13). */
   | { type: 'abilityRevealed'; playerId: string; abilityId: string };
 
@@ -164,11 +151,7 @@ export interface TeamState {
   shotMaluses: ShotMalus[];
   /** Prochaines actions adverses à annuler. */
   pendingCancels: number;
-  foulsIgnored: number;
-  /** Échéances « jusqu'à la minute écoulée X incluse » (-1 = inactif). */
-  noCardsUntil: number;
-  emptyNetUntil: number;
-  extraAttackerUntil: number;
+  delayed: DelayedEffect[];
   consequences: Consequence[];
 }
 
@@ -178,7 +161,6 @@ export interface GoalRecord {
   minute: number;
   addedMinute: number;
   elapsed: number;
-  ownGoal: boolean;
   penalty: boolean;
   /** Annulé par une capacité (coupure de courant…). */
   cancelled: boolean;
@@ -197,7 +179,15 @@ export interface InjuryRecord {
   side: Side;
   playerId: string;
   minute: number;
+  /** 0 = rien de grave, il sera là la semaine prochaine. */
   weeks: number;
+}
+
+/** Texte qui s'envole au-dessus d'un joueur quand la capacité le touche. */
+export interface FloatingText {
+  playerId: string;
+  text: string;
+  tone: 'bonus' | 'malus';
 }
 
 export interface ActivationRecord {
@@ -206,20 +196,19 @@ export interface ActivationRecord {
   playerId: string;
   abilityId: string;
   abilityName: string;
+  rarity: Rarity;
   minute: number;
   elapsed: number;
   byAi: boolean;
-  success: boolean;
   targetIds: string[];
-  /** Libellés des risques survenus. */
-  risks: string[];
+  /** Capacité de zone : l'UI colore la zone touchée. */
+  zone: boolean;
+  floats: FloatingText[];
   /** Impact estimé sur le match, de 0 à 1 (CAP-10). */
   impact: number;
   notes: string[];
   /** Dernière minute pendant laquelle les faits de jeu sont crédités à l'activation. */
   activeUntil: number;
-  comboName: string | null;
-  usedInCombo: boolean;
 }
 
 /** Fenêtre d'événement (CAP-19) : le match attend que le coach active ou laisse passer. */
@@ -265,17 +254,14 @@ export interface MatchState {
   elapsed: number;
   stoppage: number;
   stoppageAnnounced: boolean;
-  /** Temps additionnel ajouté par les capacités, versé dans la prochaine annonce. */
-  extraStoppage: number;
-  frozenUntil: number;
-  homeAdvantageCancelledUntil: number;
+  /** Niveaux des équipes inversés jusqu'à cette minute écoulée incluse. */
+  swappedUntil: number;
   home: TeamState;
   away: TeamState;
   goals: GoalRecord[];
   cards: CardRecord[];
   injuries: InjuryRecord[];
   activations: ActivationRecord[];
-  combosTriggered: { side: Side; name: string; minute: number }[];
   /** Live texte complet (MATCH-04). */
   events: MatchEvent[];
   awaiting: EventWindow | null;
@@ -283,8 +269,6 @@ export interface MatchState {
   pendingPlay: PendingPlay | null;
   /** Déclencheur ouvert pour chaque camp (CAP-19), effacé à la minute suivante. */
   triggers: Record<Side, AbilityTrigger | null>;
-  eventSeq: number;
-  combos: Combo[];
   shootout: ShootoutResult | null;
   /** XP gagnée par joueur (CAP-10), calculée au coup de sifflet final. */
   xpGains: Record<string, number>;
@@ -299,7 +283,6 @@ export type MatchEventKind =
   | 'kickoff'
   | 'ambiance'
   | 'goal'
-  | 'ownGoal'
   | 'goalCancelled'
   | 'save'
   | 'miss'
@@ -316,8 +299,6 @@ export type MatchEventKind =
   | 'fullTime'
   | 'shootout'
   | 'activation'
-  | 'risk'
-  | 'combo'
   | 'effect'
   | 'eventWindow';
 
@@ -340,16 +321,14 @@ export interface ActivationPreview {
   abilityId: string | null;
   /** `???` tant que la capacité est cachée (CAP-13). */
   abilityName: string;
+  rarity: Rarity | null;
   revealed: boolean;
   cost: number;
   gauge: number;
-  /** Chance de réussite (CAP-07). */
-  successChance: number;
-  /** Risques après contexte (CAP-07). */
-  risks: { label: string; chance: number }[];
   targeting: TargetKind | null;
   targetCount: number;
-  range: Range;
+  targetLine: Position | null;
+  targetDowned: boolean;
   validTargetIds: string[];
   cooldownRemaining: number;
 }
@@ -362,10 +341,8 @@ export interface AbilityReport {
   abilityName: string;
   minute: number;
   byAi: boolean;
-  success: boolean;
   impact: number;
   xp: number;
-  combo: string | null;
   text: string;
 }
 
@@ -378,11 +355,9 @@ export interface PlayerReport {
   yellowCards: number;
   sentOff: boolean;
   injured: boolean;
-  /** Fatigue et moral en fin de match, à reporter sur le joueur (EFF-04, EFF-06). */
+  /** Fatigue due au match, à reporter sur le joueur (EFF-04). */
   fatigue: number;
-  morale: number;
   abilityRevealed: boolean;
-  seasonUses: number;
 }
 
 export interface MatchSummary {
@@ -395,7 +370,6 @@ export interface MatchSummary {
   cards: (CardRecord & { playerName: string })[];
   injuries: (InjuryRecord & { playerName: string })[];
   abilities: AbilityReport[];
-  combos: { side: Side; name: string; minute: number }[];
   consequences: Record<Side, Consequence[]>;
   xpGains: Record<string, number>;
   players: PlayerReport[];

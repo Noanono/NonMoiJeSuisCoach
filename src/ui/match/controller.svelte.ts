@@ -12,12 +12,27 @@ import {
   setInstructions,
   startActivation,
   tick,
+  type ActivationRecord,
   type MatchState,
   type Side,
 } from '../../domain/match';
-import type { Instructions } from '../../domain/types';
+import type { Instructions, Rarity } from '../../domain/types';
+import type { AvatarPlayer } from '../kit/avatar';
 import { store } from '../store.svelte';
 import type { Speed } from './live';
+
+/** Temps d'affichage d'une capacité, plus long quand elle est rare. */
+const FX_DURATION_MS: Record<Rarity, number> = { common: 1500, rare: 2000, legendary: 2800 };
+/** Au-delà, les annonces les plus anciennes sont sautées pour rester au rythme du match. */
+const FX_QUEUE_LIMIT = 3;
+
+/** Capacité en cours de mise en scène sur le terrain. */
+export interface ActivationFx {
+  record: ActivationRecord;
+  playerName: string;
+  avatar: AvatarPlayer;
+  own: boolean;
+}
 
 export class MatchController {
   readonly match: MatchState;
@@ -27,10 +42,16 @@ export class MatchController {
   paused = $state(false);
   /** Joueur dont le panneau d'activation est ouvert : l'horloge s'arrête le temps de lire (CAP-07). */
   inspectedId = $state<string | null>(null);
+  /** Capacité affichée en ce moment sur le terrain. */
+  fx = $state.raw<ActivationFx | null>(null);
+  #fxQueue: ActivationRecord[] = [];
+  #fxSeen = 0;
+  #fxTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(match: MatchState, coachSide: Side) {
     this.match = match;
     this.coachSide = coachSide;
+    this.#fxSeen = match.activations.length;
   }
 
   /** Lecture abonnée au moteur : à appeler dans chaque `$derived` qui lit `match`. */
@@ -50,12 +71,13 @@ export class MatchController {
   });
 
   /** L'horloge tourne : une seule boucle active, coupée dès que quelque chose attend (green code). */
-  readonly running = $derived(!this.paused && this.inspectedId === null && !this.engineWaiting);
+  readonly running = $derived(!this.paused && this.inspectedId === null && !this.engineWaiting && this.fx?.record.rarity !== 'legendary');
 
   /** Une minute de jeu (MATCH-02). Pause automatique à la mi-temps pour les consignes (MATCH-05). */
   step(): void {
     const before = this.match.status;
     tick(this.match);
+    this.#collectFx();
     store.touchMatch();
     if (before !== 'halftime' && this.match.status === 'halftime') {
       this.paused = true;
@@ -102,13 +124,9 @@ export class MatchController {
   }
 
   confirm(): void {
-    const before = this.match.activations.length;
     confirmActivation(this.match);
+    this.#collectFx();
     store.touchMatch();
-    const record = this.match.activations[before];
-    if (!record) return;
-    const risks = record.risks.length > 0 ? ` Revers : ${record.risks.join(', ')}.` : '';
-    store.notify(record.success ? `${record.abilityName} : ça passe.${risks}` : `${record.abilityName} : raté.${risks}`);
   }
 
   /** Annule avant validation : rien n'est consommé (CAP-20). */
@@ -128,6 +146,33 @@ export class MatchController {
     const team = this.coachSide === 'home' ? this.match.home : this.match.away;
     setInstructions(this.match, this.coachSide, { ...team.instructions, ...changes });
     store.touchMatch();
+  }
+
+  /** Repère les capacités parties depuis le dernier appel et les met en file d'affichage. */
+  #collectFx(): void {
+    const fresh = this.match.activations.slice(this.#fxSeen);
+    if (fresh.length === 0) return;
+    this.#fxSeen = this.match.activations.length;
+    this.#fxQueue = [...this.#fxQueue, ...fresh].slice(-FX_QUEUE_LIMIT);
+    if (!this.fx) this.#showNextFx();
+  }
+
+  #showNextFx(): void {
+    const record = this.#fxQueue.shift();
+    if (!record) {
+      this.fx = null;
+      return;
+    }
+    const team = record.side === 'home' ? this.match.home : this.match.away;
+    const player = team.players.find((candidate) => candidate.id === record.playerId)!;
+    const { age, clubId, position } = player.profile;
+    this.fx = { record, playerName: player.name, avatar: { id: player.id, age, clubId, position }, own: record.side === this.coachSide };
+    this.#fxTimer = setTimeout(() => this.#showNextFx(), FX_DURATION_MS[record.rarity]);
+  }
+
+  /** À appeler quand l'écran disparaît. */
+  dispose(): void {
+    clearTimeout(this.#fxTimer);
   }
 
   /** Coup de sifflet final : reporte le match sur la partie (MATCH-06). */

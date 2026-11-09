@@ -1,5 +1,5 @@
 <script lang="ts">
-  /** Barre segmentée (Jauge de Gueulante, fatigue, moral, confiance). */
+  /** Barre segmentée (Jauge de Gueulante, fatigue, confiance). */
   interface Props {
     value: number;
     max: number;

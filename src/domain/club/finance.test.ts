@@ -9,10 +9,7 @@ const baseWeek: WeeklyFinanceInput = {
   sponsorMood: 50,
   matchOutcome: 'win',
   homeMatch: true,
-  teamNight: 'none',
   wageBill: 1_000,
-  finesCollected: 0,
-  finesPaid: 0,
 };
 
 const club: Club = {
@@ -33,16 +30,13 @@ const amountOf = (label: string, input: WeeklyFinanceInput) =>
 
 describe('bilan hebdomadaire (CLUB-01)', () => {
   test('recettes et salaires apparaissent comme lignes signées', () => {
-    const lines = weeklyBalance({ ...baseWeek, finesCollected: 150, finesPaid: 300 });
     expect(amountOf('Sponsors', baseWeek)).toBeGreaterThan(0);
-    expect(lines.find((line) => line.label === 'Salaires')?.amount).toBe(-1_000);
-    expect(lines.find((line) => line.label === 'Amendes encaissées')?.amount).toBe(150);
-    expect(lines.find((line) => line.label === 'Amendes de la ligue')?.amount).toBe(-300);
+    expect(amountOf('Salaires', baseWeek)).toBe(-1_000);
   });
 
-  test('pas de buvette à l’extérieur, plus de buvette après une grosse soirée', () => {
+  test('pas de buvette à l’extérieur', () => {
     expect(amountOf('Buvette', { ...baseWeek, homeMatch: false })).toBe(0);
-    expect(amountOf('Buvette', { ...baseWeek, teamNight: 'bigNight' })).toBeGreaterThan(amountOf('Buvette', baseWeek));
+    expect(amountOf('Buvette', baseWeek)).toBeGreaterThan(0);
   });
 
   test('les sponsors paient plus en division supérieure et quand ils sont contents', () => {

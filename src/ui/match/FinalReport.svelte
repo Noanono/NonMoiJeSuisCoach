@@ -24,9 +24,7 @@
   const consequences = $derived.by(() => {
     const names = new Map(summary.players.map((player) => [player.playerId, player.name]));
     const nameOf = (id: string) => names.get(id) ?? '?';
-    return summary.consequences[coachSide]
-      .map((consequence) => consequenceText(consequence, nameOf))
-      .filter((text): text is string => text !== null);
+    return summary.consequences[coachSide].map((consequence) => consequenceText(consequence, nameOf));
   });
 
   let heading: HTMLHeadingElement;
@@ -60,7 +58,7 @@
               {#each summary.goals.filter((goal) => goal.side === side) as goal, index (index)}
                 <li>
                   <span class="tampon">{minuteLabel(goal.minute, goal.addedMinute)}</span>
-                  {goal.playerName}{goal.ownGoal ? ' (csc)' : ''}{goal.penalty ? ' (pen.)' : ''}
+                  {goal.playerName}{goal.penalty ? ' (pen.)' : ''}
                 </li>
               {:else}
                 <li class="vide">Aucun but.</li>
@@ -84,7 +82,7 @@
           <li>
             <span class="tampon">{injury.minute}'</span>
             <span class="carton tampon blessure">Blessé</span>
-            {injury.playerName}, {injury.weeks} sem. <span class="pale">({teamName(injury.side)})</span>
+            {injury.playerName}, {injury.weeks > 0 ? `${injury.weeks} sem.` : 'rien de grave'} <span class="pale">({teamName(injury.side)})</span>
           </li>
         {/each}
         {#if summary.cards.length === 0 && summary.injuries.length === 0}
@@ -106,10 +104,8 @@
               <th class="tampon" scope="col">Camp</th>
               <th class="tampon" scope="col">Joueur</th>
               <th class="tampon" scope="col">Capacité</th>
-              <th class="tampon" scope="col">Résultat</th>
               <th class="tampon" scope="col">Impact</th>
               <th class="tampon chiffre" scope="col">XP</th>
-              <th class="tampon" scope="col">Combo</th>
             </tr>
           </thead>
           <tbody>
@@ -119,10 +115,8 @@
                 <td>{report.side === coachSide ? 'Toi' : 'En face'}</td>
                 <td>{report.playerName}</td>
                 <td class="texte-fort">{report.abilityName}</td>
-                <td><span class="resultat tampon" class:reussi={report.success}>{report.success ? '+ Réussie' : '− Ratée'}</span></td>
                 <td>{report.text} <span class="tampon">{formatPercent(report.impact)}</span></td>
                 <td class="tampon chiffre">{report.xp}</td>
-                <td>{report.combo ?? ''}</td>
               </tr>
             {/each}
           </tbody>
@@ -133,7 +127,7 @@
 
   <Card title="Après le match" tone="craie-2">
     {#if consequences.length === 0}
-      <p class="vide texte-s">Aucune conséquence hors match.</p>
+      <p class="vide texte-s">Rien à signaler pour la suite.</p>
     {:else}
       <ul class="liste texte-s">
         {#each consequences as text, index (index)}<li>{text}</li>{/each}
@@ -252,15 +246,6 @@
   .chiffre {
     text-align: right;
     font-variant-numeric: tabular-nums;
-  }
-  .resultat {
-    padding: 0 var(--space-1);
-    background: var(--carton);
-    color: var(--craie);
-    white-space: nowrap;
-  }
-  .resultat.reussi {
-    background: var(--victoire);
   }
   .sortie {
     display: flex;

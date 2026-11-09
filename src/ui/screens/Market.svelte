@@ -2,6 +2,7 @@
   import './parts/screens.css';
   import Button from '../kit/Button.svelte';
   import Card from '../kit/Card.svelte';
+  import PlayerAvatar from '../kit/PlayerAvatar.svelte';
   import OffersList from './parts/OffersList.svelte';
   import { store } from '../store.svelte';
   import { formatEuros } from '../format';
@@ -13,7 +14,7 @@
   import { fullName, POSITION_LABEL, POSITION_SHORT } from './describe';
   import { nextTransferWindowWeek, transferWindowLastWeek } from './views';
 
-  /** Mercato (CLUB-02, FRAS-05) : liste filtrable, achats et offres reçues. */
+  /** Mercato (CLUB-02) : liste filtrable, achats et offres reçues. */
   const PAGE_SIZE = 40;
   const POSITIONS = Object.keys(POSITION_LABEL) as Position[];
 
@@ -39,6 +40,7 @@
         return {
           id: listing.playerId,
           name: fullName(player),
+          avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position },
           position: player.position,
           age: player.age,
           overall: listing.overall,
@@ -144,7 +146,7 @@
             {#each visible as listing (listing.id)}
               {@const affordable = listing.price <= transferWindow.budget}
               <tr>
-                <td class="texte-fort">{listing.name}</td>
+                <td class="texte-fort"><span class="identite"><PlayerAvatar player={listing.avatar} size={32} />{listing.name}</span></td>
                 <td><abbr title={POSITION_LABEL[listing.position]}>{POSITION_SHORT[listing.position]}</abbr></td>
                 <td class="num">{listing.age}</td>
                 <td class="num texte-fort">{listing.overall}</td>
@@ -193,6 +195,11 @@
   }
   abbr {
     text-decoration: none;
+  }
+  .identite {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
   }
   .plus {
     margin-top: var(--space-4);

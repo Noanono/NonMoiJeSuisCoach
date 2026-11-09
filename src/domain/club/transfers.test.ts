@@ -8,13 +8,12 @@ import {
   buyPlayer,
   generateIncomingOffers,
   marketListings,
-  rejectOffer,
   sellPlayer,
   type IncomingOffer,
   type TransferWorld,
 } from './transfers';
 
-const abilityOf: AbilityLookup = (id) => ({ rarity: id === 'legende' ? 'legendary' : 'common', tags: [] });
+const abilityOf: AbilityLookup = (id) => ({ rarity: id === 'legende' ? 'legendary' : 'common' });
 
 function makeClub(id: string, playerIds: string[], overrides: Partial<Club> = {}): Club {
   return {
@@ -103,12 +102,12 @@ describe('achats et ventes (CLUB-02)', () => {
   });
 });
 
-describe('liste du mercato (FRAS-05)', () => {
+describe('liste du mercato', () => {
   test('la capacité d’un joueur n’est affichée que si elle est révélée', () => {
     const listings = marketListings(makeWorld(), 'coach', abilityOf);
     expect(listings.some((listing) => listing.clubId === 'coach')).toBe(false);
     expect(listings.find((listing) => listing.playerId === 'ai-0')?.ability).toBeNull();
-    expect(listings.find((listing) => listing.playerId === 'ai-1')?.ability).toEqual({ abilityId: 'le-plongeur', rarity: 'common' });
+    expect(listings.find((listing) => listing.playerId === 'ai-1')?.ability).toEqual({ abilityId: 'la-mobylette', rarity: 'common' });
   });
 });
 
@@ -129,17 +128,12 @@ describe('offres des clubs IA (CLUB-03)', () => {
     expect(result.ok).toBe(false);
   });
 
-  test('refuser l’offre d’un joueur qui veut partir le fait bouder', () => {
+  test('les clubs IA font des offres quand le mercato est ouvert', () => {
     const world = makeWorld();
-    world.players['coach-3'] = { ...world.players['coach-3']!, transferRequested: true };
-    const { world: after } = rejectOffer(world, offer);
-    expect(after.players['coach-3']!.morale).toBeLessThan(world.players['coach-3']!.morale);
-  });
-
-  test('les clubs IA font des offres, surtout sur les joueurs qui veulent partir', () => {
-    const world = makeWorld();
-    for (const id of world.clubs.coach!.playerIds) world.players[id] = { ...world.players[id]!, transferRequested: true };
-    const offers = generateIncomingOffers(world, { coachClubId: 'coach', week: 3, windowOpen: true, abilityOf, rng: createRng(7) });
+    const rng = createRng(7);
+    const offers = Array.from({ length: 30 }, () =>
+      generateIncomingOffers(world, { coachClubId: 'coach', week: 3, windowOpen: true, abilityOf, rng }),
+    ).flat();
     expect(offers.length).toBeGreaterThan(0);
     for (const generated of offers) {
       expect(generated.fromClubId).toBe('ai');

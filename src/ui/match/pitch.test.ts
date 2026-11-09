@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { createMatch, selectTarget, startActivation } from '../../domain/match';
 import { makeSheet, testMatchOptions } from '../../domain/match/fixtures';
 import { findPlayer } from '../../domain/match/state';
-import { availability, benchPlayers, pitchColumns, pitchView, toChip, tokenFocus } from './pitch';
+import { availability, benchPlayers, pitchColumns, pitchView, toChip, tokenFocus, tokenView } from './pitch';
 
 function match() {
   return createMatch(
@@ -91,7 +91,7 @@ describe('effets actifs (CAP-09)', () => {
   });
 
   test('malus avec « − », effet jusqu’au coup de sifflet', () => {
-    const chip = toChip({ label: 'Chambrage', stat: 'morale', value: -0.1, remaining: null });
+    const chip = toChip({ label: 'Chambrage', stat: 'speed', value: -0.1, remaining: null });
     expect(chip).toMatchObject({ tone: 'malus', sign: '−', countdown: 'fin' });
   });
 
@@ -99,5 +99,15 @@ describe('effets actifs (CAP-09)', () => {
     expect(toChip({ label: 'Le Boucher', stat: 'knockout', value: -1, remaining: 3 }).detail).toBe(
       'Le Boucher : − hors jeu, encore 3 min',
     );
+  });
+
+  test('un joueur sous effet porte un halo, le malus l’emporte', () => {
+    const state = match();
+    const player = state.home.players[3]!;
+    expect(tokenView(state, player, 'home').halo).toBeNull();
+    player.effects.push({ label: 'x', stat: 'speed', value: 0.2, endsAt: 50 });
+    expect(tokenView(state, player, 'home').halo).toBe('bonus');
+    player.effects.push({ label: 'y', stat: 'shooting', value: -0.2, endsAt: 50 });
+    expect(tokenView(state, player, 'home').halo).toBe('malus');
   });
 });

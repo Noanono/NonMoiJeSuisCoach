@@ -41,8 +41,7 @@ export function advanceClock(run: Run): boolean {
 function announceStoppage(run: Run): void {
   const { state, rng } = run;
   const range = state.status === 'firstHalf' ? FIRST_HALF_STOPPAGE : SECOND_HALF_STOPPAGE;
-  state.stoppage = rng.int(range.min, range.max) + state.extraStoppage;
-  state.extraStoppage = 0;
+  state.stoppage = rng.int(range.min, range.max);
   state.stoppageAnnounced = true;
   pushEvent(run, 'stoppage', null, comment(rng, 'stoppage', { n: state.stoppage }));
 }

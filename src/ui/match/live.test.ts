@@ -23,7 +23,7 @@ describe('live texte (MATCH-04, MATCH-07)', () => {
     event('activation', 'away', 10),
     event('goal', 'home', 12, 'But de Michel'),
     event('activation', 'home', 13),
-    event('combo', 'home', 14),
+    event('ambiance', 'home', 14),
   ];
 
   test('le plus récent en haut, clés stables, affichage limité', () => {
@@ -35,7 +35,7 @@ describe('live texte (MATCH-04, MATCH-07)', () => {
   test('distingue les capacités du coach et celles d’en face', () => {
     expect(liveTone(events[1]!, 'home')).toBe('theirs');
     expect(liveTone(events[3]!, 'home')).toBe('mine');
-    expect(liveTone(events[4]!, 'home')).toBe('combo');
+    expect(liveTone(events[4]!, 'home')).toBe('plain');
     expect(liveTone(events[2]!, 'away')).toBe('goal');
   });
 

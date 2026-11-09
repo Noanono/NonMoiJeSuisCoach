@@ -18,7 +18,6 @@
           playerName: player ? fullName(player) : 'Joueur parti',
           position: player ? POSITION_SHORT[player.position] : '',
           value: player ? playerValue(player, getAbility(player.ability.abilityId).rarity) : 0,
-          wantsOut: player?.transferRequested ?? false,
           club: game.clubs[offer.fromClubId]?.name ?? 'Club mystère',
           amount: offer.amount,
           expiresWeek: offer.expiresWeek,
@@ -50,7 +49,7 @@
         </p>
         <p class="texte-s discret">
           Valeur <span class="mono">{formatEuros(offer.value)}</span> · expire semaine
-          <span class="mono">{offer.expiresWeek}</span>{#if offer.wantsOut} · il veut partir, un refus le vexera{/if}
+          <span class="mono">{offer.expiresWeek}</span>
         </p>
         <div class="ligne-actions">
           <Button size="s" disabled={!windowOpen} onclick={() => answer(offer.id, true)}>Accepter</Button>

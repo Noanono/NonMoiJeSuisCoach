@@ -32,7 +32,7 @@ export function periodLabel(state: MatchState): string {
 /** Lignes du live affichées par défaut : au-delà, « tout voir » (green code). */
 export const LIVE_LIMIT = 60;
 
-export type LiveTone = 'goal' | 'mine' | 'theirs' | 'combo' | 'card' | 'window' | 'plain';
+export type LiveTone = 'goal' | 'mine' | 'theirs' | 'card' | 'window' | 'plain';
 
 export interface LiveLine {
   /** Index dans `state.events` : le live ne fait que s'allonger, la clé est stable. */
@@ -48,7 +48,6 @@ const TAG: Record<LiveTone, string | null> = {
   goal: 'But',
   mine: 'Toi',
   theirs: 'En face',
-  combo: 'Combo',
   card: 'Carton',
   window: 'À toi',
   plain: null,
@@ -58,13 +57,9 @@ const TAG: Record<LiveTone, string | null> = {
 export function liveTone(event: MatchEvent, coachSide: Side): LiveTone {
   switch (event.kind) {
     case 'goal':
-    case 'ownGoal':
       return 'goal';
     case 'activation':
-    case 'risk':
       return event.side === coachSide ? 'mine' : 'theirs';
-    case 'combo':
-      return 'combo';
     case 'yellowCard':
     case 'redCard':
       return 'card';
@@ -91,7 +86,7 @@ export function liveLines(events: readonly MatchEvent[], coachSide: Side, limit:
 export function lastGoalText(events: readonly MatchEvent[]): string {
   for (let index = events.length - 1; index >= 0; index--) {
     const event = events[index]!;
-    if (event.kind === 'goal' || event.kind === 'ownGoal') return `${minuteLabel(event.minute, event.addedMinute)} ${event.text}`;
+    if (event.kind === 'goal') return `${minuteLabel(event.minute, event.addedMinute)} ${event.text}`;
   }
   return '';
 }

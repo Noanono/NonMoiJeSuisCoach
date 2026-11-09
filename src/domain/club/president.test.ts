@@ -2,12 +2,12 @@ import { describe, expect, test } from 'bun:test';
 import type { Club, Division } from '../types';
 import { createRng } from '../core/rng';
 import {
-  confidenceAfterIncident,
   confidenceAfterMatch,
   isFired,
   matchExpectation,
   reviewSeason,
   seasonObjective,
+  sponsorMoodAfterMatch,
 } from './president';
 
 const division: Division = {
@@ -65,6 +65,11 @@ describe('confiance du président (CLUB-05)', () => {
     expect(afterThrashing.confidence).toBe(0);
     expect(isFired(afterThrashing.confidence)).toBe(true);
     expect(isFired(1)).toBe(false);
-    expect(isFired(confidenceAfterIncident(2, 'clubFine'))).toBe(true);
+  });
+
+  test('les sponsors suivent les résultats', () => {
+    expect(sponsorMoodAfterMatch(50, 'win')).toBeGreaterThan(50);
+    expect(sponsorMoodAfterMatch(50, 'loss')).toBeLessThan(50);
+    expect(sponsorMoodAfterMatch(50, 'draw')).toBe(50);
   });
 });

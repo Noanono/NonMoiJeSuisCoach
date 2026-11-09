@@ -50,10 +50,6 @@ const LINES = {
     'Penalty transformé par {player} ! {score}. Le gardien est parti boire un café du mauvais côté.',
     "{player} ne tremble pas sur le penalty, {score}. Sang-froid de comptable.",
   ],
-  ownGoal: [
-    'But contre son camp de {player} ! {score} pour {team}. Il voulait dégager, il a dégagé… dans ses filets.',
-    "CSC de {player}, {score}. Le ballon a choisi son camp, et ce n'est pas le sien.",
-  ],
   goalCancelled: [
     "But de {team} annulé ! Le score revient à {score}. Personne ne sait vraiment pourquoi, et c'est très bien.",
     'Le but de {team} ne compte plus, {score}. Le panneau d\'affichage, lui, a déjà fondu un fusible.',
@@ -76,10 +72,6 @@ const LINES = {
   foul: [
     'Faute de {player} ({team}). Coup de sifflet, et un mollet qui s\'en souviendra.',
     "Faute de {player}. L'arbitre siffle, la tribune proteste par principe.",
-  ],
-  foulIgnored: [
-    "Faute de {player}, mais l'arbitre regarde ailleurs. Le clin d'œil a payé.",
-    "{player} accroche son adversaire, pas de coup de sifflet. L'arbitre est de bonne humeur aujourd'hui.",
   ],
   yellowCard: [
     'Carton jaune pour {player} ({team}). Il proteste, mais avec le sourire.',
@@ -118,6 +110,14 @@ const LINES = {
     "{player} ({team}) se tient la cuisse et ne peut pas continuer : {weeks} semaine(s) d'arrêt. Pas de remplacement, {team} jouera à dix.",
     "Blessure pour {player} : forfait jusqu'à la fin du match et {weeks} semaine(s) à l'infirmerie. Le kiné sort sa trousse et sa pommade au camphre.",
   ],
+  injuryMinor: [
+    "{player} ({team}) se tient la cuisse et sort pour ce match. Rien de grave : il sera là la semaine prochaine. {team} jouera à dix.",
+    "Pépin pour {player}, qui ne peut pas continuer. Le kiné parle d'une « grosse bobologie ». Pas de remplacement, {team} jouera à dix.",
+  ],
+  cleanSheet: [
+    "{label} a tenu bon : {n} point(s) de Gueulante pour {team}.",
+    "Aucun but encaissé pendant {label} : {team} récupère {n} point(s) de Gueulante.",
+  ],
   activationHuman: [
     '{player} active {ability} ! {label}',
     "Sur ton ordre, {player} sort {ability}. {label}",
@@ -128,26 +128,9 @@ const LINES = {
     "Le banc de {team} s'agite : {player} active {ability}. {label} À toi de riposter.",
     "{team} sort l'arme : {ability} par {player}. {label}",
   ],
-  activationFailed: [
-    '{ability} de {player} tombe à plat. Il a essayé, personne n\'a rien vu.',
-    "{player} tente {ability}… raté. C'était pourtant bien parti dans sa tête.",
-  ],
-  risk: [
-    'Revers pour {team} : {label}.',
-    'Ça se retourne contre {team} : {label}.',
-    'Le revers tombe pour {player} : {label}.',
-  ],
-  combo: [
-    'COMBO pour {team} : {label} ! Les deux compères se tapent dans la main.',
-    "Combo {label} pour {team} ! Le vestiaire en parlera pendant des années.",
-  ],
   knockout: [
     '{player} ({team}) est hors jeu pour {minutes} min. Il se relèvera, promis.',
     "{player} est au tapis pour {minutes} min. Il compte les étoiles, il en est à douze.",
-  ],
-  freeze: [
-    'Le match est figé pendant {minutes} min. Tout le monde regarde le ciel en attendant.',
-    "Jeu arrêté {minutes} min. L'arbitre en profite pour refaire ses lacets.",
   ],
   eventWindow: [
     "Pause : {label}. Tu as des capacités à dégainer, c'est maintenant ou jamais.",
@@ -184,13 +167,9 @@ export const UNAVAILABLE = {
   busy: "Une autre activation attend sa cible, termine-la d'abord.",
   gauge: 'Jauge de Gueulante à sec : il te manque {n} point(s). Hurle un peu plus fort.',
   cooldown: 'Encore {n} min de recharge : il reprend son souffle et sa dignité.',
-  perMatch: "Déjà utilisée ce match. L'arbitre commence à se méfier.",
-  perSeason: 'Joker de la saison déjà grillé. Reviens la saison prochaine.',
-  perEvent: 'Déjà utilisée sur cet événement. Attends le prochain.',
   trigger: 'Ça se déclenche {label} : attends le bon moment.',
-  minMinute: "Pas avant la {n}e minute : il n'est pas encore réveillé.",
-  whenLeading: "Seulement quand tu mènes. Là, ça ferait juste de la peine.",
-  noTarget: 'Personne à portée : il brasse de l\'air.',
+  noRecentGoal: "Il faut un but adverse de moins de {n} min à effacer.",
+  noTarget: "Personne à viser : il brasse de l'air.",
 } as const;
 
 export const TRIGGER_LABEL = {
@@ -200,6 +179,7 @@ export const TRIGGER_LABEL = {
   opponentSetPiece: 'sur un coup de pied arrêté adverse',
   ownPenalty: 'sur un penalty pour toi',
   opponentPenalty: 'sur un penalty adverse',
+  ownDeadBall: 'sur un penalty ou un coup franc pour toi',
   halftime: 'à la mi-temps',
 } as const;
 

@@ -19,7 +19,6 @@ export function openTriggers(
 ): void {
   const { state } = run;
   const opponent = opponentSide(side);
-  state.eventSeq++;
   state.triggers[side] = ownTrigger;
   state.triggers[opponent] = opponentTrigger;
   for (const concerned of [side, opponent]) {
@@ -34,12 +33,18 @@ export function clearTriggers(state: MatchState): void {
   state.triggers.away = null;
 }
 
+/** La capacité répond-elle au déclencheur ouvert ? `ownDeadBall` vaut pour penalty et coup de pied arrêté. */
+export function triggerIsOpen(ability: AbilityTrigger, open: AbilityTrigger | null): boolean {
+  if (ability === 'ownDeadBall') return open === 'ownSetPiece' || open === 'ownPenalty';
+  return ability === open;
+}
+
 /** Joueurs du camp dont la capacité répond au déclencheur ouvert et est disponible. */
 export function eligiblePlayerIds(state: MatchState, side: Side): string[] {
   const trigger = state.triggers[side];
   if (!trigger) return [];
   return teamOf(state, side)
-    .players.filter((player) => player.ability?.trigger === trigger && checkAvailability(state, side, player) === null)
+    .players.filter((player) => player.ability && player.ability.trigger !== 'anytime' && triggerIsOpen(player.ability.trigger, trigger) && checkAvailability(state, side, player) === null)
     .map((player) => player.id);
 }
 

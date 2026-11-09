@@ -125,15 +125,6 @@
     color: var(--craie);
     border-color: var(--carton);
   }
-  .ligne.combo {
-    background: repeating-linear-gradient(
-      45deg,
-      var(--scotch) 0 12px,
-      color-mix(in srgb, var(--scotch) 85%, var(--encre-fixe)) 12px 14px
-    );
-    color: var(--encre-fixe);
-    border-left-color: var(--encre-fixe);
-  }
   .ligne.card .tag {
     background: var(--scotch);
     color: var(--encre-fixe);

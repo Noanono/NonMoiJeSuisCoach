@@ -24,9 +24,6 @@ const LEVEL_PER_YEAR_BEFORE_MATURITY = 2;
 const MIN_YOUTH_POTENTIAL_GAIN = 3;
 const MAX_YOUTH_POTENTIAL_GAIN = 15;
 
-const MIN_INITIAL_MORALE = 55;
-const MAX_INITIAL_MORALE = 75;
-
 /** Salaire hebdomadaire : quelques dizaines d'euros en district, quelques milliers dans l'élite. */
 const SALARY_BASE = 20;
 const SALARY_RATING_SCALE = 16;
@@ -83,13 +80,11 @@ export function generatePlayer(options: GeneratePlayerOptions): Player {
     attributes,
     potential: generatePotential(rng, rating, age),
     fatigue: 0,
-    morale: rng.int(MIN_INITIAL_MORALE, MAX_INITIAL_MORALE),
     injuryWeeks: 0,
     suspendedMatches: 0,
-    ability: { abilityId: ability.id, level: 1, xp: 0, revealed: !ability.hidden, seasonUses: 0 },
+    ability: { abilityId: ability.id, level: 1, xp: 0, revealed: !ability.hidden },
     salary: salaryForRating(rating),
     clubId,
-    transferRequested: false,
     seasonStats: { matches: 0, goals: 0, yellowCards: 0, redCards: 0 },
   };
 }

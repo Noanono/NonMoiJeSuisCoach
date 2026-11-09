@@ -2,10 +2,9 @@
   import Button from '../../kit/Button.svelte';
   import Modal from './Modal.svelte';
   import { store } from '../../store.svelte';
-  import { dialogueText, DIALOGUES } from '../../../domain/club/dialogues';
+  import { DIALOGUES } from '../../../domain/club/dialogues';
   import { describeConsequence } from '../../../domain/club/model';
   import { answerDialogue } from '../../../domain/game';
-  import { fullName } from '../describe';
 
   /** Dialogue de la semaine (CLUB-06) : la question et ses réponses, chacune avec ses conséquences chiffrées. */
   interface Props {
@@ -21,10 +20,9 @@
       const pending = game.dialogue;
       const definition = pending && DIALOGUES.find((candidate) => candidate.id === pending.dialogueId);
       if (!pending || !definition) return null;
-      const player = pending.playerId ? game.players[pending.playerId] : undefined;
       return {
         speaker: definition.speakerName,
-        text: dialogueText(definition.text, player ? fullName(player) : 'un joueur'),
+        text: definition.text,
         choices: definition.choices.map((choice) => ({
           id: choice.id,
           label: choice.label,

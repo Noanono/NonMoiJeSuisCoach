@@ -1,29 +1,18 @@
 /**
- * Activation des capacités par le coach (CAP-03, CAP-04, CAP-07, CAP-16 à CAP-20).
+ * Activation des capacités par le coach (CAP-03, CAP-04, CAP-16 à CAP-20).
  * Parcours humain : previewActivation → startActivation → selectTarget (une à une)
  * → confirmActivation, ou cancelActivation sans rien consommer.
  */
-import type { Risk } from '../types';
 import { addConsequence } from './actions';
 import { comment, fill, TRIGGER_LABEL, UNAVAILABLE } from './commentary';
-import { checkCombo } from './combos';
 import { applyEffects, type EffectContext } from './effects';
 import { IMPACT, IMPACT_WINDOW_MINUTES } from './impact';
 import { beginRun, endRun, opponentSide, pushEvent, requirePlayer, teamOf, type Run } from './state';
 import { chosenTargetCount, validTargets } from './targets';
-import type {
-  ActivationPreview,
-  ActivationRecord,
-  MatchEvent,
-  MatchPlayer,
-  MatchState,
-  PreparedAbility,
-  Side,
-} from './types';
-import { refreshWindow } from './windows';
+import type { ActivationPreview, ActivationRecord, MatchEvent, MatchPlayer, MatchState, PreparedAbility, Side } from './types';
+import { refreshWindow, triggerIsOpen } from './windows';
 
 const HIDDEN_NAME = '???';
-const HIDDEN_RISK_LABEL = 'Revers inconnu';
 
 /** Raison pour laquelle le joueur ne peut pas activer sa capacité, `null` si c'est possible. */
 export function checkAvailability(state: MatchState, side: Side, player: MatchPlayer): string | null {
@@ -42,28 +31,21 @@ function physicalReason(state: MatchState, player: MatchPlayer, ability: Prepare
 }
 
 function timingReason(state: MatchState, side: Side, ability: PreparedAbility): string | null {
-  if (ability.trigger !== 'anytime' && state.triggers[side] !== ability.trigger) {
+  if (ability.trigger !== 'anytime' && !triggerIsOpen(ability.trigger, state.triggers[side])) {
     return fill(UNAVAILABLE.trigger, { label: TRIGGER_LABEL[ability.trigger] });
   }
-  const condition = ability.condition;
-  if (condition?.minMinute !== undefined && state.minute < condition.minMinute) {
-    return fill(UNAVAILABLE.minMinute, { n: condition.minMinute });
-  }
-  if (condition?.whenLeading && teamOf(state, side).goals <= teamOf(state, opponentSide(side)).goals) {
-    return UNAVAILABLE.whenLeading;
-  }
+  const window = ability.requiresRecentOpponentGoal;
+  if (window !== null && !hasRecentGoal(state, opponentSide(side), window)) return fill(UNAVAILABLE.noRecentGoal, { n: window });
   return null;
+}
+
+function hasRecentGoal(state: MatchState, side: Side, withinMinutes: number): boolean {
+  return state.goals.some((goal) => goal.side === side && !goal.cancelled && state.elapsed - goal.elapsed <= withinMinutes);
 }
 
 function usageReason(state: MatchState, side: Side, player: MatchPlayer): string | null {
   const ability = player.ability!;
-  const cooldown = ability.cooldown;
-  if (cooldown.kind === 'minutes' && player.cooldownUntil > state.elapsed) {
-    return fill(UNAVAILABLE.cooldown, { n: player.cooldownUntil - state.elapsed });
-  }
-  if (cooldown.kind === 'perMatch' && player.usesThisMatch >= cooldown.uses) return UNAVAILABLE.perMatch;
-  if (cooldown.kind === 'perSeason' && player.seasonUses >= cooldown.uses) return UNAVAILABLE.perSeason;
-  if (cooldown.kind === 'perEvent' && player.lastEventUse === state.eventSeq) return UNAVAILABLE.perEvent;
+  if (player.cooldownUntil > state.elapsed) return fill(UNAVAILABLE.cooldown, { n: player.cooldownUntil - state.elapsed });
   const gauge = teamOf(state, side).gauge;
   if (gauge < ability.cost) return fill(UNAVAILABLE.gauge, { n: ability.cost - gauge });
   if (needsTargets(ability) && validTargets(state, player, ability).length === 0) return UNAVAILABLE.noTarget;
@@ -79,14 +61,13 @@ function needsTargets(ability: PreparedAbility): boolean {
 // Parcours du coach
 // ---------------------------------------------------------------------------
 
-/** Ce que le coach voit avant d'activer (CAP-07). */
+/** Ce que le coach voit avant d'activer. */
 export function previewActivation(state: MatchState, side: Side, playerId: string): ActivationPreview {
   const player = requirePlayer(state, playerId);
   const ability = player.ability;
   const busy = state.pending !== null && state.pending.playerId !== playerId;
   const reason = busy ? UNAVAILABLE.busy : checkAvailability(state, side, player);
   const revealed = player.abilityRevealed || !ability?.hidden;
-  const cooldownRemaining = Math.max(0, player.cooldownUntil - state.elapsed);
   return {
     available: reason === null,
     reason,
@@ -94,19 +75,16 @@ export function previewActivation(state: MatchState, side: Side, playerId: strin
     playerId,
     abilityId: ability && revealed ? ability.id : null,
     abilityName: ability && revealed ? ability.name : HIDDEN_NAME,
+    rarity: ability && revealed ? ability.rarity : null,
     revealed,
     cost: ability?.cost ?? 0,
     gauge: teamOf(state, side).gauge,
-    successChance: ability?.successChance ?? 0,
-    risks: (ability?.risks ?? []).map((risk: Risk) => ({
-      label: revealed ? risk.label : HIDDEN_RISK_LABEL,
-      chance: risk.chance,
-    })),
     targeting: ability?.targeting.kind ?? null,
     targetCount: ability ? chosenTargetCount(ability) : 0,
-    range: ability?.targeting.range ?? 'any',
+    targetLine: ability?.targeting.line ?? null,
+    targetDowned: ability?.targeting.downed ?? false,
     validTargetIds: ability ? validTargets(state, player, ability).map((target) => target.id) : [],
-    cooldownRemaining: ability?.cooldown.kind === 'minutes' ? cooldownRemaining : 0,
+    cooldownRemaining: Math.max(0, player.cooldownUntil - state.elapsed),
   };
 }
 
@@ -134,7 +112,7 @@ export function cancelActivation(state: MatchState): void {
   state.pending = null;
 }
 
-/** Valide l'activation : consomme, tire la réussite et les risques, applique les effets et combos. */
+/** Valide l'activation : consomme et applique les effets. */
 export function confirmActivation(state: MatchState): MatchEvent[] {
   const pending = state.pending;
   if (!pending || pending.targetIds.length < pending.required) return [];
@@ -156,44 +134,26 @@ export interface ActivationOrder {
 
 /** Cœur commun au coach et à l'IA. La disponibilité doit avoir été vérifiée. Mute l'état. */
 export function performActivation(run: Run, order: ActivationOrder): ActivationRecord {
-  const { state, rng } = run;
+  const { state } = run;
   const { side, player } = order;
   const ability = player.ability!;
   consumeActivation(state, player, ability);
   revealAbility(state, player, ability);
   const targets = ability.targeting.kind === 'randomOpponent' ? drawRandomTargets(run, player, ability) : order.targets;
-  const record = createRecord(state, order, ability, rng.chance(ability.successChance));
+  const record = createRecord(state, order, ability);
   record.targetIds = targets.map((target) => target.id);
   state.activations.push(record);
-  announceActivation(run, order, record, targets);
-  const context: EffectContext = {
-    run,
-    side,
-    source: player,
-    participants: [player],
-    targets,
-    label: ability.name,
-    activation: record,
-  };
-  if (record.success) applyEffects(context, ability.effects);
-  applyRisks({ ...context, activation: null }, ability.risks, record);
-  if (record.success) checkCombo(run, record);
+  announceActivation(run, order, targets);
+  const context: EffectContext = { run, side, source: player, targets, label: ability.name, activation: record };
+  applyEffects(context, ability.effects);
   refreshWindow(state);
   return record;
 }
 
-/** Jauge et recharge (CAP-04, CAP-05, CAP-12). */
+/** Jauge et recharge (CAP-04, CAP-05). */
 function consumeActivation(state: MatchState, player: MatchPlayer, ability: PreparedAbility): void {
-  const team = teamOf(state, player.side);
-  team.gauge -= ability.cost;
-  player.usesThisMatch++;
-  const cooldown = ability.cooldown;
-  if (cooldown.kind === 'minutes') player.cooldownUntil = state.elapsed + cooldown.value;
-  if (cooldown.kind === 'perEvent') player.lastEventUse = state.eventSeq;
-  if (cooldown.kind === 'perSeason') {
-    player.seasonUses++;
-    addConsequence(team, { type: 'seasonUse', playerId: player.id, abilityId: ability.id, seasonUses: player.seasonUses });
-  }
+  teamOf(state, player.side).gauge -= ability.cost;
+  if (ability.cooldown > 0) player.cooldownUntil = state.elapsed + ability.cooldown;
 }
 
 /** Une capacité cachée se révèle à sa première activation (CAP-13). */
@@ -203,7 +163,7 @@ function revealAbility(state: MatchState, player: MatchPlayer, ability: Prepared
   addConsequence(teamOf(state, player.side), { type: 'abilityRevealed', playerId: player.id, abilityId: ability.id });
 }
 
-/** « Au hasard » (CAP-18) : la cible est tirée parmi les adversaires à portée. */
+/** « Au hasard » (CAP-18) : la cible est tirée parmi les adversaires valides. */
 function drawRandomTargets(run: Run, player: MatchPlayer, ability: PreparedAbility): MatchPlayer[] {
   const pool = validTargets(run.state, player, ability);
   const count = Math.min(ability.targeting.count ?? 1, pool.length);
@@ -212,26 +172,24 @@ function drawRandomTargets(run: Run, player: MatchPlayer, ability: PreparedAbili
   return drawn;
 }
 
-function createRecord(state: MatchState, order: ActivationOrder, ability: PreparedAbility, success: boolean) {
-  const record: ActivationRecord = {
+function createRecord(state: MatchState, order: ActivationOrder, ability: PreparedAbility): ActivationRecord {
+  return {
     id: state.nextActivationId++,
     side: order.side,
     playerId: order.player.id,
     abilityId: ability.id,
     abilityName: ability.name,
+    rarity: ability.rarity,
     minute: state.minute,
     elapsed: state.elapsed,
     byAi: order.byAi,
-    success,
     targetIds: [],
-    risks: [],
-    impact: success ? IMPACT.success : 0,
+    zone: ability.targeting.kind === 'zone',
+    floats: [],
+    impact: IMPACT.success,
     notes: [],
     activeUntil: state.elapsed + Math.max(IMPACT_WINDOW_MINUTES, longestDuration(ability)),
-    comboName: null,
-    usedInCombo: false,
   };
-  return record;
 }
 
 function longestDuration(ability: PreparedAbility): number {
@@ -243,24 +201,11 @@ function longestDuration(ability: PreparedAbility): number {
 }
 
 /** Chaque activation est annoncée dans le live, surtout celles de l'IA (MATCH-07). */
-function announceActivation(run: Run, order: ActivationOrder, record: ActivationRecord, targets: MatchPlayer[]): void {
+function announceActivation(run: Run, order: ActivationOrder, targets: MatchPlayer[]): void {
   const ability = order.player.ability!;
   const team = teamOf(run.state, order.side);
   const targetText = targets.length > 0 ? ` Cible : ${targets.map((target) => target.name).join(', ')}.` : '';
   const vars = { player: order.player.name, team: team.name, ability: ability.name };
-  const key = !record.success ? 'activationFailed' : order.byAi ? 'activationAi' : 'activationHuman';
-  const text = comment(run.rng, key, { ...vars, label: `${ability.description}${targetText}` });
+  const text = comment(run.rng, order.byAi ? 'activationAi' : 'activationHuman', { ...vars, label: `${ability.description}${targetText}` });
   pushEvent(run, 'activation', order.side, text, { playerId: order.player.id, abilityId: ability.id });
-}
-
-/** Tire chaque risque indépendamment, que l'effet principal ait réussi ou non (CAP-07). */
-export function applyRisks(context: EffectContext, risks: readonly Risk[], record: ActivationRecord): void {
-  const { run } = context;
-  for (const risk of risks) {
-    if (!run.rng.chance(risk.chance)) continue;
-    record.risks.push(risk.label);
-    const vars = { team: teamOf(run.state, context.side).name, player: context.source.name, label: risk.label };
-    pushEvent(run, 'risk', context.side, comment(run.rng, 'risk', vars), { playerId: context.source.id });
-    applyEffects(context, risk.effects);
-  }
 }

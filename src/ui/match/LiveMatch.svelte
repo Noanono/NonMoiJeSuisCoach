@@ -30,6 +30,8 @@
     return () => clearInterval(timer);
   });
 
+  $effect(() => () => controller.dispose());
+
   /** Onglet caché : on met en pause plutôt que de simuler pour personne. */
   function pauseWhenHidden(): void {
     if (document.hidden && controller.running) controller.paused = true;

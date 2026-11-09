@@ -1,38 +1,24 @@
 import { getAbility } from '../abilities/catalog';
 import { pickWeeklyDialogue } from '../club/dialogues';
 import { applyBalance, wageBill, weeklyBalance } from '../club/finance';
-import { clampGauge, type FrasqueEvent, type MatchOutcome } from '../club/model';
-import { applyPressArticle, humiliationEvent, writeArticle } from '../club/press';
-import { confidenceAfterMatch, confidenceTrend, isFired, matchExpectation } from '../club/president';
+import { clampGauge, type MatchOutcome } from '../club/model';
+import { confidenceAfterMatch, confidenceTrend, isFired, matchExpectation, sponsorMoodAfterMatch } from '../club/president';
 import { weeklySquadUpdate } from '../club/squadLife';
 import { activeOffers, generateIncomingOffers } from '../club/transfers';
 import { createRng, type Rng } from '../core/rng';
 import { isTransferWindowOpen, SEASON_WEEKS } from '../league/calendar';
 import { drawNextCupRound, isCupRoundComplete } from '../league/cup';
-import type { Fixture, Player, PressArticle } from '../types';
+import type { Fixture, Player } from '../types';
 import { playAiFixture } from './matches';
 import { callUpStandIns } from './standIns';
 import { divisionStandings, endSeason, refreshAiLineups } from './season';
-import {
-  clubPlayers,
-  humanClub,
-  humanDivision,
-  humanFixture,
-  humanSquad,
-  outlookOf,
-  replacePlayers,
-  weekFixtures,
-  writeOutlook,
-} from './selectors';
+import { clubPlayers, humanClub, humanDivision, humanFixture, humanSquad, replacePlayers, weekFixtures } from './selectors';
 import type { GameState } from './state';
 
 /** Récupération hebdomadaire des joueurs des clubs IA, version allégée de la vie d'effectif. */
 const AI_WEEKLY_RECOVERY = 30;
 const DIALOGUE_CHANCE = 0.6;
 const RECENT_DIALOGUES_KEPT = 6;
-const PRESS_KEPT = 30;
-/** L'hebdo local ne parle pas du club toutes les semaines… sauf après une humiliation. */
-const FRONT_PAGE_CHANCE = 0.4;
 
 /** Exécute une commande avec le générateur de la partie, puis sauvegarde son état (reprise identique). */
 export function withRng<T>(state: GameState, command: (rng: Rng) => T): T {
@@ -59,16 +45,13 @@ export function advanceWeek(state: GameState): void {
     for (const fixture of weekFixtures(state)) if (!fixture.result) playAiFixture(state, fixture, rng);
     const fixture = humanFixture(state);
     const outcome = fixture ? outcomeFor(fixture, state.humanClubId) : null;
-    updateHumanSquad(state, fixture, outcome, rng);
+    updateHumanSquad(state, fixture);
     recoverAiSquads(state);
     settleFinances(state, fixture, outcome);
     updatePresident(state, fixture, outcome);
     updateOffers(state, rng);
     advanceCup(state, rng);
     maybeOpenDialogue(state, rng);
-    state.teamNight = 'none';
-    state.finesCollected = 0;
-    state.finesPaid = 0;
     if (state.status === 'fired') return;
     state.week += 1;
     if (state.week > SEASON_WEEKS) endSeason(state, rng);
@@ -105,44 +88,13 @@ function goalsFor(fixture: Fixture, clubId: string): { scored: number; conceded:
     : { scored: result.awayGoals, conceded: result.homeGoals };
 }
 
-/** Vie du vestiaire (EFF-04 à EFF-07, FRAS-01, FRAS-06) et unes de la presse locale (FRAS-03, FRAS-04). */
-function updateHumanSquad(state: GameState, fixture: Fixture | null, outcome: MatchOutcome | null, rng: Rng): void {
+/** Récupération, blessures et suspensions de la semaine (EFF-04, EFF-05). */
+function updateHumanSquad(state: GameState, fixture: Fixture | null): void {
   const lineup = humanClub(state).lineup;
-  const result = weeklySquadUpdate({
-    squad: humanSquad(state),
-    appearances: fixture && lineup ? lineup.starters : [],
-    matchOutcome: outcome,
-    houseRules: state.houseRules,
-    teamNight: state.teamNight,
-    abilityOf: getAbility,
-    rng,
-  });
-  replacePlayers(state, result.squad);
-  state.abilityContext = result.abilityContext;
-  state.news.push(...result.messages);
-  const events = [...result.events];
-  if (fixture) {
-    const { scored, conceded } = goalsFor(fixture, state.humanClubId);
-    const humiliation = humiliationEvent(scored, conceded);
-    if (humiliation) events.push(humiliation);
-  }
-  publishFrontPage(state, events, rng);
-  state.press.length = Math.min(state.press.length, PRESS_KEPT);
-}
-
-/** Une seule une par semaine (FRAS-03) : la frasque qui fait le plus de dégâts auprès du président. */
-function publishFrontPage(state: GameState, events: readonly FrasqueEvent[], rng: Rng): void {
-  const context = { week: state.week, season: state.season, clubName: humanClub(state).name, rng };
-  const articles = events.map((event) => writeArticle(event, context));
-  const frontPage = articles.reduce<PressArticle | null>(
-    (worst, article) => (!worst || article.presidentDelta < worst.presidentDelta ? article : worst),
-    null,
+  replacePlayers(
+    state,
+    weeklySquadUpdate({ squad: humanSquad(state), appearances: fixture && lineup ? lineup.starters : [], matchPlayed: fixture !== null }),
   );
-  const humiliated = events.some((event) => event.kind === 'humiliatingDefeat');
-  if (!frontPage || (!humiliated && !rng.chance(FRONT_PAGE_CHANCE))) return;
-  state.press.unshift(frontPage);
-  writeOutlook(state, applyPressArticle(outlookOf(state), frontPage));
-  state.news.push(`À la une de L'Écho de la Buvette : « ${frontPage.headline} »`);
 }
 
 function recoverAiSquads(state: GameState): void {
@@ -166,16 +118,13 @@ function settleFinances(state: GameState, fixture: Fixture | null, outcome: Matc
     sponsorMood: state.outlook.sponsorMood,
     matchOutcome: outcome,
     homeMatch: fixture?.homeId === club.id,
-    teamNight: state.teamNight,
     wageBill: wageBill(humanSquad(state)),
-    finesCollected: state.finesCollected,
-    finesPaid: state.finesPaid,
   });
   state.clubs[club.id] = applyBalance(club, lines);
   state.lastFinance = lines;
 }
 
-/** Confiance du président après le match (CLUB-05) ; licenciement à zéro. */
+/** Confiance du président et humeur des sponsors après le match (CLUB-05) ; licenciement à zéro. */
 function updatePresident(state: GameState, fixture: Fixture | null, outcome: MatchOutcome | null): void {
   if (fixture && outcome) {
     const isHome = fixture.homeId === state.humanClubId;
@@ -187,6 +136,7 @@ function updatePresident(state: GameState, fixture: Fixture | null, outcome: Mat
       goalDifference: scored - conceded,
     });
     state.outlook.presidentConfidence = change.confidence;
+    state.outlook.sponsorMood = sponsorMoodAfterMatch(state.outlook.sponsorMood, outcome);
     state.news.push(`Le président : « ${change.message} »`);
     state.streak = {
       wins: outcome === 'win' ? state.streak.wins + 1 : 0,
@@ -230,22 +180,16 @@ function advanceCup(state: GameState, rng: Rng): void {
 /** Dialogue de la semaine (CLUB-06). */
 function maybeOpenDialogue(state: GameState, rng: Rng): void {
   if (state.dialogue || !rng.chance(DIALOGUE_CHANCE)) return;
-  const squad = humanSquad(state);
-  const saddest = squad.reduce<Player | null>((low, player) => (!low || player.morale < low.morale ? player : low), null);
-  const { dialogue, playerId } = pickWeeklyDialogue(
+  const dialogue = pickWeeklyDialogue(
     {
       losingStreak: state.streak.losses,
       winningStreak: state.streak.wins,
-      recentFrasque: state.press.some((article) => article.week === state.week && article.season === state.season),
       budget: humanClub(state).budget,
       presidentConfidence: state.outlook.presidentConfidence,
-      lastTeamNight: state.teamNight,
-      transferRequestPlayerId: squad.find((player) => player.transferRequested)?.id ?? null,
-      unhappyPlayerId: saddest && saddest.morale < 35 ? saddest.id : null,
       recentDialogueIds: state.recentDialogueIds,
     },
     rng,
   );
-  state.dialogue = { dialogueId: dialogue.id, playerId: playerId ?? rng.pick(squad).id };
+  state.dialogue = { dialogueId: dialogue.id };
   state.recentDialogueIds = [dialogue.id, ...state.recentDialogueIds].slice(0, RECENT_DIALOGUES_KEPT);
 }

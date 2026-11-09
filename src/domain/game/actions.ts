@@ -4,13 +4,11 @@
  */
 import { getAbility } from '../abilities/catalog';
 import { applyDialogueChoice, DIALOGUES } from '../club/dialogues';
-import { finePlayer, fineAmount, type FineLevel } from '../club/discipline';
-import { applyPressArticle, writeArticle } from '../club/press';
-import { acceptOffer, askingPrice, buyPlayer, marketListings, rejectOffer, sellPlayer, type MarketListing, type TransferResult } from '../club/transfers';
+import { acceptOffer, askingPrice, buyPlayer, marketListings, sellPlayer, type MarketListing, type TransferResult } from '../club/transfers';
 import { askingSalary } from '../club/valuation';
 import { isTransferWindowOpen } from '../league/calendar';
 import { autoLineup, validateLineup, type LineupError } from '../league/lineup';
-import type { HouseRule, Instructions, Lineup, TeamNight } from '../types';
+import type { Instructions, Lineup } from '../types';
 import { humanClub, humanSquad, outlookOf, replacePlayers, writeOutlook } from './selectors';
 import type { GameState } from './state';
 import { withRng } from './week';
@@ -39,39 +37,6 @@ export function autoPickLineup(state: GameState): LineupError[] {
 export function setInstructions(state: GameState, instructions: Instructions): void {
   const club = humanClub(state);
   if (club.lineup) club.lineup = { ...club.lineup, instructions };
-}
-
-/** Règlement intérieur (FRAS-01) : appliqué au moral chaque semaine et aux capacités en match. */
-export function toggleHouseRule(state: GameState, rule: HouseRule): void {
-  state.houseRules = state.houseRules.includes(rule)
-    ? state.houseRules.filter((existing) => existing !== rule)
-    : [...state.houseRules, rule];
-  state.abilityContext = { ...state.abilityContext, houseRules: state.houseRules };
-}
-
-/** Soirée d'équipe de la semaine (FRAS-06) : elle compte pour le prochain match. */
-export function chooseTeamNight(state: GameState, night: TeamNight): void {
-  state.teamNight = night;
-  state.abilityContext = { ...state.abilityContext, teamNight: night };
-}
-
-/** Amende (FRAS-02) : encaissée au bilan de la semaine, le joueur perd du moral et peut se rebeller. */
-export function fine(state: GameState, playerId: string, level: FineLevel): ActionResult {
-  const player = state.players[playerId];
-  if (!player || player.clubId !== state.humanClubId) return refused('Ce joueur n’est pas chez toi.');
-  return withRng(state, (rng) => {
-    const result = finePlayer(player, fineAmount(player, level), rng);
-    state.players[playerId] = result.player;
-    state.finesCollected += result.income;
-    let outlook = outlookOf(state);
-    for (const event of result.events) {
-      const article = writeArticle(event, { week: state.week, season: state.season, clubName: humanClub(state).name, rng });
-      state.press.unshift(article);
-      outlook = applyPressArticle(outlook, article);
-    }
-    writeOutlook(state, outlook);
-    return done(result.messages.join(' '));
-  });
 }
 
 export function transferWindowOpen(state: GameState): boolean {
@@ -131,15 +96,9 @@ export function answerOffer(state: GameState, offerId: string, accept: boolean):
   const offer = state.offers.find((candidate) => candidate.id === offerId);
   if (!offer) return refused('Cette offre a expiré. Le club adverse a acheté un barbecue à la place.');
   state.offers = state.offers.filter((candidate) => candidate.id !== offerId);
-  const world = { clubs: state.clubs, players: state.players };
-  if (!accept) {
-    const rejection = rejectOffer(world, offer);
-    state.clubs = rejection.world.clubs;
-    state.players = rejection.world.players;
-    return done(rejection.messages.join(' '));
-  }
+  if (!accept) return done('Offre refusée.');
   const lineup = humanClub(state).lineup;
-  const result = applyTransfer(state, acceptOffer(world, offer, { week: state.week, windowOpen: transferWindowOpen(state) }));
+  const result = applyTransfer(state, acceptOffer({ clubs: state.clubs, players: state.players }, offer, { week: state.week, windowOpen: transferWindowOpen(state) }));
   if (result.ok) refillLineup(state, lineup);
   return result;
 }
@@ -154,11 +113,7 @@ export function answerDialogue(state: GameState, choiceId: string): ActionResult
   const pending = state.dialogue;
   const dialogue = pending && DIALOGUES.find((candidate) => candidate.id === pending.dialogueId);
   if (!pending || !dialogue) return refused('Personne ne t’attend. Profites-en.');
-  const result = applyDialogueChoice(
-    { outlook: outlookOf(state), squad: humanSquad(state), ...(pending.playerId ? { playerId: pending.playerId } : {}) },
-    dialogue,
-    choiceId,
-  );
+  const result = applyDialogueChoice({ outlook: outlookOf(state), squad: humanSquad(state) }, dialogue, choiceId);
   writeOutlook(state, result.outlook);
   replacePlayers(state, result.squad);
   state.dialogue = null;

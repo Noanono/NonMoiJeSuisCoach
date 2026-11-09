@@ -3,7 +3,8 @@
  * joueurs par ligne, état de chaque jeton et effets actifs. Fonctions pures, sans Svelte.
  */
 import { activeEffects, previewActivation, type ActiveEffectView, type MatchPlayer, type MatchState, type Side } from '../../domain/match';
-import type { Position } from '../../domain/types';
+import type { Position, Rarity } from '../../domain/types';
+import type { AvatarPlayer } from '../kit/avatar';
 
 /** Ordre des lignes du coach, de son but vers l'attaque. L'adversaire est en miroir. */
 const LINE_ORDER: readonly Position[] = ['GK', 'DEF', 'MID', 'ATT'];
@@ -97,6 +98,7 @@ export function tokenFocus(state: MatchState, player: MatchPlayer, coachSide: Si
 export interface TokenView {
   id: string;
   name: string;
+  avatar: AvatarPlayer;
   rating: number;
   own: boolean;
   status: Availability;
@@ -106,6 +108,9 @@ export interface TokenView {
   focus: TokenFocus;
   /** Coût de la capacité si elle peut partir maintenant, `null` sinon. */
   readyCost: number | null;
+  readyRarity: Rarity | null;
+  /** Le joueur est sous l'effet d'une capacité : le malus l'emporte, c'est ce qu'il faut voir. */
+  halo: 'bonus' | 'malus' | null;
   /** Libellé complet pour les lecteurs d'écran. */
   label: string;
 }
@@ -122,6 +127,9 @@ export function tokenView(state: MatchState, player: MatchPlayer, coachSide: Sid
   const focus = tokenFocus(state, player, coachSide);
   const ready = own && state.pending === null && state.status !== 'finished' && previewActivation(state, coachSide, player.id);
   const readyCost = ready && ready.available ? ready.cost : null;
+  const readyRarity = readyCost !== null ? (player.ability?.rarity ?? null) : null;
+  const halo = chips.some((chip) => chip.tone === 'malus') ? 'malus' : chips.length > 0 ? 'bonus' : null;
+  const avatar = { id: player.id, age: player.profile.age, clubId: player.profile.clubId, position: player.profile.position };
   const rating = Math.round(player.rating);
   const parts = [player.name, player.line ? LINE_LABEL[player.line] : 'remplaçant', `note ${rating}`];
   if (reason) parts.push(reason);
@@ -129,7 +137,7 @@ export function tokenView(state: MatchState, player: MatchPlayer, coachSide: Sid
   if (readyCost !== null) parts.push(`capacité prête, coût ${readyCost}`);
   if (focus.chosen) parts.push('cible choisie');
   else if (focus.highlighted) parts.push(state.pending ? 'cible valide' : 'peut agir maintenant');
-  return { id: player.id, name: shortName(player), rating, own, status, reason, chips, focus, readyCost, label: parts.join(', ') };
+  return { id: player.id, name: shortName(player), avatar, rating, own, status, reason, chips, focus, readyCost, readyRarity, halo, label: parts.join(', ') };
 }
 
 export interface PitchView {
@@ -164,14 +172,14 @@ const STAT_LABEL: Record<ActiveEffectView['stat'], string> = {
   defense: 'défense',
   goalkeeping: 'arrêts',
   concentration: 'concentration',
-  aggression: 'agressivité',
-  morale: 'moral',
   knockout: 'hors jeu',
+  swap: 'niveaux inversés',
 };
 
 const PERCENT = 100;
 
 export interface EffectChip {
+  stat: ActiveEffectView['stat'];
   tone: 'bonus' | 'malus';
   /** Signe toujours affiché avec la couleur (design system). */
   sign: '+' | '−';
@@ -190,9 +198,10 @@ export function toChip(effect: ActiveEffectView): EffectChip {
   const bonus = effect.value > 0;
   const sign = bonus ? '+' : '−';
   const countdown = effect.remaining === null ? 'fin' : `${effect.remaining}'`;
-  const amount = effect.stat === 'knockout' ? '' : ` ${Math.round(Math.abs(effect.value) * PERCENT)} %`;
+  const amount = effect.stat === 'knockout' || effect.stat === 'swap' ? '' : ` ${Math.round(Math.abs(effect.value) * PERCENT)} %`;
   const duration = effect.remaining === null ? "jusqu'au coup de sifflet" : `encore ${effect.remaining} min`;
   return {
+    stat: effect.stat,
     tone: bonus ? 'bonus' : 'malus',
     sign,
     countdown,

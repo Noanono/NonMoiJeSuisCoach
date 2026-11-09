@@ -1,9 +1,9 @@
-import type { Club, Player, TeamNight } from '../types';
+import type { Club, Player } from '../types';
 import { NEUTRAL_SPONSOR_MOOD, type MatchOutcome } from './model';
 
 /**
  * Bilan financier hebdomadaire du club (CLUB-01) : recettes (sponsors, buvette,
- * primes de résultat, amendes encaissées) et dépenses (salaires, amendes payées).
+ * primes de résultat) et dépenses (salaires).
  */
 
 export interface FinanceLine {
@@ -20,13 +20,8 @@ export interface WeeklyFinanceInput {
   /** Résultat du match de la semaine, `null` sans match. */
   matchOutcome: MatchOutcome | null;
   homeMatch: boolean;
-  teamNight: TeamNight;
   /** Masse salariale hebdomadaire (voir `wageBill`). */
   wageBill: number;
-  /** Amendes infligées aux joueurs cette semaine (FRAS-02). */
-  finesCollected: number;
-  /** Amendes payées par le club à la ligue (streaker, fumigène…). */
-  finesPaid: number;
 }
 
 /** Chaque division plus bas divise les montants par 1 / TIER_DECAY. */
@@ -36,8 +31,6 @@ const ELITE_BUVETTE_PER_HOME_MATCH = 20_000;
 const ELITE_RESULT_BONUS: Record<MatchOutcome, number> = { win: 30_000, draw: 10_000, loss: 0 };
 /** Humeur 0 = sponsors à moitié prix, 100 = sponsors à +50 %. */
 const SPONSOR_MOOD_SPAN = 1;
-/** La troisième mi-temps se joue au bar du club : la buvette en profite. */
-const BUVETTE_NIGHT_FACTOR: Record<TeamNight, number> = { none: 1, lightDrinks: 1.1, bigNight: 1.35 };
 const BUVETTE_HOME_WIN_FACTOR = 1.2;
 
 function tierFactor(divisionTier: number): number {
@@ -53,10 +46,10 @@ function sponsorIncome({ divisionTier, sponsorMood }: WeeklyFinanceInput): numbe
   return Math.round(ELITE_SPONSOR_WEEKLY * tierFactor(divisionTier) * moodFactor);
 }
 
-function buvetteIncome({ divisionTier, homeMatch, matchOutcome, teamNight }: WeeklyFinanceInput): number {
+function buvetteIncome({ divisionTier, homeMatch, matchOutcome }: WeeklyFinanceInput): number {
   if (!homeMatch || matchOutcome === null) return 0;
   const winFactor = matchOutcome === 'win' ? BUVETTE_HOME_WIN_FACTOR : 1;
-  return Math.round(ELITE_BUVETTE_PER_HOME_MATCH * tierFactor(divisionTier) * BUVETTE_NIGHT_FACTOR[teamNight] * winFactor);
+  return Math.round(ELITE_BUVETTE_PER_HOME_MATCH * tierFactor(divisionTier) * winFactor);
 }
 
 function resultBonus({ divisionTier, matchOutcome }: WeeklyFinanceInput): number {
@@ -70,9 +63,7 @@ export function weeklyBalance(input: WeeklyFinanceInput): FinanceLine[] {
     { label: 'Sponsors', amount: sponsorIncome(input) },
     { label: 'Buvette', amount: buvetteIncome(input) },
     { label: 'Prime de résultat', amount: resultBonus(input) },
-    { label: 'Amendes encaissées', amount: input.finesCollected },
     { label: 'Salaires', amount: -input.wageBill },
-    { label: 'Amendes de la ligue', amount: -input.finesPaid },
   ];
   return lines.filter((line) => line.amount !== 0);
 }

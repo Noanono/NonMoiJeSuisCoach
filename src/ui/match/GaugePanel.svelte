@@ -28,7 +28,7 @@
   <div class="barre">
     <Gauge value={gauges.own} max={GAUGE_MAX} segments={GAUGE_MAX} label="Jauge de Gueulante" />
   </div>
-  <p class="texte-s aide">+1 toutes les 5 min, +2 quand tu encaisses. En face : <span class="tampon">{gauges.other}/{GAUGE_MAX}</span></p>
+  <p class="texte-s aide">+1 toutes les 10 min, +1 quand tu encaisses. En face : <span class="tampon">{gauges.other}/{GAUGE_MAX}</span></p>
 </section>
 
 <style>

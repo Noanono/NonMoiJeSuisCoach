@@ -1,12 +1,11 @@
 /**
  * Création de l'état du match et accès communs (équipes, joueurs, zones).
  */
-import type { Ability, Combo, Player, Position } from '../types';
+import type { Ability, Player, Position } from '../types';
 import { createRng, type Rng } from '../core/rng';
 import { effectiveRating, FORMATION_SLOTS } from '../player/rating';
-import { getAbility, COMBOS } from '../abilities/catalog';
-import { contextMultiplier, MAX_LEVEL, scaleEffect, scaleRisk, statsAtLevel } from '../abilities/progression';
-import type { AbilityContext } from '../abilities/progression';
+import { getAbility } from '../abilities/catalog';
+import { statsAtLevel } from '../abilities/progression';
 import type {
   MatchEvent,
   MatchEventKind,
@@ -19,7 +18,6 @@ import type {
   TeamState,
 } from './types';
 import { comment } from './commentary';
-import { isBeneficial } from './effect-nature';
 
 /** Jauge de Gueulante au coup d'envoi (CAP-05). */
 export const GAUGE_START = 3;
@@ -128,23 +126,18 @@ export function createMatch(options: MatchOptions): MatchState {
     elapsed: 0,
     stoppage: 0,
     stoppageAnnounced: false,
-    extraStoppage: 0,
-    frozenUntil: NEVER,
-    homeAdvantageCancelledUntil: NEVER,
+    swappedUntil: NEVER,
     home,
     away,
     goals: [],
     cards: [],
     injuries: [],
     activations: [],
-    combosTriggered: [],
     events: [],
     awaiting: null,
     pending: null,
     pendingPlay: null,
     triggers: { home: null, away: null },
-    eventSeq: 0,
-    combos: relevantCombos(options.combos ?? COMBOS, home, away),
     shootout: null,
     xpGains: {},
     nextActivationId: 1,
@@ -159,9 +152,9 @@ function createTeam(sheet: TeamSheet, side: Side, lookup: AbilityLookup): TeamSt
   const slots = FORMATION_SLOTS[sheet.formation];
   const players: MatchPlayer[] = [];
   sheet.starters.forEach((player, index) => {
-    players.push(createMatchPlayer({ player, side, line: slots[index] ?? player.position, sheet, lookup }));
+    players.push(createMatchPlayer({ player, side, line: slots[index] ?? player.position, lookup }));
   });
-  for (const player of sheet.bench) players.push(createMatchPlayer({ player, side, line: null, sheet, lookup }));
+  for (const player of sheet.bench) players.push(createMatchPlayer({ player, side, line: null, lookup }));
   return {
     side,
     clubId: sheet.clubId,
@@ -176,10 +169,7 @@ function createTeam(sheet: TeamSheet, side: Side, lookup: AbilityLookup): TeamSt
     chanceBoosts: [],
     shotMaluses: [],
     pendingCancels: 0,
-    foulsIgnored: 0,
-    noCardsUntil: NEVER,
-    emptyNetUntil: NEVER,
-    extraAttackerUntil: NEVER,
+    delayed: [],
     consequences: [],
   };
 }
@@ -188,11 +178,10 @@ interface PlayerSetup {
   player: Player;
   side: Side;
   line: Position | null;
-  sheet: TeamSheet;
   lookup: AbilityLookup;
 }
 
-function createMatchPlayer({ player, side, line, sheet, lookup }: PlayerSetup): MatchPlayer {
+function createMatchPlayer({ player, side, line, lookup }: PlayerSetup): MatchPlayer {
   const profile: Player = { ...player };
   const ability = findAbility(lookup, player.ability.abilityId);
   return {
@@ -207,12 +196,10 @@ function createMatchPlayer({ player, side, line, sheet, lookup }: PlayerSetup): 
     injured: false,
     knockedOutUntil: NEVER,
     effects: [],
-    ability: ability && prepareAbility(ability, player.ability.level, sheet.context),
+    ability: ability && prepareAbility(ability, player.ability.level),
     abilityRevealed: player.ability.revealed,
-    seasonUses: player.ability.seasonUses,
-    usesThisMatch: 0,
     cooldownUntil: 0,
-    lastEventUse: -1,
+    fatigueRestored: 0,
     goals: 0,
   };
 }
@@ -226,39 +213,22 @@ function findAbility(lookup: AbilityLookup, id: string): Ability | null {
   }
 }
 
-function targetingAtLevel(ability: Ability, level: number): Ability['targeting'] {
-  return level >= MAX_LEVEL && ability.level5Targeting ? { ...ability.targeting, ...ability.level5Targeting } : ability.targeting;
-}
-
-/** Niveau (CAP-11) puis contexte (CAP-14) : le bonus amplifie les effets favorables, le risque les revers. */
-export function prepareAbility(ability: Ability, level: number, context: AbilityContext): PreparedAbility {
+/** Applique le niveau (CAP-11) à une capacité du catalogue. */
+export function prepareAbility(ability: Ability, level: number): PreparedAbility {
   const stats = statsAtLevel(ability, level);
-  const multiplier = contextMultiplier(ability, context);
   return {
     id: ability.id,
     name: ability.name,
+    rarity: ability.rarity,
     category: ability.category,
     position: ability.position,
-    targeting: targetingAtLevel(ability, level),
+    targeting: stats.targeting,
     trigger: ability.trigger,
-    condition: ability.condition ?? null,
+    requiresRecentOpponentGoal: ability.requiresRecentOpponentGoal ?? null,
     description: ability.description,
-    downside: ability.downside,
     hidden: ability.hidden,
     cost: stats.cost,
-    successChance: stats.successChance,
     cooldown: stats.cooldown,
-    effects: stats.effects.map((effect) =>
-      isBeneficial(effect, ability.targeting.kind) ? scaleEffect(effect, multiplier.bonus) : effect,
-    ),
-    risks: stats.risks.map((risk) => scaleRisk(risk, multiplier.risk)),
+    effects: stats.effects,
   };
-}
-
-/** Ne garde que les combos jouables dans ce match : les deux capacités dans la même équipe. */
-function relevantCombos(combos: readonly Combo[], home: TeamState, away: TeamState): Combo[] {
-  const owns = (team: TeamState, id: string) => team.players.some((player) => player.ability?.id === id);
-  return combos.filter(({ abilityIds: [a, b] }) =>
-    [home, away].some((team) => owns(team, a) && owns(team, b)),
-  );
 }

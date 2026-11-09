@@ -19,10 +19,8 @@ export interface AbilityProgress {
   /** 1 à 5 (CAP-10). */
   level: number;
   xp: number;
-  /** false = capacité cachée (CAP-13, FRAS-05). */
+  /** false = capacité cachée (CAP-13). */
   revealed: boolean;
-  /** Utilisations consommées cette saison (capacités légendaires, CAP-12). */
-  seasonUses: number;
 }
 
 export interface Player {
@@ -36,8 +34,6 @@ export interface Player {
   potential: number;
   /** 0 = frais, 100 = épuisé (EFF-04). */
   fatigue: number;
-  /** 0 = au fond du trou, 100 = euphorique (EFF-06). */
-  morale: number;
   /** Semaines d'indisponibilité restantes (EFF-05). */
   injuryWeeks: number;
   suspendedMatches: number;
@@ -45,8 +41,6 @@ export interface Player {
   /** Salaire hebdomadaire en euros. */
   salary: number;
   clubId: string | null;
-  /** Le joueur a demandé son transfert (EFF-07). */
-  transferRequested: boolean;
   seasonStats: { matches: number; goals: number; yellowCards: number; redCards: number };
 }
 
@@ -65,7 +59,7 @@ export interface Instructions {
 
 export interface Lineup {
   formation: Formation;
-  /** 11 identifiants, dans l'ordre des postes de la formation (voir FORMATION_SLOTS). */
+  /** 11 places, dans l'ordre des postes de la formation (voir FORMATION_SLOTS) ; EMPTY_SLOT = poste libre. */
   starters: string[];
   /** Remplaçants (aucun changement en match en V1, MATCH-08) : utiles pour les capacités « Banc ». */
   bench: string[];
@@ -78,59 +72,34 @@ export interface Lineup {
 
 export type Rarity = 'common' | 'rare' | 'legendary';
 export type AbilityPosition = Position | 'ANY' | 'BENCH';
-export type AbilityCategory =
-  | 'sabotage'
-  | 'provoc'
-  | 'attack'
-  | 'defense'
-  | 'support'
-  | 'goalkeeper'
-  | 'chaos'
-  | 'legendary';
+/** Sert à l'IA pour choisir selon le score. */
+export type AbilityCategory = 'attack' | 'defense' | 'sabotage' | 'support' | 'legendary';
 
 /**
  * Qui choisit la cible (CAP-16 à CAP-18) :
  * - self : le porteur ; team / opponentTeam : toute une équipe ;
  * - zone : déclenchée à l'emplacement du porteur, le coach choisit le moment ;
  * - teammate / opponent : le coach choisit `count` cibles, une à une, match en pause ;
- * - randomOpponent : cible tirée au hasard (« au hasard » dans le catalogue).
+ * - randomOpponent : cible tirée au hasard.
  */
 export type TargetKind = 'self' | 'team' | 'opponentTeam' | 'zone' | 'teammate' | 'opponent' | 'randomOpponent';
-
-/** Portée d'une cible (CAP-17) : vis-à-vis = même ligne adverse, near = « 5 m » = ligne voisine. */
-export type Range = 'facing' | 'near' | 'any';
 
 export interface Targeting {
   kind: TargetKind;
   count?: number;
-  range?: Range;
+  /** Limite les cibles à une ligne (« 1 attaquant », « 2 défenseurs »). */
+  line?: Position;
+  /** Seuls les joueurs actuellement au sol sont des cibles (Le Kiné douteux). */
+  downed?: boolean;
 }
 
 /** Sur qui s'applique un effet, une fois la cible résolue. */
-export type Scope =
-  | 'self'
-  | 'targets'
-  | 'team'
-  | 'opponents'
-  | 'zoneAll'
-  | 'zoneOpponents'
-  | 'opponentKeeper'
-  | 'ownKeeper'
-  | 'opponentCaptain';
+export type Scope = 'self' | 'targets' | 'team' | 'opponents' | 'zoneOpponents';
 
 /** Statistiques modifiables en match. `all` = toutes les stats de jeu. */
-export type MatchStat =
-  | 'all'
-  | 'speed'
-  | 'technique'
-  | 'physical'
-  | 'shooting'
-  | 'defense'
-  | 'goalkeeping'
-  | 'concentration'
-  | 'aggression';
+export type MatchStat = 'all' | 'speed' | 'technique' | 'physical' | 'shooting' | 'defense' | 'goalkeeping' | 'concentration';
 
-/** Déclencheur d'une capacité liée à un événement (CAP-19). */
+/** Déclencheur d'une capacité liée à un événement (CAP-19). `ownDeadBall` = penalty ou coup de pied arrêté. */
 export type AbilityTrigger =
   | 'anytime'
   | 'afterOwnGoal'
@@ -138,73 +107,52 @@ export type AbilityTrigger =
   | 'opponentSetPiece'
   | 'ownPenalty'
   | 'opponentPenalty'
+  | 'ownDeadBall'
   | 'halftime';
 
-export type Cooldown =
-  | { kind: 'minutes'; value: number }
-  | { kind: 'perMatch'; uses: number }
-  | { kind: 'perSeason'; uses: number }
-  | { kind: 'perEvent' };
-
 /**
- * Effets primitifs interprétés par le moteur de match.
+ * Effets primitifs interprétés par le moteur de match. Tous restent dans le match :
+ * aucune capacité ne touche au budget, à la confiance ou aux matchs suivants.
  * Les valeurs en pourcentage sont des fractions (0.2 = +20 %, -0.3 = −30 %).
  * Les durées sont en minutes de jeu.
  */
 export type Effect =
-  | { type: 'modifier'; scope: Scope; stat: MatchStat; value: number; duration: number }
-  /** Joueur(s) hors jeu (au sol, aux toilettes, poursuivis par un chien…). */
-  | { type: 'knockout'; scope: Scope; duration: number; chance?: number }
-  /** Annule l'action adverse en cours ou la prochaine. */
+  /** `extendOnGoal` : minutes ajoutées à l'effet à chaque but marqué par l'équipe. */
+  | { type: 'modifier'; scope: Scope; stat: MatchStat; value: number; duration: number; extendOnGoal?: number }
+  /** Modificateur calculé à l'activation : `base` + `perUnit` par but encaissé ou par minute jouée. */
+  | { type: 'scaledModifier'; scope: Scope; stat: MatchStat; base: number; perUnit: number; per: 'concededGoal' | 'minute'; duration: number }
+  /** Joueur(s) hors jeu. `chaseDuration` : la mise hors jeu passe ensuite à un autre adversaire. */
+  | { type: 'knockout'; scope: Scope; duration: number; chaseDuration?: number }
+  /** Relève immédiatement un joueur au sol. */
+  | { type: 'revive'; scope: Scope }
+  /** Annule la prochaine action adverse. */
   | { type: 'cancelAction' }
-  /** Bonus de conversion sur la prochaine occasion de l'équipe (ou d'un type précis). */
-  | { type: 'chanceBoost'; value: number; on: 'nextChance' | 'setPiece' | 'penalty' | 'counter' | 'longShot' }
-  /** Malus sur la prochaine occasion adverse. */
+  /** Bonus sur la prochaine occasion. `carrier` : le porteur la tente et sa recharge repart à zéro s'il marque. */
+  | { type: 'chanceBoost'; value: number; carrier?: boolean }
+  /** Crée tout de suite une occasion pour le porteur, avec cette probabilité de but. */
+  | { type: 'instantChance'; chance: number }
+  /** Malus sur les prochains tirs adverses. */
   | { type: 'opponentChanceMalus'; value: number; shots: number }
-  | { type: 'penaltyAwarded'; chance: number }
-  | { type: 'ownGoal'; chance: number }
-  | { type: 'card'; scope: Scope; card: 'yellow' | 'red'; chance: number }
-  /** Le match se fige : moins d'occasions des deux côtés. */
-  | { type: 'freeze'; duration: number }
-  | { type: 'stoppageTime'; minutes: number }
-  /** Récupère de l'énergie (fraction de la fatigue effacée). */
+  /** Efface une fraction de la fatigue, pour ce match seulement. */
   | { type: 'energy'; scope: Scope; value: number }
-  | { type: 'morale'; scope: Scope; value: number }
   /** Annule un but adverse marqué dans les `withinMinutes` dernières minutes. */
   | { type: 'cancelGoal'; withinMinutes: number }
-  | { type: 'noCards'; duration: number }
-  | { type: 'foulsIgnored'; count: number }
-  | { type: 'emptyNet'; duration: number }
-  | { type: 'extraAttacker'; duration: number }
-  /** Annule les baisses de moral en cours de l'équipe. */
-  | { type: 'clearMoraleMaluses' }
-  /** Annule l'avantage du terrain adverse. */
-  | { type: 'cancelHomeAdvantage'; duration: number }
-  // --- Conséquences hors match (appliquées par la boucle de saison) ---
-  | { type: 'fine'; amount: number }
-  | { type: 'budget'; amount: number }
-  | { type: 'presidentConfidence'; value: number }
-  | { type: 'injury'; scope: Scope; weeks: number }
-  | { type: 'suspension'; scope: Scope; matches: number }
-  /** Forme du lendemain : fatigue ajoutée à tout l'effectif (−30 % de forme = +30 de fatigue). */
-  | { type: 'squadFatigue'; value: number }
-  | { type: 'press'; headline: string };
-
-export interface Risk {
-  /** Probabilité 0..1, affichée au coach avant l'activation (CAP-07). */
-  chance: number;
-  label: string;
-  effects: Effect[];
-}
+  | { type: 'gauge'; value: number }
+  | { type: 'stealGauge'; value: number }
+  /** Points de jauge gagnés si l'équipe n'encaisse rien pendant `duration`. */
+  | { type: 'cleanSheetGauge'; value: number; duration: number }
+  /** Retire les malus de l'équipe ; `bonusGauge` points si au moins `threshold` malus sont retirés. */
+  | { type: 'clearMaluses'; bonusGauge: number; threshold: number }
+  /** Inverse les niveaux des deux équipes. */
+  | { type: 'swapTeams'; duration: number };
 
 export interface AbilityStats {
-  /** Probabilité que l'effet principal réussisse (1 = certain). */
-  successChance: number;
   effects: Effect[];
-  risks: Risk[];
-  cooldown: Cooldown;
+  targeting: Targeting;
   /** Coût en points de Jauge de Gueulante (CAP-05). */
   cost: number;
+  /** Minutes de recharge, 0 = aucune. */
+  cooldown: number;
 }
 
 export interface Ability {
@@ -215,35 +163,14 @@ export interface Ability {
   position: AbilityPosition;
   targeting: Targeting;
   trigger: AbilityTrigger;
-  /** Conditions d'activation éventuelles. */
-  condition?: { minMinute?: number; whenLeading?: boolean };
-  /** Texte d'effet humoristique, tel qu'affiché sur la fiche joueur. */
+  /** Disponible seulement si un but adverse date de moins de tant de minutes. */
+  requiresRecentOpponentGoal?: number;
+  /** Texte humoristique, sans chiffres : les chiffres dépendent du niveau et sont calculés. */
   description: string;
-  /** Texte du malus / risque. */
-  downside: string;
-  /** Texte du bonus de niveau 5 (CAP-11). */
-  level5Text: string;
-  /** Statistiques au niveau 1. */
-  base: AbilityStats;
-  /** Surcharge appliquée au niveau 5 (CAP-11). */
-  level5: Partial<AbilityStats>;
-  /** Ciblage élargi au niveau 5 (« deux crampons, deux cibles »). */
-  level5Targeting?: Partial<Targeting>;
-  /** Mots-clés de contexte (CAP-14, FRAS-01) : 'alcohol' = +50 % après une grosse soirée. */
-  tags: ('alcohol' | 'vice' | 'family')[];
+  /** Effets au niveau 1. */
+  effects: Effect[];
   /** Capacité cachée jusqu'à l'arrivée au club ou la première activation (CAP-13). */
   hidden: boolean;
-}
-
-export interface Combo {
-  id: string;
-  name: string;
-  abilityIds: [string, string];
-  description: string;
-  downside: string;
-  effects: Effect[];
-  /** Revers appliqués avec certitude ou selon leur probabilité. */
-  risks: Risk[];
 }
 
 // ---------------------------------------------------------------------------
@@ -305,21 +232,4 @@ export interface StandingRow {
   goalsFor: number;
   goalsAgainst: number;
   points: number;
-}
-
-// ---------------------------------------------------------------------------
-// Gestion des frasques (FRAS-*)
-// ---------------------------------------------------------------------------
-
-export type HouseRule = 'curfew' | 'noAlcoholEve' | 'barClosedToPlayers' | 'noGirlfriendsInStands';
-export type TeamNight = 'none' | 'lightDrinks' | 'bigNight';
-
-export interface PressArticle {
-  id: string;
-  week: number;
-  season: number;
-  headline: string;
-  /** Effet sur la confiance du président et les sponsors (FRAS-04). */
-  presidentDelta: number;
-  sponsorDelta: number;
 }

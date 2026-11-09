@@ -6,12 +6,8 @@ import { applyDialogueChoice, DIALOGUES, pickWeeklyDialogue, type DialogueContex
 const calmWeek: DialogueContext = {
   losingStreak: 0,
   winningStreak: 0,
-  recentFrasque: false,
   budget: 50_000,
   presidentConfidence: 60,
-  lastTeamNight: 'none',
-  transferRequestPlayerId: null,
-  unhappyPlayerId: null,
   recentDialogueIds: [],
 };
 
@@ -26,30 +22,36 @@ describe('dialogues (CLUB-06)', () => {
     }
   });
 
+  test('un dialogue ne fatigue jamais : seuls les matchs fatiguent (EFF-04)', () => {
+    for (const dialogue of DIALOGUES) {
+      for (const choice of dialogue.choices) {
+        for (const consequence of choice.consequences) {
+          if (consequence.kind === 'fatigue') expect(consequence.value).toBeLessThan(0);
+        }
+      }
+    }
+  });
+
   test('le contexte oriente le choix du dialogue de la semaine', () => {
-    const losing = pickWeeklyDialogue({ ...calmWeek, losingStreak: 4 }, createRng(1));
-    expect(losing.dialogue.trigger).toBe('losingStreak');
-    const transfer = pickWeeklyDialogue({ ...calmWeek, transferRequestPlayerId: 'p9' }, createRng(1));
-    expect(transfer.dialogue.trigger).toBe('transferRequest');
-    expect(transfer.playerId).toBe('p9');
-    expect(pickWeeklyDialogue(calmWeek, createRng(1)).dialogue.trigger).toBe('anytime');
+    expect(pickWeeklyDialogue({ ...calmWeek, losingStreak: 4 }, createRng(1)).trigger).toBe('losingStreak');
+    expect(pickWeeklyDialogue({ ...calmWeek, budget: 100 }, createRng(1)).trigger).toBe('lowBudget');
+    expect(pickWeeklyDialogue(calmWeek, createRng(1)).trigger).toBe('anytime');
   });
 
   test('un dialogue récent n’est pas resservi tant qu’il en reste d’autres', () => {
     const recentDialogueIds = DIALOGUES.filter((dialogue) => dialogue.trigger === 'anytime')
       .slice(1)
       .map((dialogue) => dialogue.id);
-    const { dialogue } = pickWeeklyDialogue({ ...calmWeek, recentDialogueIds }, createRng(5));
+    const dialogue = pickWeeklyDialogue({ ...calmWeek, recentDialogueIds }, createRng(5));
     expect(recentDialogueIds).not.toContain(dialogue.id);
   });
 
-  test('appliquer un choix modifie les jauges et le moral du joueur concerné', () => {
-    const dialogue = DIALOGUES.find((candidate) => candidate.id === 'player-transfer-request')!;
-    const squad = [makePlayer({ id: 'p9', morale: 20 }), makePlayer({ id: 'p2', morale: 50 })];
+  test('appliquer un choix modifie les jauges', () => {
+    const dialogue = DIALOGUES.find((candidate) => candidate.id === 'physio-ice-bath')!;
+    const squad = [makePlayer({ id: 'p9', fatigue: 50 })];
     const outlook = { budget: 1_000, presidentConfidence: 50, sponsorMood: 50 };
-    const result = applyDialogueChoice({ outlook, squad, playerId: 'p9' }, dialogue, 'drink');
-    expect(result.squad[0]!.morale).toBe(28);
-    expect(result.squad[1]!.morale).toBe(50);
+    const result = applyDialogueChoice({ outlook, squad }, dialogue, 'ice-only');
+    expect(result.squad[0]!.fatigue).toBe(45);
     expect(result.outlook.budget).toBe(950);
     expect(result.messages).toContain('Budget −50 €');
     expect(() => applyDialogueChoice({ outlook, squad }, dialogue, 'nope')).toThrow();

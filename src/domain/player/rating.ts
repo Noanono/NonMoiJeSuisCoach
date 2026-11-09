@@ -37,13 +37,12 @@ export function positionFactor(natural: Position, played: Position): number {
 
 /**
  * Performance effective d'un joueur à un poste donné, en tenant compte
- * du poste (EFF-02), de la fatigue (EFF-04) et du moral (EFF-06).
+ * du poste (EFF-02) et de la fatigue (EFF-04).
  */
 export function effectiveRating(player: Player, played: Position): number {
   const base = overall(player) * positionFactor(player.position, played);
   const fatiguePenalty = 1 - (player.fatigue / 100) * 0.35;
-  const moraleFactor = 0.85 + (player.morale / 100) * 0.25;
-  return clamp(base * fatiguePenalty * moraleFactor, 1, 99);
+  return clamp(base * fatiguePenalty, 1, 99);
 }
 
 /** Probabilité de blessure par match, plus forte quand le joueur est fatigué (EFF-04). */

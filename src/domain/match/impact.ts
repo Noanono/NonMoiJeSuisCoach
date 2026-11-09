@@ -12,10 +12,7 @@ export const IMPACT = {
   goalScored: 0.5,
   chanceStopped: 0.1,
   actionCancelled: 0.4,
-  sendOff: 0.5,
   knockout: 0.2,
-  penalty: 0.3,
-  ownGoal: 0.6,
   goalCancelled: 0.7,
 } as const;
 
@@ -27,20 +24,19 @@ export function creditActivation(record: ActivationRecord, amount: number, note:
   if (!record.notes.includes(note)) record.notes.push(note);
 }
 
-/** Crédite toutes les activations réussies du camp dont l'effet est encore en cours. */
+/** Crédite toutes les activations du camp dont l'effet est encore en cours. */
 export function creditActive(state: MatchState, side: Side, amount: number, note: string): void {
   for (const record of state.activations) {
-    if (record.side === side && record.success && record.activeUntil >= state.elapsed) {
+    if (record.side === side && record.activeUntil >= state.elapsed) {
       creditActivation(record, amount, note);
     }
   }
 }
 
-/** XP par joueur : chaque activation réussie rapporte selon son impact (CAP-10). */
+/** XP par joueur : chaque activation rapporte selon son impact (CAP-10). */
 export function computeXpGains(state: MatchState): Record<string, number> {
   const gains: Record<string, number> = {};
   for (const record of state.activations) {
-    if (!record.success) continue;
     gains[record.playerId] = (gains[record.playerId] ?? 0) + xpForActivation(record.impact);
   }
   return gains;

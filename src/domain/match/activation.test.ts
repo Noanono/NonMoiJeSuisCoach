@@ -1,8 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import type { AbilityContext } from '../abilities/progression';
 import { makeSheet, testMatchOptions } from './fixtures';
 import { cancelActivation, confirmActivation, previewActivation, selectTarget, startActivation } from './activation';
-import { announceSetPiece } from './plays';
+import { announceSetPiece, awardPenalty } from './plays';
 import { activeEffects } from './queries';
 import { tick } from './simulation';
 import { beginRun, createMatch, endRun, requirePlayer } from './state';
@@ -10,9 +9,8 @@ import { dismissEventWindow } from './windows';
 import type { MatchState } from './types';
 
 /** Match coach contre coach : aucune IA ne vient perturber le test. */
-function humanMatch(abilities: Record<number, string>, options: { bench?: string[]; context?: AbilityContext } = {}) {
+function humanMatch(abilities: Record<number, string>, options: { bench?: string[] } = {}) {
   const home = makeSheet({ clubId: 'h', isHuman: true, abilities, benchAbilities: options.bench });
-  if (options.context) home.context = options.context;
   return createMatch(testMatchOptions(home, makeSheet({ clubId: 'a', isHuman: true })));
 }
 
@@ -25,14 +23,14 @@ function activate(state: MatchState, playerId: string, targetIds: string[] = [])
 describe('activation des capacités', () => {
   test('la jauge est débitée et la recharge démarre à la validation (CAP-04, CAP-05)', () => {
     const state = humanMatch({ 5: 'pilier' });
-    expect(previewActivation(state, 'home', 'h-5')).toMatchObject({ available: true, cost: 2, successChance: 1 });
+    expect(previewActivation(state, 'home', 'h-5')).toMatchObject({ available: true, cost: 2, rarity: 'common' });
     const events = activate(state, 'h-5');
     expect(events.some((event) => event.kind === 'activation')).toBe(true);
     expect(state.home.gauge).toBe(1);
     const preview = previewActivation(state, 'home', 'h-5');
     expect(preview.available).toBe(false);
-    expect(preview.cooldownRemaining).toBe(20);
-    expect(preview.reason).toContain('20 min');
+    expect(preview.cooldownRemaining).toBe(15);
+    expect(preview.reason).toContain('15 min');
   });
 
   test('annuler avant validation ne consomme ni jauge ni recharge (CAP-20)', () => {
@@ -43,11 +41,10 @@ describe('activation des capacités', () => {
     cancelActivation(state);
     expect(state.pending).toBeNull();
     expect(state.home.gauge).toBe(3);
-    expect(requirePlayer(state, 'h-1').usesThisMatch).toBe(0);
     expect(previewActivation(state, 'home', 'h-1').available).toBe(true);
   });
 
-  test('les cibles valides respectent la portée et excluent les joueurs hors jeu (CAP-16, CAP-17)', () => {
+  test('les cibles valides respectent la ligne visée et excluent les joueurs hors jeu (CAP-16, CAP-17)', () => {
     const state = humanMatch({ 1: 'boucher' });
     expect(previewActivation(state, 'home', 'h-1').validTargetIds).toEqual(['a-9', 'a-10']);
     requirePlayer(state, 'a-9').knockedOutUntil = 10;
@@ -77,6 +74,7 @@ describe('activation des capacités', () => {
     activate(state, 'h-5');
     const knocked = state.away.players.filter((player) => player.knockedOutUntil > 0).map((player) => player.id);
     expect(knocked).toEqual(['a-5', 'a-6', 'a-7', 'a-8']);
+    expect(state.activations[0]!.zone).toBe(true);
   });
 
   test('une capacité « Banc » s’active depuis le banc, au hasard parmi les adversaires (CAP-03, CAP-18)', () => {
@@ -92,15 +90,15 @@ describe('activation des capacités', () => {
     expect(previewActivation(state, 'home', 'h-5')).toMatchObject({ available: false });
   });
 
-  test('une légendaire consomme une utilisation de la saison et ses revers sont reportés (CAP-12)', () => {
+  test('une légendaire se rejoue autant que la jauge le permet', () => {
     const state = humanMatch({}, { bench: ['malediction'] });
-    activate(state, 'h-b0');
-    expect(requirePlayer(state, 'h-b0').seasonUses).toBe(1);
-    expect(state.home.consequences).toContainEqual({ type: 'seasonUse', playerId: 'h-b0', abilityId: 'malediction', seasonUses: 1 });
-    expect(state.home.consequences.some((consequence) => consequence.type === 'squadFatigue')).toBe(true);
-    expect(state.home.consequences.some((consequence) => consequence.type === 'fine')).toBe(true);
     state.home.gauge = 10;
-    expect(previewActivation(state, 'home', 'h-b0').reason).toContain('saison');
+    activate(state, 'h-b0');
+    expect(state.home.gauge).toBe(5);
+    expect(previewActivation(state, 'home', 'h-b0').available).toBe(true);
+    activate(state, 'h-b0');
+    expect(state.home.gauge).toBe(0);
+    expect(previewActivation(state, 'home', 'h-b0').reason).toContain('5 point(s)');
   });
 
   test('une capacité cachée se révèle à sa première activation (CAP-13)', () => {
@@ -112,23 +110,10 @@ describe('activation des capacités', () => {
     expect(state.home.consequences).toContainEqual({ type: 'abilityRevealed', playerId: 'h-5', abilityId: 'cache' });
   });
 
-  test('deux capacités compatibles à moins de 5 minutes déclenchent le combo (CAP-15)', () => {
-    const state = humanMatch({ 5: 'beau-gosse', 6: 'ex-president' });
-    activate(state, 'h-5');
-    const events = activate(state, 'h-6');
-    expect(events.some((event) => event.kind === 'combo')).toBe(true);
-    expect(state.combosTriggered).toEqual([{ side: 'home', name: 'Drame conjugal', minute: 0 }]);
-    expect(activeEffects(state, 'h-5').some((effect) => effect.label === 'Drame conjugal')).toBe(true);
-    expect(activeEffects(state, 'h-6').some((effect) => effect.label === 'Drame conjugal')).toBe(true);
-    expect(state.home.consequences).toContainEqual({ type: 'presidentConfidence', value: -15, reason: 'Drame conjugal' });
-  });
-
-  test('après une grosse soirée, les capacités alcoolisées frappent 50 % plus fort (CAP-14)', () => {
-    const state = humanMatch({ 5: 'pilier' }, { context: { teamNight: 'bigNight', houseRules: [] } });
-    activate(state, 'h-5');
-    expect(activeEffects(state, 'h-5')[0]!.value).toBeCloseTo(0.6);
-    const ruled = humanMatch({ 5: 'pilier' }, { context: { teamNight: 'none', houseRules: ['noAlcoholEve'] } });
-    expect(previewActivation(ruled, 'home', 'h-5').risks[0]!.chance).toBeCloseTo(0.17);
+  test('chaque activation garde de quoi la mettre en scène sur le terrain', () => {
+    const state = humanMatch({ 1: 'boucher' });
+    activate(state, 'h-1', ['a-9']);
+    expect(state.activations[0]).toMatchObject({ rarity: 'rare', targetIds: ['a-9'], floats: [{ playerId: 'a-9', text: 'K.O. 15 MIN', tone: 'malus' }] });
   });
 });
 
@@ -167,5 +152,14 @@ describe('fenêtres d’événement (CAP-19)', () => {
     const state = humanMatch({ 5: 'pilier' });
     setPieceAgainstHome(state);
     expect(state.awaiting).toBeNull();
+  });
+
+  test('Bière tiède répond au penalty comme au coup franc', () => {
+    const home = makeSheet({ clubId: 'h', isHuman: true, abilities: { 9: 'biere-tiede' } });
+    const state = createMatch({ home, away: makeSheet({ clubId: 'a', isHuman: true }), seed: 1 });
+    const run = beginRun(state);
+    awardPenalty(run, 'home', null);
+    endRun(run);
+    expect(state.awaiting).toMatchObject({ trigger: 'ownPenalty', eligiblePlayerIds: ['h-9'] });
   });
 });

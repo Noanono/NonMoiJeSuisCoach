@@ -2,7 +2,6 @@
  * Textes du match en direct et du résumé (CAP-19, MATCH-06) : l'info d'abord, la blague après.
  */
 import type { Consequence, EventWindow, MatchSummary, PendingPlay, Side } from '../../domain/match';
-import { formatEuros, formatSigned } from '../format';
 
 export type Outcome = 'V' | 'N' | 'D';
 
@@ -50,6 +49,7 @@ export function windowTitle(window: EventWindow, pendingPlay: PendingPlay | null
   const setPiece = SET_PIECE_NAME[pendingPlay?.kind ?? 'freeKick'];
   switch (window.trigger) {
     case 'ownSetPiece':
+    case 'ownDeadBall':
       return `${setPiece} pour toi : quelqu'un a une idée ?`;
     case 'opponentSetPiece':
       return `${setPiece} pour eux : quelqu'un a une idée ?`;
@@ -66,26 +66,14 @@ export function windowTitle(window: EventWindow, pendingPlay: PendingPlay | null
   }
 }
 
-/** Conséquence hors match lisible, `null` pour la comptabilité interne. */
-export function consequenceText(consequence: Consequence, playerName: (id: string) => string): string | null {
+/** Ce qui reste du match pour la suite de la saison, en clair. */
+export function consequenceText(consequence: Consequence, playerName: (id: string) => string): string {
   switch (consequence.type) {
-    case 'fine':
-      return `Amende de ${formatEuros(consequence.amount)} : ${consequence.reason}`;
-    case 'budget':
-      return `Budget ${formatSigned(consequence.amount)} € : ${consequence.reason}`;
-    case 'presidentConfidence':
-      return `Confiance du président ${formatSigned(consequence.value)} : ${consequence.reason}`;
     case 'injury':
       return `${playerName(consequence.playerId)} absent ${consequence.weeks} sem. : ${consequence.reason}`;
     case 'suspension':
       return `${playerName(consequence.playerId)} suspendu ${consequence.matches} match(s) : ${consequence.reason}`;
-    case 'squadFatigue':
-      return `Fatigue de l'effectif ${formatSigned(consequence.value)} : ${consequence.reason}`;
-    case 'press':
-      return `Dans la presse : « ${consequence.headline} »`;
     case 'abilityRevealed':
       return `Capacité révélée chez ${playerName(consequence.playerId)}`;
-    case 'seasonUse':
-      return null;
   }
 }

@@ -6,16 +6,12 @@ export function makeAbility(id: string, rarity: Rarity, position: AbilityPositio
     id,
     name: id,
     rarity,
-    category: 'chaos',
+    category: 'support',
     position,
     targeting: { kind: 'self' },
     trigger: 'anytime',
     description: 'Capacité de test',
-    downside: 'Aucun',
-    level5Text: 'Aucun',
-    base: { successChance: 1, effects: [], risks: [], cooldown: { kind: 'minutes', value: 20 }, cost: 1 },
-    level5: {},
-    tags: [],
+    effects: [],
     hidden,
   };
 }

@@ -1,223 +1,212 @@
 /**
- * Interprète des primitives `Effect` (CAP-04, CAP-06, CAP-09) : effets en match,
- * et conséquences hors match accumulées pour la boucle de saison.
+ * Interprète des primitives `Effect` (CAP-04, CAP-06, CAP-09). Tout reste dans le match.
  */
-import type { Effect } from '../types';
+import type { Effect, MatchStat } from '../types';
 import { clamp } from '../core/rng';
-import { addConsequence, bookPlayer, cancelRecentGoal, knockOut, recordGoal } from './actions';
+import { addGauge, cancelRecentGoal, knockOut } from './actions';
 import { comment } from './commentary';
 import { creditActivation, IMPACT } from './impact';
-import { awardPenalty } from './plays';
-import { isOnPitch, opponentSide, pushEvent, refreshRating, teamOf, UNTIL_FINAL_WHISTLE, type Run } from './state';
+import { playInstantChance } from './plays';
+import { isActive, NEVER, opponentSide, pushEvent, refreshRating, teamOf, type Run } from './state';
 import { resolveScope } from './targets';
-import type { ActivationRecord, MatchPlayer, Side } from './types';
+import type { ActivationRecord, FloatingText, MatchPlayer, Side, TeamState } from './types';
 
-const MORALE_SCALE = 100;
 const FATIGUE_MAX = 100;
-/** Lignes susceptibles de marquer contre leur camp, par ordre de préférence. */
-const OWN_GOAL_LINES = ['DEF', 'GK', 'MID'] as const;
+const PERCENT = 100;
+
+const STAT_SHORT: Record<MatchStat, string> = {
+  all: 'TOUT',
+  speed: 'VITESSE',
+  technique: 'TECHNIQUE',
+  physical: 'PHYSIQUE',
+  shooting: 'TIR',
+  defense: 'DÉFENSE',
+  goalkeeping: 'ARRÊTS',
+  concentration: 'CONCENTRATION',
+};
 
 export interface EffectContext {
   run: Run;
   side: Side;
   source: MatchPlayer;
-  participants: MatchPlayer[];
   targets: MatchPlayer[];
-  /** Libellé affiché sur les effets actifs (nom de la capacité ou du combo). */
+  /** Libellé affiché sur les effets actifs (nom de la capacité). */
   label: string;
-  /** Activation à créditer des faits de jeu provoqués, `null` pour les revers. */
-  activation: ActivationRecord | null;
+  activation: ActivationRecord;
 }
 
 export function applyEffects(context: EffectContext, effects: readonly Effect[]): void {
   for (const effect of effects) applyEffect(context, effect);
 }
 
-function credit(context: EffectContext, amount: number, note: string): void {
-  if (context.activation) creditActivation(context.activation, amount, note);
-}
-
 function scoped(context: EffectContext, effect: Extract<Effect, { scope: unknown }>): MatchPlayer[] {
   return resolveScope({ state: context.run.state, ...context }, effect.scope);
 }
 
+function float(context: EffectContext, player: MatchPlayer, text: string, tone: FloatingText['tone']): void {
+  context.activation.floats.push({ playerId: player.id, text, tone });
+}
+
+function percentText(value: number): string {
+  return `${value < 0 ? '−' : '+'}${Math.round(Math.abs(value) * PERCENT)} %`;
+}
+
 /** Applique un effet. Mute l'état du match. */
 export function applyEffect(context: EffectContext, effect: Effect): void {
-  const { run, side } = context;
+  const { run, side, source } = context;
   const { state } = run;
   const team = teamOf(state, side);
+  const opponents = teamOf(state, opponentSide(side));
   const until = (duration: number) => state.elapsed + duration;
   switch (effect.type) {
     case 'modifier':
-      for (const player of scoped(context, effect)) {
-        player.effects.push({ label: context.label, stat: effect.stat, value: effect.value, endsAt: until(effect.duration) });
-      }
-      return;
+      return applyModifier(context, effect, effect.value);
+    case 'scaledModifier': {
+      const units = effect.per === 'minute' ? state.minute : opponents.goals;
+      return applyModifier(context, effect, effect.base + effect.perUnit * units);
+    }
     case 'knockout':
       return applyKnockout(context, effect);
+    case 'revive':
+      for (const player of scoped(context, effect)) revive(context, player);
+      return;
     case 'cancelAction':
       team.pendingCancels++;
+      float(context, source, 'ACTION ANNULÉE', 'bonus');
       return;
     case 'chanceBoost':
-      team.chanceBoosts.push({ value: effect.value, on: effect.on });
+      team.chanceBoosts.push(effect.carrier ? { value: effect.value, shooterId: source.id } : { value: effect.value });
+      float(context, source, `${percentText(effect.value)} OCCASION`, 'bonus');
+      return;
+    case 'instantChance':
+      float(context, source, 'OCCASION !', 'bonus');
+      playInstantChance(run, side, source, effect.chance);
       return;
     case 'opponentChanceMalus':
       team.shotMaluses.push({ value: Math.abs(effect.value), shotsLeft: effect.shots });
-      return;
-    case 'penaltyAwarded':
-      if (!run.rng.chance(effect.chance)) return;
-      credit(context, IMPACT.penalty, 'penalty obtenu');
-      awardPenalty(run, side, context.source.line === null ? null : context.source.id);
-      return;
-    case 'ownGoal':
-      return applyOwnGoal(context, effect.chance);
-    case 'card':
-      return applyCards(context, effect);
-    case 'freeze':
-      state.frozenUntil = Math.max(state.frozenUntil, until(effect.duration));
-      pushEvent(run, 'effect', side, comment(run.rng, 'freeze', { minutes: effect.duration }));
-      return;
-    case 'stoppageTime':
-      addStoppage(run, effect.minutes);
+      float(context, source, `TIR ADVERSE ${percentText(-Math.abs(effect.value))}`, 'bonus');
       return;
     case 'energy':
-      for (const player of scoped(context, effect)) restoreEnergy(player, effect.value);
-      return;
-    case 'morale':
-      for (const player of scoped(context, effect)) changeMorale(player, effect.value, context.label);
+      for (const player of scoped(context, effect)) {
+        restoreEnergy(player, effect.value);
+        float(context, player, `${percentText(effect.value)} ÉNERGIE`, 'bonus');
+      }
       return;
     case 'cancelGoal':
       if (cancelRecentGoal(run, opponentSide(side), effect.withinMinutes)) {
-        credit(context, IMPACT.goalCancelled, 'but adverse annulé');
+        creditActivation(context.activation, IMPACT.goalCancelled, 'but adverse annulé');
+        float(context, source, 'BUT ANNULÉ', 'bonus');
       }
       return;
-    case 'noCards':
-      team.noCardsUntil = Math.max(team.noCardsUntil, until(effect.duration));
+    case 'gauge':
+      addGauge(team, effect.value);
+      float(context, source, `+${effect.value} GUEULANTE`, 'bonus');
       return;
-    case 'foulsIgnored':
-      team.foulsIgnored += effect.count;
+    case 'stealGauge': {
+      const stolen = Math.min(opponents.gauge, effect.value);
+      opponents.gauge -= stolen;
+      addGauge(team, stolen);
+      float(context, source, `+${stolen} GUEULANTE VOLÉE`, 'bonus');
       return;
-    case 'emptyNet':
-      team.emptyNetUntil = Math.max(team.emptyNetUntil, until(effect.duration));
+    }
+    case 'cleanSheetGauge':
+      team.delayed.push({ kind: 'cleanSheet', at: until(effect.duration) + 1, points: effect.value, conceded: opponents.goals, label: context.label });
       return;
-    case 'extraAttacker':
-      team.extraAttackerUntil = Math.max(team.extraAttackerUntil, until(effect.duration));
-      return;
-    case 'clearMoraleMaluses':
-      for (const player of team.players) clearMoraleMaluses(player);
-      return;
-    case 'cancelHomeAdvantage':
-      if (side === 'away') {
-        state.homeAdvantageCancelledUntil = Math.max(state.homeAdvantageCancelledUntil, until(effect.duration));
-      }
-      return;
-    default:
-      return applyOffMatchEffect(context, effect);
+    case 'clearMaluses':
+      return clearMaluses(context, team, effect.bonusGauge, effect.threshold);
+    case 'swapTeams':
+      return swapTeams(context, team, opponents, until(effect.duration));
   }
 }
 
-/** Conséquences hors match (amende, presse…) : stockées par camp pour la boucle de saison. */
-function applyOffMatchEffect(
-  context: EffectContext,
-  effect: Extract<Effect, { type: 'fine' | 'budget' | 'presidentConfidence' | 'injury' | 'suspension' | 'squadFatigue' | 'press' }>,
-): void {
-  const team = teamOf(context.run.state, context.side);
-  const reason = context.label;
-  switch (effect.type) {
-    case 'fine':
-    case 'budget':
-      return addConsequence(team, { type: effect.type, amount: effect.amount, reason });
-    case 'presidentConfidence':
-    case 'squadFatigue':
-      return addConsequence(team, { type: effect.type, value: effect.value, reason });
-    case 'press':
-      return addConsequence(team, { type: 'press', headline: effect.headline, reason });
-    case 'injury':
-      for (const player of scoped(context, effect)) {
-        const owner = teamOf(context.run.state, player.side);
-        addConsequence(owner, { type: 'injury', playerId: player.id, weeks: effect.weeks, reason });
-      }
-      return;
-    case 'suspension':
-      for (const player of scoped(context, effect)) {
-        const owner = teamOf(context.run.state, player.side);
-        addConsequence(owner, { type: 'suspension', playerId: player.id, matches: effect.matches, reason });
-      }
-      return;
-    default: {
-      const unhandled: never = effect;
-      throw new Error(`Effet non géré : ${JSON.stringify(unhandled)}`);
-    }
+function applyModifier(context: EffectContext, effect: Extract<Effect, { scope: unknown; stat: unknown }>, value: number): void {
+  const endsAt = context.run.state.elapsed + effect.duration;
+  const extendOnGoal = effect.type === 'modifier' ? effect.extendOnGoal : undefined;
+  for (const player of scoped(context, effect)) {
+    player.effects.push({ label: context.label, stat: effect.stat, value, endsAt, ...(extendOnGoal ? { extendOnGoal } : {}) });
+    const friendly = player.side === context.side;
+    float(context, player, `${percentText(value)} ${STAT_SHORT[effect.stat]}`, friendly === value > 0 ? 'bonus' : 'malus');
   }
 }
 
 function applyKnockout(context: EffectContext, effect: Extract<Effect, { type: 'knockout' }>): void {
   const { run } = context;
   for (const player of scoped(context, effect)) {
-    if (effect.chance !== undefined && !run.rng.chance(effect.chance)) continue;
     knockOut(run, player, effect.duration, context.label);
-    if (player.side !== context.side) credit(context, IMPACT.knockout, 'adversaire mis hors jeu');
+    float(context, player, `K.O. ${effect.duration} MIN`, player.side === context.side ? 'bonus' : 'malus');
+    if (player.side === context.side) continue;
+    creditActivation(context.activation, IMPACT.knockout, 'adversaire mis hors jeu');
+    if (effect.chaseDuration !== undefined) {
+      teamOf(run.state, context.side).delayed.push({
+        kind: 'chase',
+        at: run.state.elapsed + effect.duration + 1,
+        duration: effect.chaseDuration,
+        excludedId: player.id,
+        label: context.label,
+      });
+    }
   }
 }
 
-function applyCards(context: EffectContext, effect: Extract<Effect, { type: 'card' }>): void {
-  const { run } = context;
-  for (const player of scoped(context, effect)) {
-    if (!run.rng.chance(effect.chance)) continue;
-    const given = bookPlayer(run, player, effect.card);
-    if (given === 'red' && player.side !== context.side) credit(context, IMPACT.sendOff, 'expulsion provoquée');
-  }
+function revive(context: EffectContext, player: MatchPlayer): void {
+  player.knockedOutUntil = NEVER;
+  player.effects = player.effects.filter((effect) => effect.stat !== 'knockout');
+  float(context, player, 'RELEVÉ', 'bonus');
 }
 
-function applyOwnGoal(context: EffectContext, chance: number): void {
-  const { run, side } = context;
-  if (!run.rng.chance(chance)) return;
-  const culprit = ownGoalCulprit(teamOf(run.state, opponentSide(side)).players);
-  if (!culprit) return;
-  credit(context, IMPACT.ownGoal, 'but contre son camp provoqué');
-  recordGoal(run, side, culprit, { ownGoal: true });
-}
-
-function ownGoalCulprit(players: MatchPlayer[]): MatchPlayer | undefined {
-  for (const line of OWN_GOAL_LINES) {
-    const culprit = players.find((player) => player.line === line && isOnPitch(player));
-    if (culprit) return culprit;
-  }
-  return players.find(isOnPitch);
-}
-
-/** Efface une fraction de la fatigue (négatif = en ajoute). */
+/** Efface une fraction de la fatigue, le temps du match : `fatigueRestored` la rend après. */
 function restoreEnergy(player: MatchPlayer, fraction: number): void {
-  player.profile.fatigue = clamp(player.profile.fatigue * (1 - fraction), 0, FATIGUE_MAX);
+  const before = player.profile.fatigue;
+  player.profile.fatigue = clamp(before * (1 - fraction), 0, FATIGUE_MAX);
+  player.fatigueRestored += before - player.profile.fatigue;
   refreshRating(player);
 }
 
-/** Change le moral et garde la trace de la variation pour pouvoir l'annuler (Capitaine gueulard). */
-function changeMorale(player: MatchPlayer, fraction: number, label: string): void {
-  const before = player.profile.morale;
-  player.profile.morale = clamp(before + fraction * MORALE_SCALE, 0, MORALE_SCALE);
-  const applied = (player.profile.morale - before) / MORALE_SCALE;
-  if (applied === 0) return;
-  player.effects.push({ label, stat: 'morale', value: applied, endsAt: UNTIL_FINAL_WHISTLE });
-  refreshRating(player);
-}
-
-function clearMoraleMaluses(player: MatchPlayer): void {
-  const effects = player.effects;
-  let changed = false;
-  for (let i = effects.length - 1; i >= 0; i--) {
-    const effect = effects[i]!;
-    if (effect.stat !== 'morale' || effect.value >= 0) continue;
-    player.profile.morale = clamp(player.profile.morale - effect.value * MORALE_SCALE, 0, MORALE_SCALE);
-    effects.splice(i, 1);
-    changed = true;
+function clearMaluses(context: EffectContext, team: TeamState, bonusGauge: number, threshold: number): void {
+  let removed = 0;
+  for (const player of team.players) {
+    const kept = player.effects.filter((effect) => effect.value >= 0 || effect.stat === 'knockout');
+    removed += player.effects.length - kept.length;
+    player.effects = kept;
   }
-  if (changed) refreshRating(player);
+  float(context, context.source, removed > 0 ? 'MALUS EFFACÉS' : 'RIEN À EFFACER', 'bonus');
+  if (removed >= threshold) {
+    addGauge(team, bonusGauge);
+    float(context, context.source, `+${bonusGauge} GUEULANTE`, 'bonus');
+  }
 }
 
-/** Temps additionnel : prolonge la période en cours ou s'ajoute à la prochaine annonce. */
-export function addStoppage(run: Run, minutes: number): void {
-  const { state } = run;
-  if (state.stoppageAnnounced) state.stoppage += minutes;
-  else state.extraStoppage += minutes;
+/** Niveaux inversés : affichés comme un effet sur chaque joueur en match. */
+function swapTeams(context: EffectContext, own: TeamState, opponents: TeamState, endsAt: number): void {
+  const { state } = context.run;
+  state.swappedUntil = Math.max(state.swappedUntil, endsAt);
+  for (const [team, value] of [[own, 1], [opponents, -1]] as const) {
+    for (const player of team.players) {
+      if (player.line !== null) player.effects.push({ label: context.label, stat: 'swap', value, endsAt });
+    }
+  }
+  float(context, context.source, 'NIVEAUX INVERSÉS', 'bonus');
+}
+
+/** Résout les suites prévues pour cette minute (recompense du Bus, chien qui change de victime). */
+export function resolveDelayedEffects(run: Run): void {
+  for (const team of [run.state.home, run.state.away]) {
+    if (team.delayed.length === 0) continue;
+    const due = team.delayed.filter((effect) => effect.at <= run.state.elapsed);
+    team.delayed = team.delayed.filter((effect) => effect.at > run.state.elapsed);
+    for (const effect of due) resolveDelayed(run, team, effect);
+  }
+}
+
+function resolveDelayed(run: Run, team: TeamState, effect: TeamState['delayed'][number]): void {
+  const { state, rng } = run;
+  const opponents = teamOf(state, opponentSide(team.side));
+  if (effect.kind === 'cleanSheet') {
+    if (opponents.goals > effect.conceded) return;
+    addGauge(team, effect.points);
+    pushEvent(run, 'effect', team.side, comment(rng, 'cleanSheet', { label: effect.label, team: team.name, n: effect.points }));
+    return;
+  }
+  const victims = opponents.players.filter((player) => player.id !== effect.excludedId && player.line !== null && isActive(player, state.elapsed));
+  if (victims.length > 0) knockOut(run, rng.pick(victims), effect.duration, effect.label);
 }

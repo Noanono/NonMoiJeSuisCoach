@@ -6,17 +6,15 @@ import type {
   AbilityPosition,
   AbilityTrigger,
   AttributeName,
-  Cooldown,
   Effect,
   MatchStat,
   Mentality,
   Player,
   Position,
-  Range,
-  Risk,
   Scope,
   Targeting,
 } from '../../domain/types';
+import type { Level5Bonus } from '../../domain/abilities/progression';
 
 const PERCENT = 100;
 /** Signe moins typographique (design system : « + » et « − »). */
@@ -49,7 +47,6 @@ const STAT_LABEL: Record<MatchStat, string> = {
   defense: 'en défense',
   goalkeeping: "d'arrêts",
   concentration: 'de concentration',
-  aggression: "d'agressivité",
 };
 
 const SCOPE_LABEL: Record<Scope, string> = {
@@ -57,14 +54,10 @@ const SCOPE_LABEL: Record<Scope, string> = {
   targets: 'la cible',
   team: 'son équipe',
   opponents: "l'équipe adverse",
-  zoneAll: 'tous dans la zone',
   zoneOpponents: 'adversaires de la zone',
-  opponentKeeper: 'gardien adverse',
-  ownKeeper: 'son gardien',
-  opponentCaptain: 'capitaine adverse',
 };
 
-const RANGE_LABEL: Record<Range, string> = { facing: 'vis-à-vis', near: 'à 5 m', any: 'partout' };
+const LINE_WORD: Record<Position, string> = { GK: 'gardien', DEF: 'défenseur', MID: 'milieu', ATT: 'attaquant' };
 
 const TRIGGER_LABEL: Record<AbilityTrigger, string> = {
   anytime: 'À tout moment',
@@ -73,18 +66,9 @@ const TRIGGER_LABEL: Record<AbilityTrigger, string> = {
   opponentSetPiece: 'Sur coup franc adverse',
   ownPenalty: 'Sur penalty pour son équipe',
   opponentPenalty: 'Sur penalty adverse',
+  ownDeadBall: 'Sur penalty ou coup franc pour son équipe',
   halftime: 'À la mi-temps',
 };
-
-const CHANCE_TARGET_LABEL: Record<Extract<Effect, { type: 'chanceBoost' }>['on'], string> = {
-  nextChance: 'la prochaine occasion',
-  setPiece: 'le prochain coup de pied arrêté',
-  penalty: 'le prochain penalty',
-  counter: 'la contre-attaque',
-  longShot: 'les tirs de loin',
-};
-
-const euros = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
 
 /** Pourcentage arrondi à l'unité, sans signe : 0.335 → « 34 % ». */
 export function percent(fraction: number): string {
@@ -106,87 +90,69 @@ function plural(count: number, singular: string, pluralForm = `${singular}s`): s
   return `${count} ${count > 1 ? pluralForm : singular}`;
 }
 
-function chanceSuffix(chance: number | undefined): string {
-  return chance === undefined || chance >= 1 ? '' : ` (${percent(chance)} de chances)`;
-}
-
 /** Effet chiffré d'une capacité, en une ligne lisible (CAP-04, CAP-08). */
 export function describeEffect(effect: Effect): string {
   switch (effect.type) {
-    case 'modifier':
-      return `${signedPercent(effect.value)} ${STAT_LABEL[effect.stat]} (${SCOPE_LABEL[effect.scope]}) pendant ${effect.duration}${NBSP}min`;
-    case 'knockout':
-      return `Hors jeu ${effect.duration}${NBSP}min : ${SCOPE_LABEL[effect.scope]}${chanceSuffix(effect.chance)}`;
+    case 'modifier': {
+      const extension = effect.extendOnGoal ? `, +${effect.extendOnGoal}${NBSP}min par but marqué` : '';
+      return `${signedPercent(effect.value)} ${STAT_LABEL[effect.stat]} (${SCOPE_LABEL[effect.scope]}) pendant ${effect.duration}${NBSP}min${extension}`;
+    }
+    case 'scaledModifier': {
+      if (effect.per === 'minute') {
+        return `${signedPercent(effect.perUnit)} ${STAT_LABEL[effect.stat]} par minute jouée (${SCOPE_LABEL[effect.scope]}) pendant ${effect.duration}${NBSP}min`;
+      }
+      return `${signedPercent(effect.base)} ${STAT_LABEL[effect.stat]} (${SCOPE_LABEL[effect.scope]}) pendant ${effect.duration}${NBSP}min, ${signedPercent(effect.perUnit)} par but encaissé`;
+    }
+    case 'knockout': {
+      const chase = effect.chaseDuration ? `, puis un autre adversaire ${effect.chaseDuration}${NBSP}min` : '';
+      return `Hors jeu ${effect.duration}${NBSP}min : ${SCOPE_LABEL[effect.scope]}${chase}`;
+    }
+    case 'revive':
+      return 'Relève la cible immédiatement';
     case 'cancelAction':
-      return "Annule l'action adverse en cours";
-    case 'chanceBoost':
-      return `${signedPercent(effect.value)} de réussite sur ${CHANCE_TARGET_LABEL[effect.on]}`;
+      return 'Annule la prochaine action adverse';
+    case 'chanceBoost': {
+      const carrier = effect.carrier ? " : il la tente lui-même, et s'il marque, sa recharge repart à zéro" : '';
+      return `${signedPercent(effect.value)} de chances de but sur la prochaine occasion${carrier}`;
+    }
+    case 'instantChance':
+      return `Occasion immédiate à ${percent(effect.chance)} de but`;
     case 'opponentChanceMalus': {
       const shots = effect.shots > 1 ? `les ${effect.shots} prochains tirs adverses` : 'le prochain tir adverse';
       return `${signedPercent(-effect.value)} de réussite pour ${shots}`;
     }
-    case 'penaltyAwarded':
-      return `${percent(effect.chance)} de penalty accordé`;
-    case 'ownGoal':
-      return `${percent(effect.chance)} de but contre son camp adverse`;
-    case 'card':
-      return `${effect.chance >= 1 ? 'Carton' : `${percent(effect.chance)} de carton`} ${effect.card === 'red' ? 'rouge' : 'jaune'} (${SCOPE_LABEL[effect.scope]})`;
-    case 'freeze':
-      return `Match figé ${effect.duration}${NBSP}min`;
-    case 'stoppageTime':
-      return `+${effect.minutes}${NBSP}min de temps additionnel`;
     case 'energy':
-      return `${signedPercent(effect.value)} d'énergie (${SCOPE_LABEL[effect.scope]})`;
-    case 'morale':
-      return `${signedPercent(effect.value)} de moral (${SCOPE_LABEL[effect.scope]})`;
+      return `Efface ${percent(effect.value)} de la fatigue (${SCOPE_LABEL[effect.scope]})`;
     case 'cancelGoal':
       return `Annule un but adverse des ${effect.withinMinutes} dernières minutes`;
-    case 'noCards':
-      return `Aucun carton pendant ${effect.duration}${NBSP}min`;
-    case 'foulsIgnored':
-      return `${plural(effect.count, 'faute')} non sifflée${effect.count > 1 ? 's' : ''}`;
-    case 'emptyNet':
-      return `Cages vides ${effect.duration}${NBSP}min`;
-    case 'extraAttacker':
-      return `+1 attaquant pendant ${effect.duration}${NBSP}min`;
-    case 'clearMoraleMaluses':
-      return 'Annule les baisses de moral en cours';
-    case 'cancelHomeAdvantage':
-      return `Avantage du terrain adverse annulé ${effect.duration}${NBSP}min`;
-    case 'fine':
-      return `Amende de ${euros.format(effect.amount)} pour le club`;
-    case 'budget':
-      return `${effect.amount < 0 ? MINUS : '+'}${euros.format(Math.abs(effect.amount))} au budget`;
-    case 'presidentConfidence':
-      return `Confiance du président ${signed(effect.value)}`;
-    case 'injury':
-      return `Blessure de ${plural(effect.weeks, 'semaine')} (${SCOPE_LABEL[effect.scope]})`;
-    case 'suspension':
-      return `Suspension de ${plural(effect.matches, 'match', 'matchs')} (${SCOPE_LABEL[effect.scope]})`;
-    case 'squadFatigue':
-      return `+${effect.value} de fatigue pour tout l'effectif le lendemain`;
-    case 'press':
-      return `Presse locale : « ${effect.headline} »`;
+    case 'gauge':
+      return `+${plural(effect.value, 'point')} de Gueulante`;
+    case 'stealGauge':
+      return `Vole ${plural(effect.value, 'point')} de Gueulante au coach adverse`;
+    case 'cleanSheetGauge':
+      return `+${plural(effect.value, 'point')} de Gueulante si aucun but encaissé pendant ${effect.duration}${NBSP}min`;
+    case 'clearMaluses':
+      return `Retire tous les malus de son équipe, +${plural(effect.bonusGauge, 'point')} de Gueulante si au moins ${effect.threshold} sont retirés`;
+    case 'swapTeams':
+      return `Inverse les niveaux des deux équipes pendant ${effect.duration}${NBSP}min`;
   }
 }
 
-/** Risque affiché avant activation (CAP-07) : probabilité, nom et conséquences. */
-export function describeRisk(risk: Risk): string {
-  const odds = risk.chance >= 1 ? 'Certain' : percent(risk.chance);
-  const effects = risk.effects.map(describeEffect).join(' ; ');
-  return effects ? `${odds} · ${risk.label} : ${effects}` : `${odds} · ${risk.label}`;
+export function describeCooldown(cooldown: number): string {
+  return cooldown > 0 ? `Recharge ${cooldown}${NBSP}min` : 'Aucune recharge';
 }
 
-export function describeCooldown(cooldown: Cooldown): string {
-  switch (cooldown.kind) {
-    case 'minutes':
-      return `Recharge ${cooldown.value}${NBSP}min`;
-    case 'perMatch':
-      return `${cooldown.uses}× par match`;
-    case 'perSeason':
-      return `${cooldown.uses}× par saison`;
-    case 'perEvent':
-      return 'À chaque occasion';
+/** Ce que débloque le niveau 5 (CAP-11). */
+export function describeLevel5(bonus: Level5Bonus): string {
+  switch (bonus) {
+    case 'extraTarget':
+      return 'Une cible de plus.';
+    case 'longerDuration':
+      return 'Durée augmentée de 50 %.';
+    case 'shorterCooldown':
+      return 'Recharge réduite de 5 min.';
+    case null:
+      return "Rien de plus : l'effet est déjà au maximum.";
   }
 }
 
@@ -197,7 +163,6 @@ export function describeTrigger(trigger: AbilityTrigger): string {
 /** Ciblage (CAP-16 à CAP-18). */
 export function describeTargeting(targeting: Targeting): string {
   const count = targeting.count ?? 1;
-  const range = targeting.range && targeting.range !== 'any' ? `, ${RANGE_LABEL[targeting.range]}` : '';
   switch (targeting.kind) {
     case 'self':
       return 'Lui-même';
@@ -208,15 +173,15 @@ export function describeTargeting(targeting: Targeting): string {
     case 'zone':
       return 'Sa zone : tu choisis le moment';
     case 'teammate':
-      return `${plural(count, 'coéquipier')} au choix${range}`;
+      return `${plural(count, 'coéquipier')}${targeting.downed ? ' au sol' : ''} au choix`;
     case 'opponent':
-      return `${plural(count, 'adversaire')} au choix${range}`;
+      return `${plural(count, targeting.line ? LINE_WORD[targeting.line] : 'adversaire')} au choix`;
     case 'randomOpponent':
       return `${plural(count, 'adversaire')} au hasard`;
   }
 }
 
-/** Disponibilité d'un joueur (EFF-05, EFF-07), `null` s'il est apte. */
+/** Disponibilité d'un joueur (EFF-05), `null` s'il est apte. */
 export function availabilityLabel(player: Pick<Player, 'injuryWeeks' | 'suspendedMatches'>): string | null {
   if (player.injuryWeeks > 0) return `Blessé ${player.injuryWeeks}${NBSP}sem.`;
   if (player.suspendedMatches > 0) return `Suspendu ${player.suspendedMatches}${NBSP}m.`;

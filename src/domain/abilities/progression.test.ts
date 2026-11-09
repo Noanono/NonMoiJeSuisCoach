@@ -1,29 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import type { Ability } from '../types';
-import { contextMultiplier, levelForXp, statsAtLevel } from './progression';
+import { getAbility } from './catalog';
+import { level5Bonus, levelForXp, statsAtLevel } from './progression';
 
-const ability: Ability = {
-  id: 'pilier-de-buvette',
-  name: 'Pilier de buvette',
-  rarity: 'rare',
-  category: 'attack',
-  position: 'ANY',
-  targeting: { kind: 'self' },
-  trigger: 'anytime',
-  description: '+40 % à toutes ses stats pendant 15 min',
-  downside: 'Puis −30 % jusqu’à la fin du match',
-  level5Text: 'Chute limitée à −15 %',
-  base: {
-    successChance: 1,
-    effects: [{ type: 'modifier', scope: 'self', stat: 'all', value: 0.4, duration: 15 }],
-    risks: [{ chance: 0.2, label: 'Coup de barre', effects: [] }],
-    cooldown: { kind: 'minutes', value: 20 },
-    cost: 2,
-  },
-  level5: { cost: 1 },
-  tags: ['alcohol'],
-  hidden: false,
-};
+const valueOf = (id: string, level: number) => (statsAtLevel(getAbility(id), level).effects[0] as { value: number }).value;
 
 describe('progression des capacités', () => {
   test('les seuils d’XP font monter jusqu’au niveau 5 (CAP-10)', () => {
@@ -32,39 +11,33 @@ describe('progression des capacités', () => {
     expect(levelForXp(10_000)).toBe(5);
   });
 
-  test('chaque niveau renforce l’effet, raccourcit la recharge et baisse le risque (CAP-11)', () => {
-    const l1 = statsAtLevel(ability, 1);
-    const l3 = statsAtLevel(ability, 3);
-    const effect = (stats: typeof l1) => (stats.effects[0] as { value: number }).value;
-    expect(effect(l3)).toBeGreaterThan(effect(l1));
-    expect(l3.risks[0]!.chance).toBeLessThan(l1.risks[0]!.chance);
-    expect(l3.cooldown).toEqual({ kind: 'minutes', value: 18 });
+  test('chaque niveau renforce l’effet de 10 % (CAP-11)', () => {
+    expect(valueOf('le-buteur-de-comptoir', 1)).toBeCloseTo(0.4);
+    expect(valueOf('le-buteur-de-comptoir', 3)).toBeCloseTo(0.48);
+    expect(valueOf('le-buteur-de-comptoir', 4)).toBeCloseTo(0.52);
   });
 
-  test('le niveau 5 applique la surcharge propre à la capacité (CAP-11)', () => {
-    expect(statsAtLevel(ability, 5).cost).toBe(1);
+  test('le niveau 5 donne une cible de plus aux capacités ciblées', () => {
+    const bulldozer = getAbility('le-bulldozer');
+    expect(level5Bonus(bulldozer)).toBe('extraTarget');
+    expect(statsAtLevel(bulldozer, 4).targeting.count).toBe(2);
+    expect(statsAtLevel(bulldozer, 5).targeting.count).toBe(3);
   });
 
-  test('une grosse soirée donne +50 % aux capacités alcoolisées, le règlement les bride (CAP-14, FRAS-01)', () => {
-    expect(contextMultiplier(ability, { teamNight: 'bigNight', houseRules: [] }).bonus).toBe(1.5);
-    const bridled = contextMultiplier(ability, { teamNight: 'none', houseRules: ['noAlcoholEve'] });
-    expect(bridled.bonus).toBeLessThan(1);
-    expect(bridled.risk).toBeLessThan(1);
-  });
-});
-
-describe('cohérence du niveau 5', () => {
-  test('la surcharge du niveau 5 ne fait jamais régresser un effet du niveau 4', () => {
-    const l5: Ability = {
-      ...ability,
-      level5: { effects: [{ type: 'modifier', scope: 'self', stat: 'all', value: 0.4, duration: 20 }] },
-    };
-    const value = (level: number) => (statsAtLevel(l5, level).effects[0] as { value: number }).value;
-    expect(value(5)).toBeGreaterThanOrEqual(value(4));
+  test('sinon +50 % de durée', () => {
+    const mobylette = getAbility('la-mobylette');
+    expect(level5Bonus(mobylette)).toBe('longerDuration');
+    expect((statsAtLevel(mobylette, 5).effects[0] as { duration: number }).duration).toBe(8);
   });
 
-  test('un malus certain reste certain quel que soit le niveau', () => {
-    const certain: Ability = { ...ability, base: { ...ability.base, risks: [{ chance: 1, label: 'Gueule de bois', effects: [] }] } };
-    expect(statsAtLevel(certain, 4).risks[0]!.chance).toBe(1);
+  test('sinon une recharge plus courte', () => {
+    const frappe = getAbility('la-frappe-de-mule');
+    expect(level5Bonus(frappe)).toBe('shorterCooldown');
+    expect(statsAtLevel(frappe, 5).cooldown).toBe(10);
+  });
+
+  test('la contrepartie de La Mêlée générale ne grandit pas avec le niveau', () => {
+    const [, self] = statsAtLevel(getAbility('la-melee-generale'), 4).effects;
+    expect(self).toMatchObject({ scope: 'self', duration: 10 });
   });
 });

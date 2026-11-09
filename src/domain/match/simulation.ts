@@ -4,17 +4,18 @@
  */
 import type { Instructions } from '../types';
 import { addGauge, expireEffects } from './actions';
+import { resolveDelayedEffects } from './effects';
 import { aiTakeTurn } from './ai';
 import { advanceClock, startSecondHalf } from './clock';
 import { comment } from './commentary';
 import { playChances, playFouls, resolvePendingPlay, rollInjury } from './plays';
 import { beginRun, endRun, isOnPitch, pushEvent, refreshRating, teamOf, type Run } from './state';
-import { createStrength, measureTeam } from './strength';
+import { createStrength, measureTeam, swapStrengths } from './strength';
 import type { MatchEvent, MatchState, Side, TeamState } from './types';
 import { clearTriggers } from './windows';
 
-/** Recharge de la Jauge de Gueulante : +1 toutes les 5 minutes (CAP-05). */
-export const GAUGE_RECHARGE_INTERVAL = 5;
+/** Recharge de la Jauge de Gueulante : +1 toutes les 10 minutes (CAP-05). */
+export const GAUGE_RECHARGE_INTERVAL = 10;
 const GAUGE_RECHARGE_POINTS = 1;
 /** La fatigue et les notes sont mises à jour par paquets de 5 minutes (green code). */
 const FATIGUE_INTERVAL = 5;
@@ -57,6 +58,7 @@ export function setInstructions(state: MatchState, side: Side, instructions: Ins
 function simulateMinute(run: Run): void {
   const { state } = run;
   expireEffects(state);
+  resolveDelayedEffects(run);
   if (state.elapsed % GAUGE_RECHARGE_INTERVAL === 0) {
     addGauge(state.home, GAUGE_RECHARGE_POINTS);
     addGauge(state.away, GAUGE_RECHARGE_POINTS);
@@ -67,9 +69,10 @@ function simulateMinute(run: Run): void {
   }
   measureTeam(state.home, state.elapsed, homeStrength);
   measureTeam(state.away, state.elapsed, awayStrength);
+  if (state.swappedUntil >= state.elapsed) swapStrengths(homeStrength, awayStrength);
   const eventsBefore = run.events.length;
   playChances(run, homeStrength, awayStrength);
-  if (!interrupted(state)) playFouls(run, homeStrength, awayStrength);
+  if (!interrupted(state)) playFouls(run);
   if (!interrupted(state)) rollInjury(run);
   if (!interrupted(state)) playAiTurns(run);
   if (run.events.length === eventsBefore && run.rng.chance(AMBIANCE_CHANCE)) commentAmbiance(run);

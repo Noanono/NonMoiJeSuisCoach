@@ -3,6 +3,8 @@ import { effectiveRating, FORMATION_SLOTS, isAvailable } from '../player/rating'
 
 export const STARTERS_COUNT = 11;
 export const MAX_BENCH_SIZE = 7;
+/** Poste laissé libre dans `Lineup.starters`, pendant que le coach compose. */
+export const EMPTY_SLOT = '';
 /** Le gardien occupe toujours le premier poste de FORMATION_SLOTS. */
 const GOALKEEPER_SLOT = 0;
 
@@ -78,15 +80,20 @@ export function validateLineup(lineup: Lineup, players: readonly Player[]): Line
   ];
 }
 
+function filledStarters(starters: readonly string[]): string[] {
+  return starters.filter((id) => id !== EMPTY_SLOT);
+}
+
 function checkStarterCount({ starters }: Lineup): LineupError[] {
-  if (starters.length > STARTERS_COUNT) {
-    return [{ code: 'tooManyStarters', message: `Tu as mis ${starters.length} joueurs. Même nous on a vu.` }];
+  const count = filledStarters(starters).length;
+  if (count > STARTERS_COUNT) {
+    return [{ code: 'tooManyStarters', message: `Tu as mis ${count} joueurs. Même nous on a vu.` }];
   }
-  if (starters.length < STARTERS_COUNT) {
+  if (count < STARTERS_COUNT) {
     return [
       {
         code: 'notEnoughStarters',
-        message: `${starters.length} titulaires seulement ? Il en faut 11, même en district.`,
+        message: `${count} titulaires seulement ? Il en faut 11, même en district.`,
       },
     ];
   }
@@ -101,7 +108,7 @@ function checkBenchSize({ bench }: Lineup): LineupError[] {
 function checkDuplicates({ starters, bench }: Lineup, squad: ReadonlyMap<string, Player>): LineupError[] {
   const seen = new Set<string>();
   const errors: LineupError[] = [];
-  for (const id of [...starters, ...bench]) {
+  for (const id of [...filledStarters(starters), ...bench]) {
     if (seen.has(id)) {
       errors.push({ code: 'duplicatePlayer', message: `${displayName(id, squad)} est aligné deux fois. Il a un jumeau caché ?` });
     }
@@ -112,7 +119,7 @@ function checkDuplicates({ starters, bench }: Lineup, squad: ReadonlyMap<string,
 
 function checkMembershipAndAvailability({ starters, bench }: Lineup, squad: ReadonlyMap<string, Player>): LineupError[] {
   const errors: LineupError[] = [];
-  for (const id of new Set([...starters, ...bench])) {
+  for (const id of new Set([...filledStarters(starters), ...bench])) {
     const player = squad.get(id);
     if (!player) {
       errors.push({ code: 'unknownPlayer', message: 'Ce gars-là n’est pas au club. On ne recrute pas à la buvette.' });

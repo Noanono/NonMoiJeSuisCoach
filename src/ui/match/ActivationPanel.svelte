@@ -2,6 +2,8 @@
   import { GAUGE_MAX } from '../../domain/match';
   import Button from '../kit/Button.svelte';
   import Gauge from '../kit/Gauge.svelte';
+  import PlayerAvatar from '../kit/PlayerAvatar.svelte';
+  import Sticker from '../kit/Sticker.svelte';
   import { abilitySheet } from './activation';
   import type { MatchController } from './controller.svelte';
 
@@ -11,6 +13,8 @@
   }
 
   let { controller, playerId }: Props = $props();
+
+  const RARITY_TONE = { common: 'craie', rare: 'scotch', legendary: 'fumigene' } as const;
 
   const sheet = $derived.by(() => {
     void controller.version;
@@ -30,10 +34,20 @@
 <svelte:window onkeydown={closeOnEscape} />
 
 <div class="panneau" role="dialog" aria-labelledby="activation-titre">
-  <p class="tampon joueur">{sheet.playerName}</p>
-  <h2 id="activation-titre" class="banderole-m" tabindex="-1" bind:this={heading}>{sheet.abilityName}</h2>
+  <div class="entete">
+    {#if sheet.avatar}<PlayerAvatar player={sheet.avatar} size={56} />{/if}
+    <div>
+      <p class="tampon joueur">{sheet.playerName}</p>
+      <h2 id="activation-titre" class="banderole-m" tabindex="-1" bind:this={heading}>{sheet.abilityName}</h2>
+      {#if sheet.rarity}<Sticker tone={RARITY_TONE[sheet.rarity.key]}>{sheet.rarity.label}</Sticker>{/if}
+    </div>
+  </div>
   {#if sheet.description}<p class="description">{sheet.description}</p>{/if}
-  {#if sheet.downside}<p class="texte-s revers">Revers : {sheet.downside}</p>{/if}
+  {#if sheet.abilityEffects.length > 0}
+    <ul class="ce-que-ca-fait texte-fort" aria-label="Effet de la capacité">
+      {#each sheet.abilityEffects as line, index (index)}<li>{line}</li>{/each}
+    </ul>
+  {/if}
 
   <dl class="chiffres">
     <div><dt class="tampon">Cible</dt><dd class="texte-s">{sheet.targeting}</dd></div>
@@ -45,15 +59,11 @@
         <span class="stat-s">{sheet.gauge}/{GAUGE_MAX}</span>
       </dd>
     </div>
-    <div><dt class="tampon">Réussite</dt><dd class="stat-s">{sheet.success}</dd></div>
-    {#each sheet.risks as risk, index (index)}
-      <div><dt class="tampon">Risque</dt><dd class="texte-s">{risk.label} <span class="stat-s">{risk.chance}</span></dd></div>
-    {/each}
   </dl>
 
-  {#if sheet.effects.length > 0}
+  {#if sheet.active.length > 0}
     <ul class="effets texte-s" aria-label="Effets actifs">
-      {#each sheet.effects as effect, index (index)}<li>{effect}</li>{/each}
+      {#each sheet.active as effect, index (index)}<li>{effect}</li>{/each}
     </ul>
   {/if}
 
@@ -81,12 +91,15 @@
     box-shadow: var(--ombre-sticker);
     padding: var(--space-4);
   }
+  .entete {
+    display: flex;
+    gap: var(--space-2);
+    align-items: flex-start;
+    margin-bottom: var(--space-2);
+  }
   .joueur {
     margin: 0;
     color: var(--encre-pale);
-  }
-  h2 {
-    margin-bottom: var(--space-2);
   }
   h2:focus {
     outline: none;
@@ -97,9 +110,9 @@
   .description {
     margin: 0 0 var(--space-2);
   }
-  .revers {
+  .ce-que-ca-fait {
     margin: 0 0 var(--space-2);
-    color: var(--encre-pale);
+    padding-left: var(--space-4);
   }
   .chiffres {
     display: grid;

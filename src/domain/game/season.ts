@@ -28,7 +28,6 @@ export function startSeason(state: GameState, rng: Rng): void {
 function resetSeasonCounters(state: GameState): void {
   for (const player of Object.values(state.players)) {
     player.seasonStats = { matches: 0, goals: 0, yellowCards: 0, redCards: 0 };
-    player.ability.seasonUses = 0;
   }
 }
 

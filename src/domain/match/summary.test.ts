@@ -19,7 +19,7 @@ describe('résumé de fin de match', () => {
     expect(result.homeGoals + result.awayGoals).toBe(summary.goals.length);
   });
 
-  test('chaque capacité utilisée a son joueur, sa réussite, son impact et son XP (MATCH-06, CAP-10)', () => {
+  test('chaque capacité utilisée a son joueur, son impact et son XP (MATCH-06, CAP-10)', () => {
     const state = aiMatch(21);
     playToEnd(state);
     const summary = summarize(state);
@@ -27,11 +27,9 @@ describe('résumé de fin de match', () => {
     for (const report of summary.abilities) {
       expect(report.playerName).not.toBe('?');
       expect(report.impact).toBeGreaterThanOrEqual(0);
-      if (report.success) expect(report.xp).toBeGreaterThanOrEqual(10);
-      else expect(report.xp).toBe(0);
+      expect(report.xp).toBeGreaterThanOrEqual(10);
     }
-    const successful = summary.abilities.filter((report) => report.success);
     const totalXp = Object.values(summary.xpGains).reduce((sum, xp) => sum + xp, 0);
-    expect(totalXp).toBe(successful.reduce((sum, report) => sum + report.xp, 0));
+    expect(totalXp).toBe(summary.abilities.reduce((sum, report) => sum + report.xp, 0));
   });
 });

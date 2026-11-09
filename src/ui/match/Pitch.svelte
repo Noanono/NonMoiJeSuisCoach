@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { MatchController } from './controller.svelte';
   import { pitchView } from './pitch';
+  import FxLayer from './FxLayer.svelte';
   import PlayerToken from './PlayerToken.svelte';
 
   interface Props {
@@ -14,6 +15,8 @@
     return pitchView(controller.match, controller.coachSide);
   });
 
+  let root = $state<HTMLElement>();
+
   /** Ciblage en cours : toucher choisit la cible ; sinon toucher ouvre le panneau (CAP-03, CAP-16). */
   function activate(playerId: string): void {
     if (controller.match.pending) controller.pickTarget(playerId);
@@ -21,7 +24,7 @@
   }
 </script>
 
-<section class="terrain" aria-label="Terrain : ton équipe face à l'adversaire">
+<section class="terrain" bind:this={root} aria-label="Terrain : ton équipe face à l'adversaire">
   <div class="lignes">
     {#each view.columns as column (column.key)}
       <div class="ligne" role="group" aria-label={column.label}>
@@ -42,10 +45,13 @@
       </div>
     </div>
   {/if}
+
+  <FxLayer {controller} {root} />
 </section>
 
 <style>
   .terrain {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: var(--space-4);

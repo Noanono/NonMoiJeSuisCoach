@@ -156,6 +156,13 @@ export function confidenceAfterMatch(confidence: number, review: MatchReview): C
   return { confidence: next, delta: next - confidence, message: MATCH_REACTION[review.outcome] };
 }
 
+/** Humeur des sponsors après un match : ils aiment gagner, et le faire savoir. */
+const SPONSOR_MOOD_DELTA: Record<MatchOutcome, number> = { win: 2, draw: 0, loss: -2 };
+
+export function sponsorMoodAfterMatch(mood: number, outcome: MatchOutcome): number {
+  return clampGauge(mood + SPONSOR_MOOD_DELTA[outcome]);
+}
+
 /** Tendance hebdomadaire selon le classement : objectif en vue ou zone rouge (CLUB-04, CLUB-05). */
 export const ON_TRACK_WEEKLY_CONFIDENCE = 1;
 export const DANGER_ZONE_WEEKLY_CONFIDENCE = -1;
@@ -164,15 +171,6 @@ export function confidenceTrend(position: number, objective: SeasonObjective, di
   if (position <= objective.targetPosition) return ON_TRACK_WEEKLY_CONFIDENCE;
   if (relegated > 0 && position > divisionSize - relegated) return DANGER_ZONE_WEEKLY_CONFIDENCE;
   return 0;
-}
-
-export type ConfidenceIncident = 'clubFine' | 'playerFined' | 'frasque';
-
-/** Amende payée par le club, amende infligée à un joueur (le président aime l'ordre et l'argent), frasque. */
-export const INCIDENT_CONFIDENCE_DELTA: Record<ConfidenceIncident, number> = { clubFine: -3, playerFined: 1, frasque: -2 };
-
-export function confidenceAfterIncident(confidence: number, incident: ConfidenceIncident): number {
-  return clampGauge(confidence + INCIDENT_CONFIDENCE_DELTA[incident]);
 }
 
 /** À zéro de confiance, le coach est licencié (CLUB-05). */

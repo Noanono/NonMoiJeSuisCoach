@@ -1,4 +1,3 @@
-import type { TeamNight } from '../types';
 import type { Rng } from '../core/rng';
 import { applyConsequences, type Consequence, type ConsequenceResult, type ConsequenceTarget } from './model';
 
@@ -25,12 +24,8 @@ export type DialogueTrigger =
   | 'anytime'
   | 'losingStreak'
   | 'winningStreak'
-  | 'recentFrasque'
   | 'lowBudget'
-  | 'lowConfidence'
-  | 'afterBigNight'
-  | 'transferRequest'
-  | 'unhappyPlayer';
+  | 'lowConfidence';
 
 export interface DialogueChoice {
   id: string;
@@ -45,13 +40,9 @@ export interface Dialogue {
   speaker: DialogueSpeaker;
   speakerName: string;
   trigger: DialogueTrigger;
-  /** `{joueur}` est remplacé par le joueur concerné (dialogues de joueurs). */
   text: string;
   choices: DialogueChoice[];
 }
-
-/** Dialogues concernant un joueur précis : ils ne sortent que si un joueur est désigné. */
-const PLAYER_TRIGGERS: ReadonlySet<DialogueTrigger> = new Set(['transferRequest', 'unhappyPlayer']);
 
 export const LOSING_STREAK_TRIGGER = 3;
 export const WINNING_STREAK_TRIGGER = 3;
@@ -76,13 +67,13 @@ export const DIALOGUES: readonly Dialogue[] = [
         id: 'team-bonus',
         label: "Proposer plutôt une prime pour l'équipe",
         outcome: 'Les joueurs trinquent à ta santé. Le président boude un peu son socle vide.',
-        consequences: [{ kind: 'teamMorale', value: 5 }, { kind: 'budget', value: -500 }, { kind: 'presidentConfidence', value: -2 }],
+        consequences: [{ kind: 'sponsorMood', value: 3 }, { kind: 'budget', value: -500 }, { kind: 'presidentConfidence', value: -2 }],
       },
       {
         id: 'humble',
         label: 'Rester humble',
         outcome: 'Le vestiaire apprécie. Le président te trouve « bizarrement modeste ».',
-        consequences: [{ kind: 'teamMorale', value: 2 }],
+        consequences: [{ kind: 'sponsorMood', value: 1 }],
       },
     ],
   },
@@ -103,13 +94,13 @@ export const DIALOGUES: readonly Dialogue[] = [
         id: 'blame-referee',
         label: "Accuser l'arbitre",
         outcome: "Le président adore accuser l'arbitre. Les joueurs aussi.",
-        consequences: [{ kind: 'presidentConfidence', value: 2 }, { kind: 'teamMorale', value: 3 }],
+        consequences: [{ kind: 'presidentConfidence', value: 2 }, { kind: 'sponsorMood', value: 2 }],
       },
       {
         id: 'blame-players',
         label: 'Accuser les joueurs',
         outcome: 'Le président approuve. Le vestiaire, qui écoutait derrière la porte, beaucoup moins.',
-        consequences: [{ kind: 'presidentConfidence', value: 4 }, { kind: 'teamMorale', value: -6 }],
+        consequences: [{ kind: 'presidentConfidence', value: 1 }],
       },
     ],
   },
@@ -124,13 +115,13 @@ export const DIALOGUES: readonly Dialogue[] = [
         id: 'promise-result',
         label: 'Promettre un résultat',
         outcome: 'Il te laisse une chance. La pression, elle, descend tout droit dans le vestiaire.',
-        consequences: [{ kind: 'presidentConfidence', value: 6 }, { kind: 'teamMorale', value: -3 }],
+        consequences: [{ kind: 'presidentConfidence', value: 4 }],
       },
       {
         id: 'invite-training',
         label: "L'inviter à l'entraînement",
         outcome: 'Il fait trois tours de terrain en mocassins et repart convaincu. Les joueurs, eux, ont dû courir avec lui.',
-        consequences: [{ kind: 'presidentConfidence', value: 3 }, { kind: 'fatigue', value: 5 }],
+        consequences: [{ kind: 'presidentConfidence', value: 3 }],
       },
       {
         id: 'remind-contract',
@@ -151,7 +142,7 @@ export const DIALOGUES: readonly Dialogue[] = [
         id: 'promise-minutes',
         label: 'Promettre une entrée en jeu',
         outcome: 'Le président jubile. Le vestiaire, lui, a vu Dylan jongler : deux fois, avec les mains.',
-        consequences: [{ kind: 'presidentConfidence', value: 5 }, { kind: 'teamMorale', value: -4 }],
+        consequences: [{ kind: 'presidentConfidence', value: 3 }],
       },
       {
         id: 'trial',
@@ -163,7 +154,7 @@ export const DIALOGUES: readonly Dialogue[] = [
         id: 'refuse',
         label: 'Refuser net',
         outcome: 'Le président fait la tête. Les joueurs, eux, te paient une bière.',
-        consequences: [{ kind: 'presidentConfidence', value: -6 }, { kind: 'teamMorale', value: 3 }],
+        consequences: [{ kind: 'presidentConfidence', value: -6 }, { kind: 'sponsorMood', value: 2 }],
       },
     ],
   },
@@ -178,7 +169,7 @@ export const DIALOGUES: readonly Dialogue[] = [
         id: 'whole-team',
         label: "Y aller avec toute l'équipe",
         outcome: 'Repas réussi, chemise boutonnée jusqu’au col. Les joueurs ont un peu trop goûté au digestif.',
-        consequences: [{ kind: 'teamMorale', value: 4 }, { kind: 'fatigue', value: 10 }, { kind: 'presidentConfidence', value: 2 }],
+        consequences: [{ kind: 'sponsorMood', value: 2 }, { kind: 'presidentConfidence', value: 2 }],
       },
       {
         id: 'alone',
@@ -191,33 +182,6 @@ export const DIALOGUES: readonly Dialogue[] = [
         label: 'Décliner poliment',
         outcome: 'Elle tient aussi la boulangerie qui sponsorise le maillot. Les croissants seront moins frais.',
         consequences: [{ kind: 'sponsorMood', value: -2 }],
-      },
-    ],
-  },
-  {
-    id: 'journalist-frasque',
-    speaker: 'journalist',
-    speakerName: "Kevin, de L'Écho de la Buvette",
-    trigger: 'recentFrasque',
-    text: "Kevin, de L'Écho de la Buvette, a eu vent de la dernière frasque. Il veut ta version avant le bouclage de jeudi, et accessoirement un demi en terrasse.",
-    choices: [
-      {
-        id: 'deny',
-        label: 'Démentir en bloc',
-        outcome: 'Titre du jeudi : « Le coach nie tout, même la photo ». Les sponsors grincent.',
-        consequences: [{ kind: 'presidentConfidence', value: 2 }, { kind: 'sponsorMood', value: -3 }],
-      },
-      {
-        id: 'own-it',
-        label: 'Assumer avec humour',
-        outcome: "L'article fait rire tout le canton. Les sponsors adorent, le président un peu moins.",
-        consequences: [{ kind: 'sponsorMood', value: 4 }, { kind: 'presidentConfidence', value: -3 }],
-      },
-      {
-        id: 'buy-round',
-        label: "Payer sa tournée pour qu'il oublie",
-        outcome: "Kevin a tout oublié, y compris le chemin de la rédaction.",
-        consequences: [{ kind: 'budget', value: -150 }, { kind: 'presidentConfidence', value: 2 }, { kind: 'sponsorMood', value: 1 }],
       },
     ],
   },
@@ -238,7 +202,7 @@ export const DIALOGUES: readonly Dialogue[] = [
         id: 'trash-talk',
         label: 'Chambrer le prochain adversaire',
         outcome: 'Le vestiaire affiche l’article au mur. Le président craint un match retour sur le parking.',
-        consequences: [{ kind: 'teamMorale', value: 4 }, { kind: 'presidentConfidence', value: -2 }],
+        consequences: [{ kind: 'sponsorMood', value: 2 }, { kind: 'presidentConfidence', value: -2 }],
       },
       {
         id: 'pastis',
@@ -259,13 +223,13 @@ export const DIALOGUES: readonly Dialogue[] = [
         id: 'fund',
         label: 'Financer le tifo',
         outcome: 'Le tifo est magnifique, sauf le « g » de « gagne », retourné. Les joueurs sont galvanisés.',
-        consequences: [{ kind: 'budget', value: -300 }, { kind: 'teamMorale', value: 5 }, { kind: 'sponsorMood', value: 2 }],
+        consequences: [{ kind: 'budget', value: -300 }, { kind: 'sponsorMood', value: 5 }],
       },
       {
         id: 'refuse',
         label: 'Refuser',
         outcome: 'Ils peignent la banderole sur ta voiture. Gratuitement, au moins.',
-        consequences: [{ kind: 'teamMorale', value: -2 }],
+        consequences: [{ kind: 'presidentConfidence', value: -1 }],
       },
     ],
   },
@@ -286,7 +250,7 @@ export const DIALOGUES: readonly Dialogue[] = [
         id: 'promise',
         label: 'Promettre du spectacle',
         outcome: 'Le président apprécie le discours. Les joueurs sentent la pression monter.',
-        consequences: [{ kind: 'presidentConfidence', value: 3 }, { kind: 'teamMorale', value: -2 }],
+        consequences: [{ kind: 'presidentConfidence', value: 2 }],
       },
       {
         id: 'escape',
@@ -307,7 +271,7 @@ export const DIALOGUES: readonly Dialogue[] = [
         id: 'team',
         label: "Y aller avec l'équipe",
         outcome: 'Le cake contenait surtout du rhum. Excellente ambiance, réveil difficile.',
-        consequences: [{ kind: 'teamMorale', value: 4 }, { kind: 'fatigue', value: 5 }, { kind: 'sponsorMood', value: 3 }],
+        consequences: [{ kind: 'sponsorMood', value: 5 }],
       },
       {
         id: 'captain-only',
@@ -324,87 +288,6 @@ export const DIALOGUES: readonly Dialogue[] = [
     ],
   },
   {
-    id: 'player-transfer-request',
-    speaker: 'player',
-    speakerName: '{joueur}',
-    trigger: 'transferRequest',
-    text: '{joueur} débarque dans ton bureau : il a demandé son transfert et compte bien partir. Il affirme que même le club de belote du village le ferait plus jouer.',
-    choices: [
-      {
-        id: 'promise-minutes',
-        label: 'Lui promettre du temps de jeu',
-        outcome: 'Il se calme. Les autres ont tout entendu à travers la cloison en contreplaqué.',
-        consequences: [{ kind: 'playerMorale', value: 15 }, { kind: 'teamMorale', value: -2 }],
-      },
-      {
-        id: 'open-door',
-        label: 'Lui montrer la porte',
-        outcome: "Il claque la porte, qui tombe. Le président adore ton autorité.",
-        consequences: [{ kind: 'playerMorale', value: -10 }, { kind: 'presidentConfidence', value: 2 }],
-      },
-      {
-        id: 'drink',
-        label: "L'inviter à en parler autour d'un verre",
-        outcome: 'Trois verres plus tard, il pleure sur ton épaule et jure fidélité au club.',
-        consequences: [{ kind: 'playerMorale', value: 8 }, { kind: 'budget', value: -50 }],
-      },
-    ],
-  },
-  {
-    id: 'player-unhappy',
-    speaker: 'player',
-    speakerName: '{joueur}',
-    trigger: 'unhappyPlayer',
-    text: '{joueur} a le moral dans les chaussettes : il ne joue pas assez et le fait savoir en soupirant très fort dans le vestiaire.',
-    choices: [
-      {
-        id: 'promise-start',
-        label: 'Lui promettre une place de titulaire',
-        outcome: 'Il retrouve le sourire. Celui qui joue à sa place, beaucoup moins.',
-        consequences: [{ kind: 'playerMorale', value: 10 }, { kind: 'teamMorale', value: -2 }],
-      },
-      {
-        id: 'stats',
-        label: 'Lui parler de ses statistiques',
-        outcome: "Il ne savait pas qu'il en avait. Il en a peu.",
-        consequences: [{ kind: 'playerMorale', value: -5 }],
-      },
-      {
-        id: 'party-captain',
-        label: "Le nommer capitaine de la soirée d'équipe",
-        outcome: "Responsabilité acceptée avec enthousiasme. Toute l'équipe le paie le lendemain.",
-        consequences: [{ kind: 'playerMorale', value: 6 }, { kind: 'fatigue', value: 5 }],
-      },
-    ],
-  },
-  {
-    id: 'captain-big-night',
-    speaker: 'captain',
-    speakerName: 'Le capitaine',
-    trigger: 'afterBigNight',
-    text: "La fatigue de l'effectif est au plus haut : le capitaine t'annonce que la moitié de l'équipe a fini la soirée dans la fontaine de la place, l'autre moitié dans la voiture du maire.",
-    choices: [
-      {
-        id: 'early-session',
-        label: 'Décrassage à 8 h',
-        outcome: 'Ça vomit dans les plots, mais les jambes reviennent.',
-        consequences: [{ kind: 'fatigue', value: -10 }, { kind: 'teamMorale', value: -4 }],
-      },
-      {
-        id: 'day-off',
-        label: 'Journée off',
-        outcome: 'Tout le monde dort jusqu’à 15 h. Le président trouve que vous êtes « en vacances ».',
-        consequences: [{ kind: 'fatigue', value: -15 }, { kind: 'presidentConfidence', value: -3 }],
-      },
-      {
-        id: 'ignore',
-        label: 'Faire comme si de rien n’était',
-        outcome: 'Les joueurs apprécient ta discrétion. Le maire cherche toujours qui a vomi dans sa Clio.',
-        consequences: [{ kind: 'teamMorale', value: 2 }],
-      },
-    ],
-  },
-  {
     id: 'captain-toilets',
     speaker: 'captain',
     speakerName: 'Le capitaine',
@@ -415,19 +298,19 @@ export const DIALOGUES: readonly Dialogue[] = [
         id: 'plumber',
         label: 'Payer le plombier',
         outcome: 'Le plombier ressort livide et réclame une prime de risque. Le vestiaire respire enfin.',
-        consequences: [{ kind: 'budget', value: -250 }, { kind: 'teamMorale', value: 3 }],
+        consequences: [{ kind: 'budget', value: -250 }, { kind: 'sponsorMood', value: 2 }],
       },
       {
         id: 'investigate',
         label: 'Mener l’enquête',
         outcome: "Le coupable est démasqué : c'était le président, après le loto. Fous rires dans le vestiaire.",
-        consequences: [{ kind: 'teamMorale', value: 4 }, { kind: 'presidentConfidence', value: -2 }],
+        consequences: [{ kind: 'sponsorMood', value: 2 }, { kind: 'presidentConfidence', value: -2 }],
       },
       {
         id: 'open-windows',
         label: 'Ouvrir les fenêtres et prier',
         outcome: 'Les joueurs se changent sur le parking. Ambiance glaciale, au sens propre.',
-        consequences: [{ kind: 'teamMorale', value: -4 }],
+        consequences: [{ kind: 'presidentConfidence', value: -2 }],
       },
     ],
   },
@@ -442,19 +325,19 @@ export const DIALOGUES: readonly Dialogue[] = [
         id: 'pay',
         label: "Éponger l'ardoise",
         outcome: 'Josiane offre une tournée pour fêter ça. Tu viens de recréer l’ardoise.',
-        consequences: [{ kind: 'budget', value: -1_200 }, { kind: 'teamMorale', value: 2 }, { kind: 'sponsorMood', value: 2 }],
+        consequences: [{ kind: 'budget', value: -1_200 }, { kind: 'sponsorMood', value: 3 }],
       },
       {
         id: 'docked-wages',
         label: 'Prélever sur les salaires',
         outcome: 'Les joueurs remboursent. Ils te détestent un peu, mais avec les comptes à jour.',
-        consequences: [{ kind: 'teamMorale', value: -6 }],
+        consequences: [{ kind: 'presidentConfidence', value: -3 }],
       },
       {
         id: 'gala',
         label: 'Organiser un match de gala au profit de la buvette',
         outcome: 'Match contre les pompiers, perdu 4-2. Mais la buvette a fait le plein.',
-        consequences: [{ kind: 'budget', value: 400 }, { kind: 'fatigue', value: 10 }],
+        consequences: [{ kind: 'budget', value: 400 }],
       },
     ],
   },
@@ -475,7 +358,7 @@ export const DIALOGUES: readonly Dialogue[] = [
         id: 'free-kebabs',
         label: 'Négocier des kebabs gratuits',
         outcome: 'Les joueurs adorent. Le défenseur central a pris trois kilos en une semaine.',
-        consequences: [{ kind: 'teamMorale', value: 6 }, { kind: 'fatigue', value: 5 }],
+        consequences: [{ kind: 'sponsorMood', value: 3 }],
       },
       {
         id: 'refuse',
@@ -502,7 +385,7 @@ export const DIALOGUES: readonly Dialogue[] = [
         id: 'manure',
         label: 'Va pour le fumier',
         outcome: "L'herbe pousse, l'odeur aussi. Le sponsor du maillot refuse de venir au stade.",
-        consequences: [{ kind: 'teamMorale', value: -3 }, { kind: 'sponsorMood', value: -2 }],
+        consequences: [{ kind: 'presidentConfidence', value: -2 }, { kind: 'sponsorMood', value: -2 }],
       },
     ],
   },
@@ -559,66 +442,33 @@ export const DIALOGUES: readonly Dialogue[] = [
 export interface DialogueContext {
   losingStreak: number;
   winningStreak: number;
-  /** Une frasque a fait parler d'elle récemment (FRAS-03). */
-  recentFrasque: boolean;
   budget: number;
   presidentConfidence: number;
-  lastTeamNight: TeamNight;
-  /** Joueur ayant demandé son transfert, s'il y en a un (EFF-07). */
-  transferRequestPlayerId: string | null;
-  /** Joueur au moral le plus bas, s'il est malheureux (EFF-06). */
-  unhappyPlayerId: string | null;
   /** Dialogues récents, à ne pas resservir tout de suite. */
   recentDialogueIds: readonly string[];
-}
-
-export interface WeeklyDialogue {
-  dialogue: Dialogue;
-  /** Joueur concerné, pour les dialogues de joueurs et les conséquences `playerMorale`. */
-  playerId: string | null;
 }
 
 function activeTriggers(context: DialogueContext): Set<DialogueTrigger> {
   const triggers = new Set<DialogueTrigger>(['anytime']);
   if (context.losingStreak >= LOSING_STREAK_TRIGGER) triggers.add('losingStreak');
   if (context.winningStreak >= WINNING_STREAK_TRIGGER) triggers.add('winningStreak');
-  if (context.recentFrasque) triggers.add('recentFrasque');
   if (context.budget < LOW_BUDGET_TRIGGER) triggers.add('lowBudget');
   if (context.presidentConfidence <= LOW_CONFIDENCE_TRIGGER) triggers.add('lowConfidence');
-  if (context.lastTeamNight === 'bigNight') triggers.add('afterBigNight');
-  if (context.transferRequestPlayerId) triggers.add('transferRequest');
-  if (context.unhappyPlayerId) triggers.add('unhappyPlayer');
   return triggers;
-}
-
-function concernedPlayer(trigger: DialogueTrigger, context: DialogueContext): string | null {
-  if (trigger === 'transferRequest') return context.transferRequestPlayerId;
-  if (trigger === 'unhappyPlayer') return context.unhappyPlayerId;
-  return null;
 }
 
 /**
  * Dialogue de la semaine (CLUB-06) : on privilégie ceux qui collent à l'actualité
- * (série de défaites, frasque récente…), sinon un dialogue du quotidien jamais vu récemment.
+ * (série de défaites, budget à sec…), sinon un dialogue du quotidien jamais vu récemment.
  */
-export function pickWeeklyDialogue(context: DialogueContext, rng: Rng): WeeklyDialogue {
+export function pickWeeklyDialogue(context: DialogueContext, rng: Rng): Dialogue {
   const triggers = activeTriggers(context);
   const recent = new Set(context.recentDialogueIds);
   const possible = DIALOGUES.filter((dialogue) => triggers.has(dialogue.trigger));
   const fresh = possible.filter((dialogue) => !recent.has(dialogue.id));
   const pool = fresh.length > 0 ? fresh : possible;
   const topical = pool.filter((dialogue) => dialogue.trigger !== 'anytime');
-  const dialogue = rng.pick(topical.length > 0 ? topical : pool);
-  return { dialogue, playerId: concernedPlayer(dialogue.trigger, context) };
-}
-
-/** Remplace `{joueur}` par le nom du joueur concerné. */
-export function dialogueText(text: string, playerName: string): string {
-  return text.replaceAll('{joueur}', playerName);
-}
-
-export function isPlayerDialogue(dialogue: Dialogue): boolean {
-  return PLAYER_TRIGGERS.has(dialogue.trigger);
+  return rng.pick(topical.length > 0 ? topical : pool);
 }
 
 /** Applique la réponse choisie (CLUB-06) : nouvelles jauges, effectif mis à jour et texte de la suite. */

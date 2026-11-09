@@ -1,17 +1,15 @@
 import { levelForXp } from '../abilities/progression';
-import { clampGauge } from '../club/model';
 import type { Rng } from '../core/rng';
 import { autoLineup, validateLineup, type LineupError } from '../league/lineup';
 import { createMatch, simulateQuick, summarize } from '../match';
 import type { Consequence, MatchState, MatchSummary, PlayerReport, Side, TeamSheet } from '../match/types';
 import { overall } from '../player/rating';
-import type { Fixture, MatchResult, Player, PressArticle } from '../types';
+import type { Fixture, MatchResult, Player } from '../types';
 import { clubPlayers, humanFixture, humanSquad } from './selectors';
 import type { GameState } from './state';
 
 /** Fatigue d'un match simulé rapidement (matchs IA contre IA). */
 const QUICK_MATCH_FATIGUE = 25;
-const PRESS_PRESIDENT_DELTA = -2;
 
 export function teamSheet(state: GameState, clubId: string): TeamSheet {
   const club = state.clubs[clubId];
@@ -29,7 +27,6 @@ export function teamSheet(state: GameState, clubId: string): TeamSheet {
     formation: lineup.formation,
     instructions: lineup.instructions,
     captainId: captain.id,
-    context: club.isHuman ? state.abilityContext : { teamNight: 'none', houseRules: [] },
     isHuman: club.isHuman,
   };
 }
@@ -70,7 +67,7 @@ export function startHumanMatch(state: GameState, rng: Rng): MatchState {
   });
 }
 
-/** Reporte le match du coach sur la partie : résultat, joueurs, conséquences hors match. */
+/** Reporte le match du coach sur la partie : résultat, fatigue, cartons, blessures, progression des capacités. */
 export function finishHumanMatch(state: GameState, match: MatchState): MatchSummary {
   const fixture = humanFixture(state);
   if (!fixture) throw new Error('Pas de match du coach cette semaine');
@@ -84,18 +81,13 @@ export function finishHumanMatch(state: GameState, match: MatchState): MatchSumm
 
 function toResult(summary: MatchSummary, fixture: Fixture): MatchResult {
   const clubOf = (side: Side) => (side === 'home' ? fixture.homeId : fixture.awayId);
-  const opposite = (side: Side): Side => (side === 'home' ? 'away' : 'home');
   return {
     homeGoals: summary.homeGoals,
     awayGoals: summary.awayGoals,
     ...(summary.shootout ? { penaltyWinnerId: clubOf(summary.shootout.winner) } : {}),
     scorers: summary.goals
       .filter((goal) => !goal.cancelled)
-      .map((goal) => ({
-        playerId: goal.playerId,
-        clubId: clubOf(goal.ownGoal ? opposite(goal.side) : goal.side),
-        minute: goal.minute,
-      })),
+      .map((goal) => ({ playerId: goal.playerId, clubId: clubOf(goal.side), minute: goal.minute })),
   };
 }
 
@@ -103,7 +95,6 @@ function applyPlayerReport(state: GameState, report: PlayerReport, summary: Matc
   const player = state.players[report.playerId];
   if (!player) return;
   player.ability.revealed ||= report.abilityRevealed;
-  player.ability.seasonUses = report.seasonUses;
   const xp = summary.xpGains[player.id] ?? 0;
   if (xp > 0) {
     player.ability.xp += xp;
@@ -111,7 +102,6 @@ function applyPlayerReport(state: GameState, report: PlayerReport, summary: Matc
   }
   if (!report.played) return;
   player.fatigue = report.fatigue;
-  player.morale = report.morale;
   player.seasonStats.matches += 1;
   player.seasonStats.goals += report.goals;
   player.seasonStats.yellowCards += report.yellowCards;
@@ -122,31 +112,13 @@ function applyPlayerReport(state: GameState, report: PlayerReport, summary: Matc
 }
 
 function applyConsequence(state: GameState, consequence: Consequence): void {
-  const club = state.clubs[state.humanClubId]!;
   switch (consequence.type) {
-    case 'fine':
-      state.finesPaid += consequence.amount;
-      break;
-    case 'budget':
-      club.budget += consequence.amount;
-      break;
-    case 'presidentConfidence':
-      state.outlook.presidentConfidence = clampGauge(state.outlook.presidentConfidence + consequence.value);
-      break;
     case 'injury':
       bumpPlayer(state, consequence.playerId, (player) => (player.injuryWeeks = Math.max(player.injuryWeeks, consequence.weeks)));
       break;
     case 'suspension':
       bumpPlayer(state, consequence.playerId, (player) => (player.suspendedMatches += consequence.matches));
       break;
-    case 'squadFatigue':
-      for (const player of humanSquad(state)) player.fatigue = clampGauge(player.fatigue + consequence.value);
-      break;
-    case 'press':
-      state.press.unshift(pressArticle(state, consequence.headline));
-      state.outlook.presidentConfidence = clampGauge(state.outlook.presidentConfidence + PRESS_PRESIDENT_DELTA);
-      break;
-    case 'seasonUse':
     case 'abilityRevealed':
       break;
   }
@@ -156,15 +128,4 @@ function applyConsequence(state: GameState, consequence: Consequence): void {
 function bumpPlayer(state: GameState, playerId: string, update: (player: Player) => void): void {
   const player = state.players[playerId];
   if (player) update(player);
-}
-
-function pressArticle(state: GameState, headline: string): PressArticle {
-  return {
-    id: `press-${state.season}-${state.week}-${state.press.length}`,
-    week: state.week,
-    season: state.season,
-    headline,
-    presidentDelta: PRESS_PRESIDENT_DELTA,
-    sponsorDelta: 0,
-  };
 }

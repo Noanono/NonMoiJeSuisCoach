@@ -1,11 +1,11 @@
 <script lang="ts">
   import Gauge from '../../kit/Gauge.svelte';
   import Sticker from '../../kit/Sticker.svelte';
-  import { MAX_LEVEL, RARITY_LABEL, statsAtLevel, XP_THRESHOLDS } from '../../../domain/abilities/progression';
+  import { level5Bonus, MAX_LEVEL, RARITY_LABEL, statsAtLevel, XP_THRESHOLDS } from '../../../domain/abilities/progression';
   import type { Ability, AbilityProgress, AbilityStats, Rarity } from '../../../domain/types';
-  import { ABILITY_POSITION_LABEL, describeCooldown, describeEffect, describeRisk, describeTargeting, describeTrigger, percent } from '../describe';
+  import { ABILITY_POSITION_LABEL, describeCooldown, describeEffect, describeLevel5, describeTargeting, describeTrigger } from '../describe';
 
-  /** Capacité complète d'un joueur (CAP-04, CAP-08, CAP-10 à CAP-12) : stats au niveau actuel et au suivant. */
+  /** Capacité d'un joueur (CAP-04, CAP-08, CAP-10 à CAP-12) : stats au niveau actuel et au suivant. */
   interface Props {
     ability: Ability;
     progress: AbilityProgress;
@@ -14,7 +14,6 @@
   let { ability, progress }: Props = $props();
 
   const RARITY_TONE: Record<Rarity, 'craie' | 'scotch' | 'fumigene'> = { common: 'craie', rare: 'scotch', legendary: 'fumigene' };
-  const TAG_LABEL = { alcohol: 'alcool', vice: 'vice', family: 'famille' } as const;
 
   interface LevelColumn {
     level: number;
@@ -42,25 +41,17 @@
   <header>
     <h3 class="banderole-m">{ability.name}</h3>
     <Sticker tone={RARITY_TONE[ability.rarity]}>{RARITY_LABEL[ability.rarity]}</Sticker>
-    {#if ability.rarity === 'legendary'}<span class="tampon discret">Une fois par saison</span>{/if}
   </header>
 
   <p class="texte-fort description">{ability.description}</p>
-  <p class="texte-s"><span class="tampon">Revers</span> {ability.downside}</p>
 
   <dl class="paire texte-s">
-    <dt>Poste conseillé</dt>
+    <dt>Poste</dt>
     <dd>{ABILITY_POSITION_LABEL[ability.position]}</dd>
     <dt>Ciblage</dt>
-    <dd>{describeTargeting(ability.targeting)}</dd>
+    <dd>{describeTargeting(columns[0]!.stats.targeting)}</dd>
     <dt>Quand</dt>
-    <dd>
-      {describeTrigger(ability.trigger)}{#if ability.condition?.minMinute}, dès la {ability.condition.minMinute}e{/if}{#if ability.condition?.whenLeading}, quand l'équipe mène{/if}
-    </dd>
-    {#if ability.tags.length > 0}
-      <dt>Étiquettes</dt>
-      <dd>{ability.tags.map((tag) => TAG_LABEL[tag]).join(', ')} <span class="discret">(règlement intérieur, soirées)</span></dd>
-    {/if}
+    <dd>{describeTrigger(ability.trigger)}</dd>
   </dl>
 
   <div class="defilant">
@@ -76,11 +67,7 @@
       </thead>
       <tbody>
         <tr>
-          <th scope="row">Réussite</th>
-          {#each columns as column (column.level)}<td class="mono">{percent(column.stats.successChance)}</td>{/each}
-        </tr>
-        <tr>
-          <th scope="row">Effets</th>
+          <th scope="row">Effet</th>
           {#each columns as column (column.level)}
             <td>
               <ul class="effets">
@@ -90,32 +77,18 @@
           {/each}
         </tr>
         <tr>
-          <th scope="row">Risques</th>
-          {#each columns as column (column.level)}
-            <td>
-              {#if column.stats.risks.length === 0}
-                <span class="discret">Aucun</span>
-              {:else}
-                <ul class="effets">
-                  {#each column.stats.risks as risk, index (index)}<li>{describeRisk(risk)}</li>{/each}
-                </ul>
-              {/if}
-            </td>
-          {/each}
-        </tr>
-        <tr>
           <th scope="row">Recharge</th>
           {#each columns as column (column.level)}<td class="mono">{describeCooldown(column.stats.cooldown)}</td>{/each}
         </tr>
         <tr>
           <th scope="row">Coût</th>
-          {#each columns as column (column.level)}<td class="mono">{column.stats.cost} pt{column.stats.cost > 1 ? 's' : ''} de gueulante</td>{/each}
+          {#each columns as column (column.level)}<td class="mono">{column.stats.cost} pts de gueulante</td>{/each}
         </tr>
       </tbody>
     </table>
   </div>
 
-  <p class="texte-s"><span class="tampon">Niveau 5</span> {ability.level5Text}</p>
+  <p class="texte-s"><span class="tampon">Niveau 5</span> {describeLevel5(level5Bonus(ability))}</p>
 
   <div class="xp">
     <span class="tampon">Niveau {progress.level} / {MAX_LEVEL}</span>

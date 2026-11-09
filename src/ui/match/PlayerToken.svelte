@@ -1,4 +1,6 @@
 <script lang="ts">
+  import PlayerAvatar from '../kit/PlayerAvatar.svelte';
+  import StatIcon from '../kit/StatIcon.svelte';
   import type { TokenView } from './pitch';
 
   interface Props {
@@ -21,19 +23,25 @@
   class:surligne={token.focus.highlighted}
   class:choisi={token.focus.chosen}
   class:grise={token.focus.dimmed}
+  class:halo-bonus={token.halo === 'bonus'}
+  class:halo-malus={token.halo === 'malus'}
+  data-player-id={token.id}
   disabled={!token.focus.interactive}
   aria-label={token.label}
   title={token.label}
   onclick={() => onactivate(token.id)}
 >
-  {#if token.readyCost !== null}<span class="pret tampon" aria-hidden="true">{token.readyCost}</span>{/if}
+  {#if token.readyCost !== null}<span class="pret tampon {token.readyRarity}" aria-hidden="true">{token.readyCost}</span>{/if}
+  <span class="portrait">
+    <PlayerAvatar player={token.avatar} size={38} />
+    <span class="note tampon" aria-hidden="true">{token.rating}</span>
+  </span>
   <span class="nom texte-fort">{token.name}</span>
-  <span class="note tampon" aria-hidden="true">{token.rating}</span>
   {#if token.reason}<span class="raison tampon" aria-hidden="true">{token.reason}</span>{/if}
   {#if token.chips.length > 0}
     <span class="effets" aria-hidden="true">
       {#each shownChips as chip, index (index)}
-        <span class="effet tampon {chip.tone}">{chip.sign}{chip.countdown}</span>
+        <span class="effet tampon {chip.tone}"><StatIcon stat={chip.stat} size={10} />{chip.countdown}</span>
       {/each}
       {#if hiddenChips > 0}<span class="effet tampon plus">+{hiddenChips}</span>{/if}
     </span>
@@ -50,8 +58,7 @@
     gap: 2px;
     width: 100%;
     max-width: 92px;
-    aspect-ratio: 1;
-    min-height: 64px;
+    min-height: 76px;
     padding: var(--space-1);
     background: var(--craie);
     color: var(--encre);
@@ -81,6 +88,13 @@
   .grise {
     opacity: 0.3;
   }
+  /* Halo : le joueur est sous l'effet d'une capacité (bonus en vert, malus en rouge). */
+  .halo-bonus {
+    box-shadow: 0 0 0 4px var(--victoire);
+  }
+  .halo-malus {
+    box-shadow: 0 0 0 4px var(--carton);
+  }
   .surligne {
     outline: 5px solid var(--scotch);
     outline-offset: 1px;
@@ -95,6 +109,23 @@
     outline: var(--trait-epais) dashed var(--fumigene);
     outline-offset: 3px;
   }
+  .portrait {
+    position: relative;
+    display: block;
+  }
+  .note {
+    position: absolute;
+    right: -10px;
+    bottom: -3px;
+    min-width: 20px;
+    padding: 0 2px;
+    font-size: 12px;
+    line-height: 15px;
+    letter-spacing: 0;
+    background: var(--encre-fixe);
+    color: var(--craie-fixe);
+    font-variant-numeric: tabular-nums;
+  }
   .nom {
     max-width: 100%;
     overflow: hidden;
@@ -102,10 +133,6 @@
     white-space: nowrap;
     font-size: 13px;
     line-height: 16px;
-  }
-  .note {
-    font-size: 14px;
-    font-variant-numeric: tabular-nums;
   }
   .raison {
     font-size: 10px;
@@ -115,16 +142,23 @@
   }
   .pret {
     position: absolute;
+    z-index: 1;
     top: -8px;
     right: -8px;
     min-width: 20px;
     height: 20px;
     display: grid;
     place-items: center;
-    background: var(--scotch);
+    background: var(--craie-fixe);
     color: var(--encre-fixe);
     border: var(--trait-fin) solid var(--encre-fixe);
     letter-spacing: 0;
+  }
+  .pret.rare {
+    background: var(--scotch);
+  }
+  .pret.legendary {
+    background: var(--fumigene);
   }
   .effets {
     display: flex;
@@ -133,6 +167,9 @@
     gap: 2px;
   }
   .effet {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
     padding: 0 2px;
     font-size: 10px;
     line-height: 14px;
@@ -154,7 +191,7 @@
   }
   @media (max-width: 600px) {
     .jeton {
-      min-height: 56px;
+      min-height: 64px;
     }
     .nom {
       font-size: 11px;

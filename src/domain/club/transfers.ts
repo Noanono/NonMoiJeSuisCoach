@@ -1,11 +1,11 @@
 import type { Club, Player, Rarity } from '../types';
 import type { Rng } from '../core/rng';
 import { overall } from '../player/rating';
-import { clampGauge, playerName, type AbilityLookup } from './model';
+import { playerName, type AbilityLookup } from './model';
 import { askingSalary, playerValue } from './valuation';
 
 /**
- * Mercato (CLUB-02, CLUB-03, FRAS-05) : achats, ventes, offres des clubs IA.
+ * Mercato (CLUB-02, CLUB-03) : achats, ventes, offres des clubs IA.
  * Toutes les fonctions renvoient un nouveau monde, l'ancien n'est jamais modifié.
  */
 
@@ -20,19 +20,14 @@ export const MIN_SQUAD_SIZE = 11;
 /** Un club demande plus que la valeur ; un joueur libre ne coûte qu'une prime de signature. */
 const CLUB_SELLER_MARKUP = 1.2;
 const FREE_AGENT_SIGNING_RATIO = 0.3;
-/** Un joueur qui a demandé son transfert est bradé (EFF-07). */
-const TRANSFER_REQUEST_DISCOUNT = 0.8;
 const PRICE_ROUNDING = 100;
 
 /** Offres IA (CLUB-03). */
 const OFFER_BASE_CHANCE = 0.05;
-const OFFER_TRANSFER_REQUEST_CHANCE = 0.3;
 const OFFER_MIN_RATIO = 0.8;
 const OFFER_MAX_RATIO = 1.3;
 const OFFER_VALIDITY_WEEKS = 2;
 const MAX_OFFERS_PER_WEEK = 3;
-/** Refuser une offre pour un joueur qui veut partir le vexe. */
-const REJECTED_REQUEST_MORALE_PENALTY = 10;
 
 export type TransferRefusal =
   | 'windowClosed'
@@ -118,7 +113,6 @@ export function buyPlayer(world: TransferWorld, deal: TransferDeal): TransferRes
     ...player,
     clubId: buyer.id,
     salary: deal.salary ?? player.salary,
-    transferRequested: false,
     ability: { ...player.ability, revealed },
   };
   const messages = [`${playerName(moved)} rejoint ${buyer.name} pour ${deal.price} €.`];
@@ -135,7 +129,7 @@ export function sellPlayer(
 }
 
 // ---------------------------------------------------------------------------
-// Liste du mercato (FRAS-05)
+// Liste du mercato
 // ---------------------------------------------------------------------------
 
 export interface MarketListing {
@@ -147,7 +141,7 @@ export interface MarketListing {
   price: number;
   /** Salaire hebdomadaire réclamé. */
   askingSalary: number;
-  /** Capacité affichée seulement si elle est connue (FRAS-05, CAP-13). */
+  /** Capacité affichée seulement si elle est connue (CAP-13). */
   ability: { abilityId: string; rarity: Rarity } | null;
 }
 
@@ -158,8 +152,7 @@ function roundPrice(value: number): number {
 /** Prix demandé pour un joueur sur le marché. */
 export function askingPrice(player: Player, rarity: Rarity): number {
   const ratio = player.clubId ? CLUB_SELLER_MARKUP : FREE_AGENT_SIGNING_RATIO;
-  const discount = player.transferRequested ? TRANSFER_REQUEST_DISCOUNT : 1;
-  return roundPrice(playerValue(player, rarity) * ratio * discount);
+  return roundPrice(playerValue(player, rarity) * ratio);
 }
 
 /**
@@ -213,7 +206,7 @@ function pickBidder(world: TransferWorld, coachClubId: string, amount: number, r
   return bidders.length > 0 ? rng.pick(bidders) : null;
 }
 
-/** Offres reçues cette semaine sur les joueurs du coach (CLUB-03), surtout ceux qui veulent partir. */
+/** Offres reçues cette semaine sur les joueurs du coach (CLUB-03). */
 export function generateIncomingOffers(world: TransferWorld, input: OfferGenerationInput): IncomingOffer[] {
   const coachClub = world.clubs[input.coachClubId];
   if (!input.windowOpen || !coachClub || coachClub.playerIds.length <= MIN_SQUAD_SIZE) return [];
@@ -222,8 +215,7 @@ export function generateIncomingOffers(world: TransferWorld, input: OfferGenerat
     if (offers.length >= MAX_OFFERS_PER_WEEK) break;
     const player = world.players[playerId];
     if (!player) continue;
-    const chance = player.transferRequested ? OFFER_TRANSFER_REQUEST_CHANCE : OFFER_BASE_CHANCE;
-    if (!input.rng.chance(chance)) continue;
+    if (!input.rng.chance(OFFER_BASE_CHANCE)) continue;
     const ratio = OFFER_MIN_RATIO + input.rng.next() * (OFFER_MAX_RATIO - OFFER_MIN_RATIO);
     const amount = roundPrice(playerValue(player, input.abilityOf(player.ability.abilityId).rarity) * ratio);
     const bidder = pickBidder(world, coachClub.id, amount, input.rng);
@@ -252,17 +244,6 @@ export function acceptOffer(
     price: offer.amount,
     windowOpen: context.windowOpen,
   });
-}
-
-/** Le coach refuse une offre ; un joueur qui avait demandé son transfert le prend mal (EFF-07). */
-export function rejectOffer(world: TransferWorld, offer: IncomingOffer): { world: TransferWorld; messages: string[] } {
-  const player = world.players[offer.playerId];
-  if (!player?.transferRequested) return { world, messages: ['Offre refusée.'] };
-  const sulking = { ...player, morale: clampGauge(player.morale - REJECTED_REQUEST_MORALE_PENALTY) };
-  return {
-    world: { ...world, players: { ...world.players, [player.id]: sulking } },
-    messages: [`Offre refusée. ${playerName(player)} voulait partir : il boude (moral −${REJECTED_REQUEST_MORALE_PENALTY}).`],
-  };
 }
 
 export function activeOffers(offers: readonly IncomingOffer[], week: number): IncomingOffer[] {

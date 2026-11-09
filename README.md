@@ -21,7 +21,7 @@ Le jeu tourne entièrement dans le navigateur, hors ligne une fois chargé. Les 
 ## Architecture
 
 - `src/domain/` : les règles du jeu en TypeScript pur, testées avec `bun test`.
-  - `abilities/` : catalogue des 72 capacités et 7 combos, progression sur 5 niveaux.
+  - `abilities/` : catalogue des 42 capacités, progression sur 5 niveaux.
   - `match/` : moteur de match minute par minute, activation des capacités, IA adverse, live texte.
   - `world/`, `league/` : monde fictif, divisions, calendrier, classement, coupe.
   - `club/` : finances, mercato, président, vie du vestiaire, frasques, presse, dialogues.

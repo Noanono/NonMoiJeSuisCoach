@@ -22,7 +22,6 @@ export function summarize(state: MatchState): MatchSummary {
     cards: state.cards.map((card) => ({ ...card, playerName: nameOf(card.playerId) })),
     injuries: state.injuries.map((injury) => ({ ...injury, playerName: nameOf(injury.playerId) })),
     abilities: state.activations.map((record) => abilityReport(state, record)),
-    combos: state.combosTriggered.slice(),
     consequences: { home: state.home.consequences.slice(), away: state.away.consequences.slice() },
     xpGains: state.status === 'finished' ? { ...state.xpGains } : computeXpGains(state),
     players: [...playerReports(state.home), ...playerReports(state.away)],
@@ -38,21 +37,16 @@ function abilityReport(state: MatchState, record: ActivationRecord): AbilityRepo
     abilityName: record.abilityName,
     minute: record.minute,
     byAi: record.byAi,
-    success: record.success,
     impact: record.impact,
-    xp: record.success ? xpForActivation(record.impact) : 0,
-    combo: record.comboName,
+    xp: xpForActivation(record.impact),
     text: impactText(record),
   };
 }
 
 function impactText(record: ActivationRecord): string {
-  const risks = record.risks.length > 0 ? ` Revers : ${record.risks.join(', ')}.` : '';
-  if (!record.success) return `Raté, personne n'a rien vu.${risks}`;
-  const verdict =
-    record.impact >= DECISIVE_IMPACT ? 'Décisif' : record.impact >= USEFUL_IMPACT ? 'Utile' : 'Anecdotique';
+  const verdict = record.impact >= DECISIVE_IMPACT ? 'Décisif' : record.impact >= USEFUL_IMPACT ? 'Utile' : 'Anecdotique';
   const notes = record.notes.length > 0 ? ` : ${record.notes.join(', ')}` : '';
-  return `${verdict}${notes}.${risks}`;
+  return `${verdict}${notes}.`;
 }
 
 function playerReports(team: TeamState): PlayerReport[] {
@@ -65,23 +59,18 @@ function playerReports(team: TeamState): PlayerReport[] {
     yellowCards: player.yellowCards,
     sentOff: player.sentOff,
     injured: player.injured,
-    fatigue: Math.round(player.profile.fatigue),
-    morale: Math.round(player.profile.morale),
+    fatigue: Math.round(player.profile.fatigue + player.fatigueRestored),
     abilityRevealed: player.abilityRevealed,
-    seasonUses: player.seasonUses,
   }));
 }
 
-/**
- * Résultat pour le calendrier. Les buts contre son camp ne figurent pas dans `scorers`
- * (le joueur fautif n'a pas marqué pour son club) mais comptent dans le score.
- */
+/** Résultat pour le calendrier. */
 export function toMatchResult(state: MatchState): MatchResult {
   const result: MatchResult = {
     homeGoals: state.home.goals,
     awayGoals: state.away.goals,
     scorers: state.goals
-      .filter((goal) => !goal.cancelled && !goal.ownGoal)
+      .filter((goal) => !goal.cancelled)
       .map((goal) => ({ playerId: goal.playerId, clubId: teamOf(state, goal.side).clubId, minute: goal.minute })),
   };
   if (state.shootout) result.penaltyWinnerId = teamOf(state, state.shootout.winner).clubId;

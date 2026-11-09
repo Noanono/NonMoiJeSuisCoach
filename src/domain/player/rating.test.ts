@@ -12,10 +12,9 @@ describe('note des joueurs', () => {
     expect(effectiveRating(player, 'DEF')).toBeLessThan(effectiveRating(player, 'ATT'));
   });
 
-  test('fatigue et moral bas réduisent la performance (EFF-04, EFF-06)', () => {
+  test('la fatigue réduit la performance (EFF-04)', () => {
     const fresh = makePlayer();
     expect(effectiveRating(makePlayer({ fatigue: 80 }), 'ATT')).toBeLessThan(effectiveRating(fresh, 'ATT'));
-    expect(effectiveRating(makePlayer({ morale: 5 }), 'ATT')).toBeLessThan(effectiveRating(fresh, 'ATT'));
   });
 
   test('un joueur fatigué se blesse plus souvent (EFF-04)', () => {
