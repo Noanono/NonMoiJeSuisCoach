@@ -14,8 +14,9 @@ function slugify(name: string): string {
 }
 
 describe('catalogue des capacités (CAT-01)', () => {
-  test('42 capacités : 25 communes, 12 rares, 5 légendaires', () => {
-    expect(ABILITIES).toHaveLength(42);
+  test('46 capacités : 25 communes, 12 rares, 5 légendaires, 4 mythiques', () => {
+    expect(ABILITIES).toHaveLength(46);
+    expect(abilitiesByRarity('mythic')).toHaveLength(4);
     expect(abilitiesByRarity('common')).toHaveLength(25);
     expect(abilitiesByRarity('rare')).toHaveLength(12);
     expect(abilitiesByRarity('legendary')).toHaveLength(5);
@@ -33,8 +34,8 @@ describe('catalogue des capacités (CAT-01)', () => {
   });
 
   test('coût et recharge suivent la rareté ; une légendaire n’a pas de recharge', () => {
-    expect(RARITY_COST).toEqual({ common: 2, rare: 3, legendary: 5 });
-    expect(RARITY_COOLDOWN).toEqual({ common: 15, rare: 15, legendary: 0 });
+    expect(RARITY_COST).toEqual({ common: 2, rare: 3, legendary: 5, mythic: 7 });
+    expect(RARITY_COOLDOWN).toEqual({ common: 15, rare: 15, legendary: 0, mythic: 0 });
     for (const ability of ABILITIES) expect(statsAtLevel(ability, 1).cost).toBe(RARITY_COST[ability.rarity]);
   });
 

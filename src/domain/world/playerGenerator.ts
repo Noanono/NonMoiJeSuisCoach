@@ -40,9 +40,10 @@ const POSITION_PROFILE: Record<Position, Attributes> = {
 
 /** Ordre de repli quand le pool d'une rareté est épuisé : on se rabat d'abord sur la plus proche. */
 const RARITY_FALLBACK: Record<Rarity, Rarity[]> = {
-  common: ['common', 'rare', 'legendary'],
-  rare: ['rare', 'common', 'legendary'],
-  legendary: ['legendary', 'rare', 'common'],
+  common: ['common', 'rare', 'legendary', 'mythic'],
+  rare: ['rare', 'common', 'legendary', 'mythic'],
+  legendary: ['legendary', 'rare', 'common', 'mythic'],
+  mythic: ['mythic', 'legendary', 'rare', 'common'],
 };
 
 export interface GeneratePlayerOptions {

@@ -82,7 +82,7 @@ export interface Lineup {
 // Capacités (CAP-01 à CAP-20, CAT-01)
 // ---------------------------------------------------------------------------
 
-export type Rarity = 'common' | 'rare' | 'legendary';
+export type Rarity = 'common' | 'rare' | 'legendary' | 'mythic';
 export type AbilityPosition = Position | 'ANY' | 'BENCH';
 /** Sert à l'IA pour choisir selon le score. */
 export type AbilityCategory = 'attack' | 'defense' | 'sabotage' | 'support' | 'legendary';
@@ -156,7 +156,13 @@ export type Effect =
   /** Retire les malus de l'équipe ; `bonusGauge` points si au moins `threshold` malus sont retirés. */
   | { type: 'clearMaluses'; bonusGauge: number; threshold: number }
   /** Inverse les niveaux des deux équipes. */
-  | { type: 'swapTeams'; duration: number };
+  | { type: 'swapTeams'; duration: number }
+  /** Le meilleur joueur de champ adverse rejoint l'équipe jusqu'à la fin du match. */
+  | { type: 'poachBest' }
+  /** Chaque but de l'équipe compte double. */
+  | { type: 'doubleGoals'; duration: number }
+  /** Exclus et blessés reviennent, toute l'équipe repart à 100 % d'énergie. */
+  | { type: 'miracle' };
 
 export interface AbilityStats {
   effects: Effect[];

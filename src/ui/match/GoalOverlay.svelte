@@ -22,7 +22,7 @@
       <PlayerAvatar player={goal.avatar} size={88} />
       <p>
         <span class="nom">{goal.scorer}</span>
-        <span class="detail tampon">{goal.minute} · {goal.team}{goal.penalty ? ' · sur penalty' : ''}</span>
+        <span class="detail tampon">{goal.minute} · {goal.team}{goal.penalty ? ' · sur penalty' : ''}{goal.double ? ' · compte double' : ''}</span>
       </p>
     </div>
     <p class="score"><span class="equipe">{goal.ownName}</span> {goal.ownGoals} - {goal.otherGoals} <span class="equipe">{goal.otherName}</span></p>

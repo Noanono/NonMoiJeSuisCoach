@@ -51,7 +51,7 @@ describe('génération des joueurs', () => {
 
   test('les raretés suivent environ 70 / 25 / 5 % (CAP-12)', () => {
     const rng = createRng(2026);
-    const counts: Record<Rarity, number> = { common: 0, rare: 0, legendary: 0 };
+    const counts: Record<Rarity, number> = { common: 0, rare: 0, legendary: 0, mythic: 0 };
     const total = 2000;
     for (let i = 0; i < total; i++) {
       const player = generatePlayer({ rng, position: 'ATT', reputation: 50, clubId: null, abilityPool: TEST_ABILITY_POOL, excludedAbilityIds: [] });

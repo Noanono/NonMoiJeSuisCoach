@@ -13,7 +13,7 @@
 
   let { ability, progress }: Props = $props();
 
-  const RARITY_TONE: Record<Rarity, 'craie' | 'scotch' | 'fumigene'> = { common: 'craie', rare: 'scotch', legendary: 'fumigene' };
+  const RARITY_TONE: Record<Rarity, 'craie' | 'scotch' | 'fumigene' | 'mythique'> = { common: 'craie', rare: 'scotch', legendary: 'fumigene', mythic: 'mythique' };
 
   interface LevelColumn {
     level: number;
@@ -78,7 +78,7 @@
         </tr>
         <tr>
           <th scope="row">Recharge</th>
-          {#each columns as column (column.level)}<td class="mono">{describeCooldown(column.stats.cooldown)}</td>{/each}
+          {#each columns as column (column.level)}<td class="mono">{ability.rarity === 'mythic' ? 'Une fois par match' : describeCooldown(column.stats.cooldown)}</td>{/each}
         </tr>
         <tr>
           <th scope="row">Coût</th>

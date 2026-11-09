@@ -192,6 +192,11 @@
   .pret.rare {
     background: var(--scotch);
   }
+  .pret.mythic {
+    background: var(--mythique);
+    color: var(--scotch);
+    border-color: var(--scotch);
+  }
   .pret.legendary {
     background: var(--fumigene);
   }

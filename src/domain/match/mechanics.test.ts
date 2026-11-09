@@ -182,6 +182,97 @@ describe('mécaniques des légendaires', () => {
   });
 });
 
+describe('mécaniques des mythiques', () => {
+  const full = (state: MatchState) => {
+    state.home.gauge = 10;
+    return state;
+  };
+
+  test('une mythique coûte 7 et ne sert qu’une fois par match', () => {
+    const state = match({ 3: 'le-miracle-du-kine' });
+    shout(state, 'h-3');
+    expect(state.home.gauge).toBe(3);
+    state.home.gauge = 10;
+    expect(previewActivation(state, 'home', 'h-3').reason).toContain('Déjà utilisée');
+  });
+
+  test('Le Transfert du parking prend le meilleur joueur de champ adverse', () => {
+    const state = match({ 5: 'le-transfert-du-parking' });
+    requirePlayer(state, 'a-9').rating = 90;
+    requirePlayer(state, 'a-0').rating = 99;
+    shout(state, 'h-5');
+    const star = requirePlayer(state, 'a-9');
+    expect(star.side).toBe('home');
+    expect(state.home.players).toContain(star);
+    expect(state.away.players).not.toContain(star);
+    expect(state.home.players.filter((player) => player.line !== null)).toHaveLength(12);
+    expect(state.activations[0]!.targetIds).toEqual(['a-9']);
+  });
+
+  test('Le But en or massif fait compter double et booste toute l’équipe', () => {
+    const state = match({ 9: 'le-but-en-or-massif' });
+    shout(state, 'h-9');
+    expect(activeEffects(state, 'h-2')[0]).toMatchObject({ stat: 'all', value: 0.3 });
+    goal(state, 'home');
+    expect(state.home.goals).toBe(2);
+    expect(state.goals[0]!.value).toBe(2);
+    goal(state, 'away');
+    expect(state.away.goals).toBe(1);
+  });
+
+  test('un but double annulé retire bien ses deux points', () => {
+    const state = createMatch({
+      home: makeSheet({ clubId: 'h', isHuman: true, abilities: { 9: 'le-but-en-or-massif' } }),
+      away: makeSheet({ clubId: 'a', isHuman: true, benchAbilities: ['la-coupure-de-courant'] }),
+      seed: 42,
+    });
+    state.home.gauge = 10;
+    state.away.gauge = 10;
+    shout(state, 'h-9');
+    goal(state, 'home');
+    startActivation(state, 'away', 'a-b0');
+    confirmActivation(state);
+    expect(state.home.goals).toBe(0);
+  });
+
+  test('Le Kebab du siècle sort six adversaires', () => {
+    const state = full(match({}, ['le-kebab-du-siecle']));
+    shout(state, 'h-b0');
+    expect(state.away.players.filter((player) => player.knockedOutUntil > 0)).toHaveLength(6);
+  });
+
+  test('Le Miracle du kiné ramène exclus et blessés, sans suite après le match', () => {
+    const state = match({ 3: 'le-miracle-du-kine' });
+    const sent = requirePlayer(state, 'h-1');
+    const hurt = requirePlayer(state, 'h-2');
+    sent.sentOff = true;
+    hurt.injured = true;
+    state.injuries.push({ side: 'home', playerId: 'h-2', minute: 5, weeks: 4 });
+    state.home.consequences.push({ type: 'suspension', playerId: 'h-1', matches: 2, reason: 'x' }, { type: 'injury', playerId: 'h-2', weeks: 4, reason: 'x' });
+    requirePlayer(state, 'h-4').profile.fatigue = 60;
+    shout(state, 'h-3');
+    expect([sent.sentOff, hurt.injured]).toEqual([false, false]);
+    expect(requirePlayer(state, 'h-4').profile.fatigue).toBe(0);
+    expect(state.home.consequences).toEqual([]);
+    expect(state.injuries).toEqual([]);
+    expect(summarize(state).players.find((report) => report.playerId === 'h-4')!.fatigue).toBe(60);
+  });
+
+  test('l’IA économise sa jauge et déclenche sa mythique', () => {
+    const state = createMatch({
+      home: makeSheet({ clubId: 'h', isHuman: true }),
+      away: makeSheet({ clubId: 'a', abilities: { 5: 'le-transfert-du-parking', 6: 'le-chambreur', 7: 'le-lacet-fou' } }),
+      seed: 12,
+    });
+    while (state.status !== 'finished') {
+      if (state.awaiting) dismissEventWindow(state);
+      tick(state);
+    }
+    const used = state.activations.filter((record) => record.side === 'away').map((record) => record.abilityId);
+    expect(used[0]).toBe('le-transfert-du-parking');
+  });
+});
+
 describe('les capacités restent dans le match', () => {
   test('Le Porteur d’eau soulage pendant le match, pas après', () => {
     const state = match({}, ['le-porteur-d-eau']);

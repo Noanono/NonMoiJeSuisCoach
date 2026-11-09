@@ -20,6 +20,9 @@ const LATE_GAME_THINK_CHANCE = 0.2;
 /** Chance d'utiliser une capacité d'événement disponible (CAP-19). */
 const TRIGGER_USE_CHANCE = 0.6;
 
+/** En dessous, Le Miracle du kiné ne vaut pas 7 points. */
+const MIRACLE_FATIGUE = 45;
+
 type Situation = 'trailing' | 'level' | 'leading';
 
 const CATEGORY_WEIGHTS: Record<Situation, Record<AbilityCategory, number>> = {
@@ -40,10 +43,12 @@ export function aiTakeTurn(run: Run, side: Side): void {
   const think = state.minute >= LATE_GAME_MINUTE ? LATE_GAME_THINK_CHANCE : THINK_CHANCE;
   if (!rng.chance(think)) return;
   const weights = CATEGORY_WEIGHTS[situationOf(state, side)];
+  const saving = isSavingForMythic(state, side);
   let best: MatchPlayer | undefined;
   let bestScore = 0;
   for (const player of teamOf(state, side).players) {
     if (!player.ability || checkAvailability(state, side, player) !== null || wouldBackfire(state, side, player)) continue;
+    if (saving && player.ability.rarity !== 'mythic') continue;
     const score = weights[player.ability.category] * rng.next();
     if (score > bestScore) {
       best = player;
@@ -55,8 +60,24 @@ export function aiTakeTurn(run: Run, side: Side): void {
 
 /** L'IA n'inverse pas les niveaux quand elle est déjà la plus forte. */
 function wouldBackfire(state: MatchState, side: Side, player: MatchPlayer): boolean {
-  if (!player.ability!.effects.some((effect) => effect.type === 'swapTeams')) return false;
-  return teamLevel(teamOf(state, side)) >= teamLevel(teamOf(state, opponentSide(side)));
+  const effects = player.ability!.effects;
+  const team = teamOf(state, side);
+  if (effects.some((effect) => effect.type === 'miracle')) return !team.players.some(needsMiracle);
+  if (!effects.some((effect) => effect.type === 'swapTeams')) return false;
+  return teamLevel(team) >= teamLevel(teamOf(state, opponentSide(side)));
+}
+
+function needsMiracle(player: MatchPlayer): boolean {
+  return player.line !== null && (player.sentOff || player.injured || player.profile.fatigue >= MIRACLE_FATIGUE);
+}
+
+/** Tant que sa mythique n'est pas partie, l'IA garde sa jauge pour atteindre le coût. */
+function isSavingForMythic(state: MatchState, side: Side): boolean {
+  return teamOf(state, side).players.some((player) => {
+    const ability = player.ability;
+    if (ability?.rarity !== 'mythic' || player.usedAbility || player.subbedOff || player.sentOff || player.injured) return false;
+    return (player.line !== null || ability.position === 'BENCH') && !wouldBackfire(state, side, player);
+  });
 }
 
 function teamLevel(team: TeamState): number {

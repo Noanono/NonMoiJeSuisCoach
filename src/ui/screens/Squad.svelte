@@ -20,7 +20,7 @@
   import { sortRows, type SortDirection } from './views';
 
   /** Tableau de l'effectif (EFF-01 à EFF-08, CLUB-08) et accès à la fiche joueur. */
-  const RARITY_ORDER: Record<Rarity, number> = { common: 1, rare: 2, legendary: 3 };
+  const RARITY_ORDER: Record<Rarity, number> = { common: 1, rare: 2, legendary: 3, mythic: 4 };
   const UNKNOWN_ABILITY = '???';
 
   interface SquadRow {

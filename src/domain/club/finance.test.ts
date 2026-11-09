@@ -59,6 +59,7 @@ describe('valeur marchande (CLUB-08)', () => {
     const player = makePlayer();
     expect(playerValue(player, 'legendary')).toBeGreaterThanOrEqual(playerValue(player, 'common') * 2.5);
     expect(playerValue(player, 'rare')).toBeGreaterThan(playerValue(player, 'common'));
+    expect(playerValue(player, 'mythic')).toBeGreaterThanOrEqual(playerValue(player, 'common') * 9);
   });
 
   test('la note, la jeunesse et le potentiel augmentent la valeur', () => {

@@ -2,7 +2,7 @@
   import type { Snippet } from 'svelte';
 
   interface Props {
-    tone?: 'scotch' | 'fumigene' | 'craie';
+    tone?: 'scotch' | 'fumigene' | 'craie' | 'mythique';
     tilted?: boolean;
     children: Snippet;
   }
@@ -23,6 +23,7 @@
   .scotch { background: var(--scotch); }
   .fumigene { background: var(--fumigene); }
   .craie { background: var(--craie); color: var(--encre); border-color: var(--encre); }
+  .mythique { background: var(--mythique); color: var(--scotch); border-color: var(--scotch); }
   .tilted {
     transform: rotate(var(--rotation-sticker));
     box-shadow: var(--ombre-sticker);

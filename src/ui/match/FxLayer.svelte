@@ -203,6 +203,18 @@
   .annonce.legendary {
     background: var(--fumigene);
   }
+  .annonce.mythic {
+    background: var(--mythique);
+    color: var(--scotch);
+    border-color: var(--scotch);
+    box-shadow: 0 0 0 4px var(--encre-fixe), 12px 12px 0 var(--encre-fixe);
+  }
+  .annonce.mythic .capacite {
+    font-size: 56px;
+  }
+  .annonce.mythic .temps span {
+    background: var(--scotch);
+  }
   .annonce.leur {
     border-style: dashed;
   }

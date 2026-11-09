@@ -7,7 +7,7 @@ import { addGauge, cancelRecentGoal, knockOut } from './actions';
 import { comment } from './commentary';
 import { creditActivation, IMPACT } from './impact';
 import { playInstantChance } from './plays';
-import { isActive, NEVER, opponentSide, pushEvent, refreshRating, teamOf, type Run } from './state';
+import { isActive, isOnPitch, NEVER, opponentSide, pushEvent, refreshRating, teamOf, type Run } from './state';
 import { resolveScope } from './targets';
 import type { ActivationRecord, FloatingText, MatchPlayer, Side, TeamState } from './types';
 
@@ -116,6 +116,14 @@ export function applyEffect(context: EffectContext, effect: Effect): void {
       return clearMaluses(context, team, effect.bonusGauge, effect.threshold);
     case 'swapTeams':
       return swapTeams(context, team, opponents, until(effect.duration));
+    case 'poachBest':
+      return poachBest(context, team, opponents);
+    case 'doubleGoals':
+      team.doubleGoalsUntil = Math.max(team.doubleGoalsUntil, until(effect.duration));
+      float(context, source, 'BUTS ×2', 'bonus');
+      return;
+    case 'miracle':
+      return miracle(context, team);
   }
 }
 
@@ -188,6 +196,41 @@ function swapTeams(context: EffectContext, own: TeamState, opponents: TeamState,
     }
   }
   float(context, context.source, 'NIVEAUX INVERSÉS', 'bonus');
+}
+
+/** Le meilleur joueur de champ adverse change de camp, à sa ligne habituelle, jusqu'à la fin du match. */
+function poachBest(context: EffectContext, own: TeamState, opponents: TeamState): void {
+  const candidates = opponents.players.filter((player) => player.line !== null && player.line !== 'GK' && isOnPitch(player));
+  const best = candidates.reduce<MatchPlayer | undefined>((top, player) => (!top || player.rating > top.rating ? player : top), undefined);
+  if (!best) return;
+  opponents.players.splice(opponents.players.indexOf(best), 1);
+  own.players.push(best);
+  best.side = own.side;
+  context.activation.targetIds.push(best.id);
+  float(context, best, 'TRANSFÉRÉ', 'bonus');
+  creditActivation(context.activation, IMPACT.knockout, 'meilleur adversaire recruté');
+  pushEvent(context.run, 'effect', own.side, `${best.name} change de camp et rejoint ${own.name}.`);
+}
+
+/** Exclus et blessés encore sur la feuille reviennent, sans suite pour eux ; tout le monde repart frais. */
+function miracle(context: EffectContext, team: TeamState): void {
+  const { state } = context.run;
+  const back = new Set<string>();
+  for (const player of team.players) {
+    if (player.subbedOff) continue;
+    restoreEnergy(player, 1);
+    player.knockedOutUntil = NEVER;
+    player.effects = player.effects.filter((effect) => effect.stat !== 'knockout');
+    if (player.line === null || (!player.sentOff && !player.injured)) continue;
+    player.sentOff = false;
+    player.injured = false;
+    back.add(player.id);
+    refreshRating(player);
+    float(context, player, 'DE RETOUR', 'bonus');
+  }
+  team.consequences = team.consequences.filter((consequence) => consequence.type === 'abilityRevealed' || !back.has(consequence.playerId));
+  state.injuries = state.injuries.filter((injury) => !back.has(injury.playerId));
+  float(context, context.source, 'MIRACLE', 'bonus');
 }
 
 /** Résout les suites prévues pour cette minute (recompense du Bus, chien qui change de victime). */

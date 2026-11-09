@@ -22,6 +22,7 @@ const POOL_SPEC: Record<Rarity, AbilitySpec[]> = {
   common: [['GK', 3], ['DEF', 3], ['MID', 3], ['ATT', 3], ['ANY', 5], ['BENCH', 3]],
   rare: [['GK', 1], ['DEF', 2], ['MID', 1], ['ATT', 2], ['ANY', 2], ['BENCH', 1]],
   legendary: [['ATT', 1], ['ANY', 2]],
+  mythic: [],
 };
 
 /** Une capacité sur ce nombre est cachée (CAP-13). */

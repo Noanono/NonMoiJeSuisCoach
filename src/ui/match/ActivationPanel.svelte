@@ -16,7 +16,7 @@
 
   let { controller, playerId }: Props = $props();
 
-  const RARITY_TONE = { common: 'craie', rare: 'scotch', legendary: 'fumigene' } as const;
+  const RARITY_TONE = { common: 'craie', rare: 'scotch', legendary: 'fumigene', mythic: 'mythique' } as const;
 
   const sheet = $derived.by(() => {
     void controller.version;

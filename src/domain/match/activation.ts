@@ -46,6 +46,7 @@ function hasRecentGoal(state: MatchState, side: Side, withinMinutes: number): bo
 
 function usageReason(state: MatchState, side: Side, player: MatchPlayer): string | null {
   const ability = player.ability!;
+  if (ability.rarity === 'mythic' && player.usedAbility) return UNAVAILABLE.oncePerMatch;
   if (player.cooldownUntil > state.elapsed) return fill(UNAVAILABLE.cooldown, { n: player.cooldownUntil - state.elapsed });
   const gauge = teamOf(state, side).gauge;
   if (gauge < ability.cost) return fill(UNAVAILABLE.gauge, { n: ability.cost - gauge });
@@ -154,6 +155,7 @@ export function performActivation(run: Run, order: ActivationOrder): ActivationR
 /** Jauge et recharge (CAP-04, CAP-05). */
 function consumeActivation(state: MatchState, player: MatchPlayer, ability: PreparedAbility): void {
   teamOf(state, player.side).gauge -= ability.cost;
+  player.usedAbility = true;
   if (ability.cooldown > 0) player.cooldownUntil = state.elapsed + ability.cooldown;
 }
 

@@ -40,7 +40,8 @@ export function recordGoal(run: Run, side: Side, scorer: MatchPlayer, options: G
   const { state } = run;
   const team = teamOf(state, side);
   const penalty = options.penalty ?? false;
-  team.goals++;
+  const value = team.doubleGoalsUntil >= state.elapsed ? 2 : 1;
+  team.goals += value;
   scorer.goals++;
   state.goals.push({
     side,
@@ -49,11 +50,12 @@ export function recordGoal(run: Run, side: Side, scorer: MatchPlayer, options: G
     addedMinute: state.addedMinute,
     elapsed: state.elapsed,
     penalty,
+    value,
     cancelled: false,
   });
   addGauge(teamOf(state, opponentSide(side)), GAUGE_ON_CONCEDED);
   const text = comment(run.rng, penalty ? 'penaltyGoal' : 'goal', { player: scorer.name, team: team.name, score: scoreLine(state) });
-  pushEvent(run, 'goal', side, text, { playerId: scorer.id, score: [state.home.goals, state.away.goals] });
+  pushEvent(run, 'goal', side, text, { playerId: scorer.id, score: [state.home.goals, state.away.goals], ...(value > 1 ? { label: 'double' } : {}) });
   extendGoalEffects(team);
   creditActive(state, side, IMPACT.goalScored, 'but marqué pendant l’effet');
   openTriggers(run, side, 'afterOwnGoal', null);
@@ -77,7 +79,7 @@ export function cancelRecentGoal(run: Run, side: Side, withinMinutes: number): b
     if (goal.side !== side || goal.cancelled) continue;
     goal.cancelled = true;
     const team = teamOf(state, side);
-    team.goals--;
+    team.goals -= goal.value;
     const scorer = team.players.find((player) => player.id === goal.playerId);
     if (scorer) scorer.goals--;
     pushEvent(run, 'goalCancelled', side, comment(run.rng, 'goalCancelled', { team: team.name, score: scoreLine(state) }), { score: [state.home.goals, state.away.goals] });

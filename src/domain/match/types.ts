@@ -112,6 +112,8 @@ export interface MatchPlayer {
   hasPlayed: boolean;
   /** Remplacé : il ne reviendra pas. */
   subbedOff: boolean;
+  /** Sa capacité a servi dans ce match : une mythique ne sert qu'une fois. */
+  usedAbility: boolean;
 }
 
 export type ChanceKind = 'open' | 'counter' | 'longShot' | 'setPiece' | 'penalty';
@@ -159,6 +161,8 @@ export interface TeamState {
   pendingCancels: number;
   delayed: DelayedEffect[];
   substitutionsUsed: number;
+  /** Les buts de l'équipe comptent double jusqu'à cette minute écoulée incluse. */
+  doubleGoalsUntil: number;
   consequences: Consequence[];
 }
 
@@ -169,6 +173,8 @@ export interface GoalRecord {
   addedMinute: number;
   elapsed: number;
   penalty: boolean;
+  /** Nombre de buts que vaut celui-ci : 2 pendant Le But en or massif. */
+  value: number;
   /** Annulé par une capacité (coupure de courant…). */
   cancelled: boolean;
 }

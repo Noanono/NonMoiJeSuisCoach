@@ -89,6 +89,8 @@ export interface GoalAlert {
   team: string;
   minute: string;
   penalty: boolean;
+  /** Le but compte double. */
+  double: boolean;
   ownName: string;
   otherName: string;
   ownGoals: number;
@@ -104,12 +106,13 @@ export function goalAlert(state: MatchState, goal: GoalRecord, coachSide: Side):
   const { age, clubId, position } = scorer.profile;
   return {
     own,
-    title: own ? 'But !' : 'But encaissé',
+    title: goal.value > 1 ? (own ? 'But en or !' : 'But en or encaissé') : own ? 'But !' : 'But encaissé',
     scorer: scorer.name,
     avatar: { id: scorer.id, age, clubId, position },
     team: scoringTeam.name,
     minute: minuteLabel(goal.minute, goal.addedMinute),
     penalty: goal.penalty,
+    double: goal.value > 1,
     ownName: coach.name,
     otherName: other.name,
     ownGoals: coach.goals,

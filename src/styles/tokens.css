@@ -39,6 +39,7 @@
 }
 
 :root {
+  --mythique: #6b2fa0;
   --font-display: Anton, Impact, 'Arial Narrow', sans-serif;
   --font-texte: Archivo, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'Space Mono', 'Courier New', monospace;

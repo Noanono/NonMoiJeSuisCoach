@@ -135,6 +135,12 @@ export function describeEffect(effect: Effect): string {
       return `Retire tous les malus de son équipe, +${plural(effect.bonusGauge, 'point')} de Gueulante si au moins ${effect.threshold} sont retirés`;
     case 'swapTeams':
       return `Inverse les niveaux des deux équipes pendant ${effect.duration}${NBSP}min`;
+    case 'poachBest':
+      return "Le meilleur joueur de champ adverse rejoint son équipe jusqu'à la fin du match";
+    case 'doubleGoals':
+      return `Chaque but de son équipe compte double pendant ${effect.duration}${NBSP}min`;
+    case 'miracle':
+      return "Ramène les exclus et les blessés, et remet toute l'équipe à 100 % d'énergie";
   }
 }
 

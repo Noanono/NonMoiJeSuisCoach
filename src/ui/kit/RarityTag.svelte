@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Rarity } from '../../domain/types';
 
-  /** Texte d'une capacité sur la couleur de sa rareté : gris commune, jaune rare, rouge légendaire. */
+  /** Texte d'une capacité sur la couleur de sa rareté : gris commune, jaune rare, rouge légendaire, violet et or mythique. */
   interface Props {
     rarity: Rarity | null;
     text: string;
@@ -33,6 +33,11 @@
   }
   .legendary {
     background: var(--fumigene);
+  }
+  .mythic {
+    background: var(--mythique);
+    color: var(--scotch);
+    border-color: var(--scotch);
   }
   .inconnue {
     background: none;

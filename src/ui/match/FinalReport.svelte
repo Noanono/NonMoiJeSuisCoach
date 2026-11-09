@@ -58,7 +58,7 @@
               {#each summary.goals.filter((goal) => goal.side === side) as goal, index (index)}
                 <li>
                   <span class="tampon">{minuteLabel(goal.minute, goal.addedMinute)}</span>
-                  {goal.playerName}{goal.penalty ? ' (pen.)' : ''}
+                  {goal.playerName}{goal.penalty ? ' (pen.)' : ''}{goal.value > 1 ? ' (×2)' : ''}
                 </li>
               {:else}
                 <li class="vide">Aucun but.</li>

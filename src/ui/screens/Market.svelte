@@ -20,7 +20,7 @@
   const PAGE_SIZE = 40;
   const POSITIONS = Object.keys(POSITION_LABEL) as Position[];
   const RARITIES = Object.keys(RARITY_LABEL) as Rarity[];
-  const RARITY_ORDER: Record<Rarity, number> = { common: 1, rare: 2, legendary: 3 };
+  const RARITY_ORDER: Record<Rarity, number> = { common: 1, rare: 2, legendary: 3, mythic: 4 };
 
   const transferWindow = $derived(
     store.select((game) => {

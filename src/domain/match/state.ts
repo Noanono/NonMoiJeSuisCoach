@@ -172,6 +172,7 @@ function createTeam(sheet: TeamSheet, side: Side, lookup: AbilityLookup): TeamSt
     pendingCancels: 0,
     delayed: [],
     substitutionsUsed: 0,
+    doubleGoalsUntil: NEVER,
     consequences: [],
   };
 }
@@ -208,6 +209,7 @@ function createMatchPlayer({ player, side, line, lookup, trained }: PlayerSetup)
     goals: 0,
     hasPlayed: line !== null,
     subbedOff: false,
+    usedAbility: false,
   };
 }
 

@@ -7,8 +7,8 @@ export const MAX_LEVEL = 5;
 export const XP_THRESHOLDS = [0, 30, 80, 160, 300] as const;
 
 /** Coût en Jauge de Gueulante et recharge en minutes (0 = aucune) selon la rareté. */
-export const RARITY_COST: Record<Rarity, number> = { common: 2, rare: 3, legendary: 5 };
-export const RARITY_COOLDOWN: Record<Rarity, number> = { common: 15, rare: 15, legendary: 0 };
+export const RARITY_COST: Record<Rarity, number> = { common: 2, rare: 3, legendary: 5, mythic: 7 };
+export const RARITY_COOLDOWN: Record<Rarity, number> = { common: 15, rare: 15, legendary: 0, mythic: 0 };
 
 /** Gain d'effet par niveau au-delà du premier (CAP-11). */
 const EFFECT_GAIN_PER_LEVEL = 0.1;
@@ -21,12 +21,12 @@ const MAX_SHOT_MALUS = 0.9;
 const BASE_ACTIVATION_XP = 10;
 
 /** Multiplicateur de valeur marchande par rareté (CLUB-08). */
-export const RARITY_VALUE_MULTIPLIER: Record<Rarity, number> = { common: 1, rare: 1.5, legendary: 3 };
+export const RARITY_VALUE_MULTIPLIER: Record<Rarity, number> = { common: 1, rare: 1.5, legendary: 3, mythic: 10 };
 
 /** Part des joueurs générés par rareté (CAP-12). */
-export const RARITY_GENERATION_WEIGHTS: Record<Rarity, number> = { common: 0.7, rare: 0.25, legendary: 0.05 };
+export const RARITY_GENERATION_WEIGHTS: Record<Rarity, number> = { common: 0.7, rare: 0.25, legendary: 0.045, mythic: 0.005 };
 
-export const RARITY_LABEL: Record<Rarity, string> = { common: 'Commune', rare: 'Rare', legendary: 'Légendaire' };
+export const RARITY_LABEL: Record<Rarity, string> = { common: 'Commune', rare: 'Rare', legendary: 'Légendaire', mythic: 'Mythique' };
 
 export function levelForXp(xp: number): number {
   let level = 1;
@@ -53,6 +53,7 @@ function hasPickedTargets({ kind }: Targeting): boolean {
 
 /** Ce que le niveau 5 ajoute (CAP-11) : +1 cible, sinon +50 % de durée, sinon une recharge plus courte. */
 export function level5Bonus(ability: Ability): Level5Bonus {
+  if (ability.rarity === 'mythic') return null;
   if (hasPickedTargets(ability.targeting)) return 'extraTarget';
   if (ability.effects.some(hasDuration)) return 'longerDuration';
   return RARITY_COOLDOWN[ability.rarity] > 0 ? 'shorterCooldown' : null;
