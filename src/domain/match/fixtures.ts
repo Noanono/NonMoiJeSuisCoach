@@ -90,6 +90,11 @@ export const TEST_ABILITIES: readonly Ability[] = [
       risks: [{ chance: 1, label: 'Lendemain difficile', effects: [{ type: 'squadFatigue', value: 30 }, { type: 'fine', amount: 500 }] }],
     },
   ),
+  ability(
+    'discours',
+    { category: 'support', trigger: 'halftime' },
+    { cost: 1, cooldown: { kind: 'perEvent' }, effects: [{ type: 'modifier', scope: 'team', stat: 'all', value: 0.05, duration: 45 }] },
+  ),
   ability('beau-gosse', { category: 'provoc' }, { cost: 1, effects: [{ type: 'foulsIgnored', count: 3 }] }),
   ability('ex-president', { category: 'provoc' }, { cost: 1, effects: [{ type: 'modifier', scope: 'self', stat: 'all', value: 0.4, duration: 20 }] }),
   ability('bus', { category: 'defense' }, { cost: 2, effects: [{ type: 'modifier', scope: 'team', stat: 'defense', value: 0.45, duration: 10 }] }),
