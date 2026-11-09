@@ -1,0 +1,78 @@
+/* Tokens du design system « Non moi je suis coach » (fanzine de supporters sur la pelouse). */
+:root,
+[data-theme='light'] {
+  --terrain: #3dbe4f;
+  --terrain-tonte: #35ae47;
+  --brin: #5ad36b;
+  --brin-ombre: #2a9a3c;
+  --ligne: #ffffff;
+  --craie: #fbfaf2;
+  --craie-2: #efede2;
+  --encre: #14130f;
+  --encre-pale: #5c574b;
+  --fumigene: #ee3b1f;
+  --scotch: #f6d743;
+  --victoire: #1e7a3c;
+  --carton: #b3261e;
+  --encre-fixe: #14130f;
+  --craie-fixe: #fbfaf2;
+  --ombre-sticker: 4px 4px 0 #14130f;
+  --ombre-presse: 1px 1px 0 #14130f;
+}
+
+[data-theme='dark'] {
+  --terrain: #0e6a2b;
+  --terrain-tonte: #0b5c25;
+  --brin: #178a3a;
+  --brin-ombre: #084a1d;
+  --ligne: #e8f3e4;
+  --craie: #1b1a15;
+  --craie-2: #26241d;
+  --encre: #f2eee3;
+  --encre-pale: #a39e90;
+  --fumigene: #ff5a3d;
+  --scotch: #f6d743;
+  --victoire: #4cc777;
+  --carton: #ff6b5e;
+  --ombre-sticker: 4px 4px 0 #000000;
+  --ombre-presse: 1px 1px 0 #000000;
+}
+
+:root {
+  --font-display: Anton, Impact, 'Arial Narrow', sans-serif;
+  --font-texte: Archivo, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Space Mono', 'Courier New', monospace;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-10: 40px;
+
+  --radius-none: 0;
+  --radius-xs: 2px;
+  --radius-pill: 999px;
+
+  --trait-epais: 3px;
+  --trait-fin: 1.5px;
+  --bande-tonte: 64px;
+
+  --rotation-sticker: -3deg;
+  --rotation-scotch: 2deg;
+
+  --marge-page: var(--space-10);
+}
+
+@media (max-width: 600px) {
+  :root {
+    --bande-tonte: 48px;
+    --marge-page: var(--space-6);
+  }
+}
+
+@media (max-width: 400px) {
+  :root {
+    --rotation-sticker: 0deg;
+    --rotation-scotch: 0deg;
+  }
+}
