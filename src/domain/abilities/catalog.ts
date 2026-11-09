@@ -1,8 +1,10 @@
 import type { Ability, Combo, Rarity } from '../types';
 import { ATTACK_ABILITIES } from './data/attack';
 import { DEFENSE_ABILITIES } from './data/defense';
+import { GOALKEEPER_ABILITIES } from './data/goalkeeper';
 import { PROVOC_ABILITIES } from './data/provoc';
 import { SABOTAGE_ABILITIES } from './data/sabotage';
+import { SUPPORT_ABILITIES } from './data/support';
 
 /** Catalogue complet des capacités (CAT-01), par section du tableau. */
 export const ABILITIES: readonly Ability[] = [
@@ -10,6 +12,8 @@ export const ABILITIES: readonly Ability[] = [
   ...PROVOC_ABILITIES,
   ...ATTACK_ABILITIES,
   ...DEFENSE_ABILITIES,
+  ...SUPPORT_ABILITIES,
+  ...GOALKEEPER_ABILITIES,
 ];
 
 /** Combos déclenchés par deux capacités à moins de 5 minutes d'intervalle (CAP-15). */
