@@ -39,6 +39,13 @@ export function nextTransferWindowWeek(week: number): number | null {
   return SEASON_CALENDAR.find((entry) => entry.week > week && entry.kind === 'transferWindow')?.week ?? null;
 }
 
+/** Dernière semaine de la fenêtre de mercato ouverte en `week`. */
+export function transferWindowLastWeek(week: number): number {
+  let last = week;
+  while (SEASON_CALENDAR[last]?.kind === 'transferWindow') last += 1;
+  return last;
+}
+
 export type SortDirection = 'asc' | 'desc';
 
 /** Trie une copie des lignes selon une clé numérique ou textuelle (tri français pour le texte). */

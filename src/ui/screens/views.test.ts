@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { seasonWeek } from '../../domain/league/calendar';
 import type { CupState } from '../../domain/league/cup';
 import type { Fixture } from '../../domain/types';
-import { nextTransferWindowWeek, recentForm, sortRows, weekLabel } from './views';
+import { nextTransferWindowWeek, recentForm, sortRows, transferWindowLastWeek, weekLabel } from './views';
 
 function fixture(week: number, homeGoals: number, awayGoals: number, homeId = 'moi', awayId = 'eux'): Fixture {
   return {
@@ -43,6 +43,11 @@ describe('calendrier', () => {
     expect(midSeason).not.toBeNull();
     expect(seasonWeek(midSeason!).kind).toBe('transferWindow');
     expect(nextTransferWindowWeek(midSeason! + 2)).toBeNull();
+  });
+
+  test('la fenêtre d’été ferme à la fin de la semaine 2', () => {
+    expect(transferWindowLastWeek(1)).toBe(2);
+    expect(transferWindowLastWeek(2)).toBe(2);
   });
 });
 

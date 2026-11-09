@@ -4,10 +4,11 @@
   import { formatEuros } from '../../format';
   import { getAbility } from '../../../domain/abilities/catalog';
   import { playerValue } from '../../../domain/club/valuation';
-  import { answerOffer } from '../../../domain/game';
+  import { answerOffer, transferWindowOpen } from '../../../domain/game';
   import { fullName, POSITION_SHORT } from '../describe';
 
   /** Offres des clubs IA sur les joueurs du coach (CLUB-03). */
+  const windowOpen = $derived(store.select(transferWindowOpen));
   const offers = $derived(
     store.select((game) =>
       game.offers.map((offer) => {
@@ -35,6 +36,9 @@
 {#if offers.length === 0}
   <p class="vide">Aucune offre. Personne ne veut de tes gars. Pour l'instant.</p>
 {:else}
+  {#if !windowOpen}
+    <p class="texte-s malus">Mercato fermé : impossible d'accepter avant la réouverture. Refuser reste possible.</p>
+  {/if}
   <ul class="liste-nue">
     {#each offers as offer (offer.id)}
       <li class="offre">
@@ -49,7 +53,7 @@
           <span class="mono">{offer.expiresWeek}</span>{#if offer.wantsOut} · il veut partir, un refus le vexera{/if}
         </p>
         <div class="ligne-actions">
-          <Button size="s" onclick={() => answer(offer.id, true)}>Accepter</Button>
+          <Button size="s" disabled={!windowOpen} onclick={() => answer(offer.id, true)}>Accepter</Button>
           <Button size="s" variant="ghost" onclick={() => answer(offer.id, false)}>Refuser</Button>
         </div>
       </li>
