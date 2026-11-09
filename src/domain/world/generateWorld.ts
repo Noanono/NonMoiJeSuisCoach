@@ -140,7 +140,9 @@ function createClub({ rng, id, identity, division, isHuman, stadium, abilityPool
   squad: Player[];
 } {
   const range = REPUTATION_BY_TIER[division.tier - 1]!;
-  const reputation = isHuman ? rng.int(range.min, range.min + HUMAN_REPUTATION_MARGIN) : rng.int(range.min, range.max);
+  // Le club du coach est dans la moitié basse du district : battable, mais pas condamné (UNIV-02).
+  const middle = Math.round((range.min + range.max) / 2);
+  const reputation = isHuman ? rng.int(middle - HUMAN_REPUTATION_MARGIN, middle) : rng.int(range.min, range.max);
   const squad = generateSquad({ rng, reputation, clubId: id, abilityPool });
   const club: Club = {
     id,
