@@ -65,6 +65,8 @@ export interface ActiveEffect {
   endsAt: number;
   /** Minutes ajoutées à chaque but marqué par l'équipe du joueur. */
   extendOnGoal?: number;
+  /** Compté dans le jeu mais non affiché (bonus d'entraînement). */
+  quiet?: boolean;
 }
 
 /** Capacité prête à l'emploi : niveau déjà appliqué à la création du match. */
@@ -106,6 +108,10 @@ export interface MatchPlayer {
   /** Fatigue effacée par les capacités : elle revient après le match, qui n'a pas de suite. */
   fatigueRestored: number;
   goals: number;
+  /** A joué ne serait-ce qu'une minute. */
+  hasPlayed: boolean;
+  /** Remplacé : il ne reviendra pas. */
+  subbedOff: boolean;
 }
 
 export type ChanceKind = 'open' | 'counter' | 'longShot' | 'setPiece' | 'penalty';
@@ -152,6 +158,7 @@ export interface TeamState {
   /** Prochaines actions adverses à annuler. */
   pendingCancels: number;
   delayed: DelayedEffect[];
+  substitutionsUsed: number;
   consequences: Consequence[];
 }
 
@@ -299,6 +306,7 @@ export type MatchEventKind =
   | 'fullTime'
   | 'shootout'
   | 'activation'
+  | 'substitution'
   | 'effect'
   | 'eventWindow';
 
@@ -310,6 +318,10 @@ export interface MatchEvent {
   text: string;
   playerId?: string;
   abilityId?: string;
+  /** Score après l'événement, domicile puis extérieur. */
+  score?: [number, number];
+  /** Précision pour le live concis : nom de la capacité, minutes ajoutées. */
+  label?: string;
 }
 
 export interface ActivationPreview {

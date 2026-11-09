@@ -24,6 +24,7 @@ export function checkAvailability(state: MatchState, side: Side, player: MatchPl
 }
 
 function physicalReason(state: MatchState, player: MatchPlayer, ability: PreparedAbility): string | null {
+  if (player.subbedOff) return UNAVAILABLE.subbedOff;
   if (player.sentOff) return UNAVAILABLE.sentOff;
   if (player.injured) return UNAVAILABLE.injured;
   if (player.line === null) return ability.position === 'BENCH' ? null : UNAVAILABLE.onBench;
@@ -207,5 +208,5 @@ function announceActivation(run: Run, order: ActivationOrder, targets: MatchPlay
   const targetText = targets.length > 0 ? ` Cible : ${targets.map((target) => target.name).join(', ')}.` : '';
   const vars = { player: order.player.name, team: team.name, ability: ability.name };
   const text = comment(run.rng, order.byAi ? 'activationAi' : 'activationHuman', { ...vars, label: `${ability.description}${targetText}` });
-  pushEvent(run, 'activation', order.side, text, { playerId: order.player.id, abilityId: ability.id });
+  pushEvent(run, 'activation', order.side, text, { playerId: order.player.id, abilityId: ability.id, label: ability.name });
 }

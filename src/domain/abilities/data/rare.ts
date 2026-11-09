@@ -13,7 +13,7 @@ export const RARE_ABILITIES: readonly Ability[] = [
     category: 'defense',
     position: 'GK',
     description: 'Sort de sa surface sans regarder, en hurlant.',
-    effects: [{ type: 'cancelAction' }, { type: 'gauge', value: 1 }],
+    effects: [{ type: 'cancelAction', count: 2 }, { type: 'gauge', value: 1 }],
   }),
   rare({
     id: 'le-gardien-fumeur',
@@ -21,7 +21,7 @@ export const RARE_ABILITIES: readonly Ability[] = [
     category: 'defense',
     position: 'GK',
     description: 'Pause clope au poteau. Plus il encaisse, plus il se concentre.',
-    effects: [{ type: 'scaledModifier', scope: 'self', stat: 'goalkeeping', base: 0.3, perUnit: 0.3, per: 'concededGoal', duration: 15 }],
+    effects: [{ type: 'scaledModifier', scope: 'self', stat: 'goalkeeping', base: 0.5, perUnit: 0.3, per: 'concededGoal', duration: 15 }],
   }),
   rare({
     id: 'le-bus-de-l-amicale',
@@ -31,7 +31,7 @@ export const RARE_ABILITIES: readonly Ability[] = [
     targeting: { kind: 'team' },
     description: 'Toute l’équipe recule et se gare devant la cage.',
     effects: [
-      { type: 'modifier', scope: 'team', stat: 'defense', value: 0.5, duration: UNTIL_END_OF_EFFECT },
+      { type: 'modifier', scope: 'team', stat: 'defense', value: 0.7, duration: UNTIL_END_OF_EFFECT },
       { type: 'cleanSheetGauge', value: 2, duration: UNTIL_END_OF_EFFECT },
     ],
   }),

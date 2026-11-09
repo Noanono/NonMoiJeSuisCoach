@@ -2,6 +2,7 @@
   import Card from '../kit/Card.svelte';
   import type { MatchController } from './controller.svelte';
   import { lastGoalText, LIVE_LIMIT, liveLines } from './live';
+  import { shortName } from './pitch';
 
   interface Props {
     controller: MatchController;
@@ -11,16 +12,18 @@
 
   let showAll = $state(false);
 
-  const total = $derived.by(() => {
-    void controller.version;
-    return controller.match.events.length;
-  });
+  function nameOf(playerId: string): string {
+    const player = [...controller.match.home.players, ...controller.match.away.players].find((candidate) => candidate.id === playerId);
+    return player ? shortName(player) : '?';
+  }
 
   // Les lignes gardent leur clé (index dans le live) : seules les nouvelles sont rendues.
-  const lines = $derived.by(() => {
-    void total;
-    return liveLines(controller.match.events, controller.coachSide, showAll ? 0 : LIVE_LIMIT);
+  const allLines = $derived.by(() => {
+    void controller.version;
+    return liveLines(controller.match.events, controller.coachSide, 0, nameOf);
   });
+  const total = $derived(allLines.length);
+  const lines = $derived(showAll ? allLines : allLines.slice(0, LIVE_LIMIT));
 
   // Région `aria-live` limitée aux buts : recalculée seulement quand le nombre de buts change.
   const goalCount = $derived.by(() => {
@@ -43,7 +46,7 @@
 
   <ol class="fil" aria-label="Live texte, le plus récent en haut">
     {#each lines as line (line.key)}
-      <li class="ligne {line.tone}">
+      <li class="ligne {line.tone}" title={line.detail}>
         <span class="minute tampon">{line.minute}</span>
         <span class="texte texte-s">
           {#if line.tag}<span class="tag tampon">{line.tag}</span>{/if}
@@ -73,7 +76,7 @@
     list-style: none;
     margin: 0;
     padding: 0;
-    max-height: 52vh;
+    max-height: 34vh;
     overflow-y: auto;
     border-top: var(--trait-fin) solid var(--encre);
   }
@@ -128,10 +131,6 @@
   .ligne.card .tag {
     background: var(--scotch);
     color: var(--encre-fixe);
-  }
-  .window .tag {
-    background: var(--encre);
-    color: var(--craie);
   }
   @media (prefers-reduced-motion: no-preference) {
     .ligne:first-child {

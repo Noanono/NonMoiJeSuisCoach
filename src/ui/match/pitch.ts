@@ -5,6 +5,7 @@
 import { activeEffects, previewActivation, type ActiveEffectView, type MatchPlayer, type MatchState, type Side } from '../../domain/match';
 import type { Position, Rarity } from '../../domain/types';
 import type { AvatarPlayer } from '../kit/avatar';
+import { POSITION_SHORT } from '../screens/describe';
 
 /** Ordre des lignes du coach, de son but vers l'attaque. L'adversaire est en miroir. */
 const LINE_ORDER: readonly Position[] = ['GK', 'DEF', 'MID', 'ATT'];
@@ -99,6 +100,10 @@ export interface TokenView {
   id: string;
   name: string;
   avatar: AvatarPlayer;
+  /** Poste naturel du joueur. */
+  position: string;
+  /** Il joue hors de son poste (EFF-02). */
+  displaced: boolean;
   rating: number;
   own: boolean;
   status: Availability;
@@ -116,13 +121,14 @@ export interface TokenView {
 }
 
 const BENCH_REASON = 'Banc';
+const SUBBED_REASON = 'Sorti';
 
 /** Tout ce qu'un jeton affiche, calculé une fois par minute de jeu. */
 export function tokenView(state: MatchState, player: MatchPlayer, coachSide: Side): TokenView {
   const own = player.side === coachSide;
   const status = availability(player, state.elapsed);
   const benchOnly = player.line === null && player.ability?.position !== 'BENCH';
-  const reason = status !== 'active' ? AVAILABILITY_LABEL[status] : benchOnly ? BENCH_REASON : null;
+  const reason = player.subbedOff ? SUBBED_REASON : status !== 'active' ? AVAILABILITY_LABEL[status] : benchOnly ? BENCH_REASON : null;
   const chips = effectChips(state, player.id);
   const focus = tokenFocus(state, player, coachSide);
   const ready = own && state.pending === null && state.status !== 'finished' && previewActivation(state, coachSide, player.id);
@@ -131,13 +137,16 @@ export function tokenView(state: MatchState, player: MatchPlayer, coachSide: Sid
   const halo = chips.some((chip) => chip.tone === 'malus') ? 'malus' : chips.length > 0 ? 'bonus' : null;
   const avatar = { id: player.id, age: player.profile.age, clubId: player.profile.clubId, position: player.profile.position };
   const rating = Math.round(player.rating);
-  const parts = [player.name, player.line ? LINE_LABEL[player.line] : 'remplaçant', `note ${rating}`];
+  const position = POSITION_SHORT[player.profile.position];
+  const displaced = player.line !== null && player.line !== player.profile.position;
+  const parts = [player.name, position, player.line ? LINE_LABEL[player.line] : 'remplaçant', `note ${rating}`];
+  if (displaced) parts.push('hors poste');
   if (reason) parts.push(reason);
   parts.push(...chips.map((chip) => chip.detail));
   if (readyCost !== null) parts.push(`capacité prête, coût ${readyCost}`);
   if (focus.chosen) parts.push('cible choisie');
   else if (focus.highlighted) parts.push(state.pending ? 'cible valide' : 'peut agir maintenant');
-  return { id: player.id, name: shortName(player), avatar, rating, own, status, reason, chips, focus, readyCost, readyRarity, halo, label: parts.join(', ') };
+  return { id: player.id, name: shortName(player), avatar, position, displaced, rating, own, status, reason, chips, focus, readyCost, readyRarity, halo, label: parts.join(', ') };
 }
 
 export interface PitchView {

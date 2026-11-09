@@ -11,18 +11,20 @@ import {
   selectTarget,
   setInstructions,
   startActivation,
+  substitutePlayer,
   tick,
   type ActivationRecord,
   type MatchState,
   type Side,
 } from '../../domain/match';
-import type { Instructions, Rarity } from '../../domain/types';
+import type { Instructions } from '../../domain/types';
 import type { AvatarPlayer } from '../kit/avatar';
+import { describeEffect } from '../screens/describe';
 import { store } from '../store.svelte';
 import type { Speed } from './live';
 
-/** Temps d'affichage d'une capacité, plus long quand elle est rare. */
-const FX_DURATION_MS: Record<Rarity, number> = { common: 1500, rare: 2000, legendary: 2800 };
+/** Temps d'affichage d'une capacité : le match attend qu'on ait lu. */
+export const FX_DURATION_MS = 5000;
 /** Au-delà, les annonces les plus anciennes sont sautées pour rester au rythme du match. */
 const FX_QUEUE_LIMIT = 3;
 
@@ -32,6 +34,9 @@ export interface ActivationFx {
   playerName: string;
   avatar: AvatarPlayer;
   own: boolean;
+  description: string;
+  /** Ce que fait la capacité, au niveau du joueur. */
+  effects: string[];
 }
 
 export class MatchController {
@@ -44,6 +49,8 @@ export class MatchController {
   inspectedId = $state<string | null>(null);
   /** Capacité affichée en ce moment sur le terrain. */
   fx = $state.raw<ActivationFx | null>(null);
+  /** Rappel des effets ouvert : l'horloge s'arrête le temps de lire. */
+  helpOpen = $state(false);
   #fxQueue: ActivationRecord[] = [];
   #fxSeen = 0;
   #fxTimer: ReturnType<typeof setTimeout> | undefined;
@@ -71,7 +78,7 @@ export class MatchController {
   });
 
   /** L'horloge tourne : une seule boucle active, coupée dès que quelque chose attend (green code). */
-  readonly running = $derived(!this.paused && this.inspectedId === null && !this.engineWaiting && this.fx?.record.rarity !== 'legendary');
+  readonly running = $derived(!this.paused && this.inspectedId === null && !this.engineWaiting && this.fx === null && !this.helpOpen);
 
   /** Une minute de jeu (MATCH-02). Pause automatique à la mi-temps pour les consignes (MATCH-05). */
   step(): void {
@@ -166,8 +173,28 @@ export class MatchController {
     const team = record.side === 'home' ? this.match.home : this.match.away;
     const player = team.players.find((candidate) => candidate.id === record.playerId)!;
     const { age, clubId, position } = player.profile;
-    this.fx = { record, playerName: player.name, avatar: { id: player.id, age, clubId, position }, own: record.side === this.coachSide };
-    this.#fxTimer = setTimeout(() => this.#showNextFx(), FX_DURATION_MS[record.rarity]);
+    this.fx = {
+      record,
+      playerName: player.name,
+      avatar: { id: player.id, age, clubId, position },
+      own: record.side === this.coachSide,
+      description: player.ability?.description ?? '',
+      effects: player.ability?.effects.map(describeEffect) ?? [],
+    };
+    this.#fxTimer = setTimeout(() => this.#showNextFx(), FX_DURATION_MS);
+  }
+
+  /** Clic sur l'annonce : on passe à la suite. */
+  skipFx(): void {
+    clearTimeout(this.#fxTimer);
+    this.#showNextFx();
+  }
+
+  /** Remplacement (MATCH-08). Le panneau du joueur se referme. */
+  substitute(leavingId: string, enteringId: string): void {
+    this.inspectedId = null;
+    if (substitutePlayer(this.match, this.coachSide, leavingId, enteringId) === false) store.notify('Ce changement n’est pas possible.');
+    store.touchMatch();
   }
 
   /** À appeler quand l'écran disparaît. */

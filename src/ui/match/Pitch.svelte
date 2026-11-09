@@ -64,7 +64,7 @@
     gap: var(--space-2);
     padding: var(--space-4) var(--space-2);
     border: var(--trait-epais) solid var(--ligne);
-    min-height: 460px;
+    min-height: 380px;
   }
   /* Ligne médiane à la craie entre les deux attaques. */
   .lignes::before {
@@ -100,7 +100,7 @@
     flex: 1;
   }
   .banc-jetons :global(.jeton) {
-    width: 76px;
+    width: 64px;
   }
 
   /* Mobile : le terrain pivote, l'adversaire en haut, ton équipe en bas. */

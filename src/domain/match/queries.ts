@@ -14,7 +14,7 @@ export interface ActiveEffectView {
 
 /** Effets actifs d'un joueur avec leur compte à rebours (CAP-09). */
 export function activeEffects(state: MatchState, playerId: string): ActiveEffectView[] {
-  return requirePlayer(state, playerId).effects.map((effect) => ({
+  return requirePlayer(state, playerId).effects.filter((effect) => !effect.quiet).map((effect) => ({
     label: effect.label,
     stat: effect.stat,
     value: effect.value,

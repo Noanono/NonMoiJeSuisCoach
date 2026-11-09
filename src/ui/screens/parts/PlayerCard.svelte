@@ -21,6 +21,7 @@
 
 <script lang="ts">
   import PlayerAvatar from '../../kit/PlayerAvatar.svelte';
+  import RatingBadge from '../../kit/RatingBadge.svelte';
   import { POSITION_SHORT } from '../describe';
 
   /** Carte d'un joueur à glisser sur l'écran Tactique. */
@@ -28,7 +29,8 @@
     player: CardPlayer;
     /** Note au poste occupé, sinon la note générale. */
     rating?: number;
-    outOfPosition?: boolean;
+    /** Points perdus hors de son poste (EFF-02), 0 s'il y est. */
+    positionPenalty?: number;
     selected?: boolean;
     dragging?: boolean;
     onpointerdown?: (event: PointerEvent) => void;
@@ -36,10 +38,10 @@
     ghost?: boolean;
   }
 
-  let { player, rating, outOfPosition = false, selected = false, dragging = false, onpointerdown, onclick, ghost = false }: Props = $props();
+  let { player, rating, positionPenalty = 0, selected = false, dragging = false, onpointerdown, onclick, ghost = false }: Props = $props();
   const shownRating = $derived(rating ?? player.overall);
   const label = $derived(
-    `${player.name}, ${POSITION_SHORT[player.position]}, note ${shownRating}${outOfPosition ? ', hors poste' : ''}${player.availability ? `, ${player.availability}` : ''}${selected ? ', sélectionné' : ''}`,
+    `${player.name}, ${POSITION_SHORT[player.position]}, note ${shownRating}${positionPenalty > 0 ? `, hors poste, moins ${positionPenalty}` : ''}${player.availability ? `, ${player.availability}` : ''}${selected ? ', sélectionné' : ''}`,
   );
 </script>
 
@@ -48,14 +50,14 @@
   <span class="tete">
     <PlayerAvatar player={player.avatar} size={46} />
     <span class="chiffres">
-      <span class="note mono">{shownRating}</span>
+      <RatingBadge value={shownRating} />
       <span class="poste tampon">{POSITION_SHORT[player.position]}</span>
     </span>
   </span>
   <span class="nom">{player.lastName}</span>
   <span class="capacite">{player.abilityName}</span>
   <span class="fatigue" aria-hidden="true"><span style:width="{player.fatigue}%"></span></span>
-  {#if outOfPosition}<span class="tampon alerte">Hors poste</span>{/if}
+  {#if positionPenalty > 0}<span class="tampon alerte">Hors poste −{positionPenalty}</span>{/if}
   {#if player.availability}<span class="tampon indispo">{player.availability}</span>{/if}
 {/snippet}
 
@@ -138,11 +140,6 @@
     display: grid;
     justify-items: end;
     flex: 1;
-  }
-  .note {
-    font-size: 20px;
-    line-height: 24px;
-    font-weight: 700;
   }
   .poste {
     color: var(--encre-pale);

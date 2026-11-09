@@ -160,6 +160,7 @@ export const UNAVAILABLE = {
   finished: 'Le match est fini, range ta gueulante pour la buvette.',
   noAbility: "Pas de capacité connue chez lui. À part boire des coups, il ne sait rien faire de spécial.",
   sentOff: "Il est déjà sous la douche. Il chante faux, mais il ne peut plus rien pour toi.",
+  subbedOff: "Il est sorti : il regarde le match en mangeant des chips.",
   injured: "Il est à l'infirmerie avec une poche de glace. Laisse-le tranquille.",
   knockedOut: 'Il est encore au sol à compter les étoiles. Attends qu\'il se relève.',
   onBench: "Il chauffe le banc, pas le match : cette capacité se joue sur la pelouse.",

@@ -1,7 +1,9 @@
 <script lang="ts">
   import Button from '../../kit/Button.svelte';
   import Gauge from '../../kit/Gauge.svelte';
+  import DeltaBadge from '../../kit/DeltaBadge.svelte';
   import PlayerAvatar from '../../kit/PlayerAvatar.svelte';
+  import RatingBadge from '../../kit/RatingBadge.svelte';
   import Modal from './Modal.svelte';
   import AbilityPanel from './AbilityPanel.svelte';
   import { store } from '../../store.svelte';
@@ -36,6 +38,7 @@
         position: POSITION_LABEL[player.position],
         age: player.age,
         overall: overall(player),
+        evolution: overall(player) - player.overallAtSeasonStart,
         potential: player.potential,
         fatigue: player.fatigue,
         salary: player.salary,
@@ -68,7 +71,7 @@
     <div class="haut">
       <PlayerAvatar player={view.avatar} size={88} />
       <dl class="chiffres">
-        <div><dt class="tampon">Note</dt><dd class="stat">{view.overall}</dd></div>
+        <div><dt class="tampon">Note</dt><dd class="stat"><RatingBadge value={view.overall} size="l" /> <DeltaBadge value={view.evolution} /></dd></div>
         <div><dt class="tampon">Potentiel</dt><dd class="stat">{view.potential}</dd></div>
         <div><dt class="tampon">Valeur</dt><dd class="valeur mono">{formatEuros(view.value)}</dd></div>
       </dl>

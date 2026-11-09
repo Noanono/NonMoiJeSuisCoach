@@ -9,6 +9,7 @@ import type { Rng } from '../core/rng';
 import type { StandingRow } from '../types';
 import { developPlayers } from '../world/development';
 import { generateYouthIntake } from '../world/youthAcademy';
+import { overall } from '../player/rating';
 import { clubPlayers, humanClub, humanDivision } from './selectors';
 import type { GameState } from './state';
 
@@ -74,6 +75,8 @@ export function endSeason(state: GameState, rng: Rng): void {
   const humanMove = moves.find((move) => move.clubId === human.id);
   if (humanMove) state.news.push(humanMove.kind === 'promotion' ? 'MONTÉE ! La buvette est ouverte toute la nuit.' : 'Descente. Le président a vendu la tireuse.');
 
+  // La référence est prise avant la progression d'intersaison : elle apparaît dans l'évolution de la saison suivante.
+  for (const player of Object.values(state.players)) player.overallAtSeasonStart = overall(player);
   for (const player of developPlayers(Object.values(state.players), rng)) state.players[player.id] = player;
   welcomeYouth(state, rng);
   state.season += 1;

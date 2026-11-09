@@ -54,7 +54,7 @@ function playerReports(team: TeamState): PlayerReport[] {
     playerId: player.id,
     side: player.side,
     name: player.name,
-    played: player.line !== null,
+    played: player.hasPlayed,
     goals: player.goals,
     yellowCards: player.yellowCards,
     sentOff: player.sentOff,

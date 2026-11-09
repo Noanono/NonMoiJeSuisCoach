@@ -4,6 +4,7 @@ import { applyBalance, wageBill, weeklyBalance } from '../club/finance';
 import { clampGauge, type MatchOutcome } from '../club/model';
 import { confidenceAfterMatch, confidenceTrend, isFired, matchExpectation, sponsorMoodAfterMatch } from '../club/president';
 import { weeklySquadUpdate } from '../club/squadLife';
+import { trainPlayer } from '../club/training';
 import { activeOffers, generateIncomingOffers } from '../club/transfers';
 import { createRng, type Rng } from '../core/rng';
 import { isTransferWindowOpen, SEASON_WEEKS } from '../league/calendar';
@@ -88,13 +89,14 @@ function goalsFor(fixture: Fixture, clubId: string): { scored: number; conceded:
     : { scored: result.awayGoals, conceded: result.homeGoals };
 }
 
-/** Récupération, blessures et suspensions de la semaine (EFF-04, EFF-05). */
+/** Récupération, blessures, suspensions (EFF-04, EFF-05) et entraînement de la semaine (TRAIN-01). */
 function updateHumanSquad(state: GameState, fixture: Fixture | null): void {
-  const lineup = humanClub(state).lineup;
-  replacePlayers(
-    state,
-    weeklySquadUpdate({ squad: humanSquad(state), appearances: fixture && lineup ? lineup.starters : [], matchPlayed: fixture !== null }),
-  );
+  const recovered = weeklySquadUpdate({ squad: humanSquad(state), appearances: state.lastAppearances, matchPlayed: fixture !== null });
+  state.lastAppearances = [];
+  const trained = recovered.map(trainPlayer);
+  replacePlayers(state, trained);
+  const improved = trained.filter((player, index) => JSON.stringify(player.attributes) !== JSON.stringify(recovered[index]!.attributes) || player.ability.level > recovered[index]!.ability.level);
+  if (improved.length > 0) state.news.push(`Entraînement : ${improved.length} joueur(s) ont progressé cette semaine.`);
 }
 
 function recoverAiSquads(state: GameState): void {

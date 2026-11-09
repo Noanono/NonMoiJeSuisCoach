@@ -53,7 +53,7 @@ export function recordGoal(run: Run, side: Side, scorer: MatchPlayer, options: G
   });
   addGauge(teamOf(state, opponentSide(side)), GAUGE_ON_CONCEDED);
   const text = comment(run.rng, penalty ? 'penaltyGoal' : 'goal', { player: scorer.name, team: team.name, score: scoreLine(state) });
-  pushEvent(run, 'goal', side, text, { playerId: scorer.id });
+  pushEvent(run, 'goal', side, text, { playerId: scorer.id, score: [state.home.goals, state.away.goals] });
   extendGoalEffects(team);
   creditActive(state, side, IMPACT.goalScored, 'but marqué pendant l’effet');
   openTriggers(run, side, 'afterOwnGoal', null);
@@ -80,7 +80,7 @@ export function cancelRecentGoal(run: Run, side: Side, withinMinutes: number): b
     team.goals--;
     const scorer = team.players.find((player) => player.id === goal.playerId);
     if (scorer) scorer.goals--;
-    pushEvent(run, 'goalCancelled', side, comment(run.rng, 'goalCancelled', { team: team.name, score: scoreLine(state) }));
+    pushEvent(run, 'goalCancelled', side, comment(run.rng, 'goalCancelled', { team: team.name, score: scoreLine(state) }), { score: [state.home.goals, state.away.goals] });
     return true;
   }
   return false;

@@ -7,7 +7,7 @@ import { advanceWeek, createGameSaves, finishHumanMatch, newGame, saveMeta, star
 import type { MatchState, MatchSummary } from '../domain/match/types';
 import type { SaveSlot, SlotSummary } from '../domain/save/saveSlots';
 
-export type Screen = 'title' | 'dashboard' | 'squad' | 'tactics' | 'market' | 'club' | 'competitions' | 'match';
+export type Screen = 'title' | 'dashboard' | 'squad' | 'tactics' | 'training' | 'market' | 'club' | 'competitions' | 'match';
 
 /** Délai d'écriture après une action de gestion : on regroupe les clics (green code). */
 const AUTOSAVE_DELAY_MS = 1500;

@@ -12,7 +12,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     category: 'defense',
     position: 'GK',
     description: 'Gonfle le ventre et bouche la moitié de la cage.',
-    effects: [{ type: 'modifier', scope: 'self', stat: 'goalkeeping', value: 0.4, duration: 10 }],
+    effects: [{ type: 'modifier', scope: 'self', stat: 'goalkeeping', value: 0.6, duration: 10 }],
   }),
   common({
     id: 'le-bavard',
@@ -20,7 +20,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     category: 'defense',
     position: 'GK',
     description: 'Raconte ses vacances à l’attaquant au moment où il arme.',
-    effects: [{ type: 'opponentChanceMalus', value: 0.4, shots: 1 }],
+    effects: [{ type: 'opponentChanceMalus', value: 0.6, shots: 1 }],
   }),
   common({
     id: 'le-danseur',
@@ -29,7 +29,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'GK',
     trigger: 'opponentPenalty',
     description: 'Gesticule sur sa ligne comme un soir de mariage.',
-    effects: [{ type: 'opponentChanceMalus', value: 0.4, shots: 1 }],
+    effects: [{ type: 'opponentChanceMalus', value: 0.6, shots: 1 }],
   }),
   common({
     id: 'le-degagement-de-mule',
@@ -57,7 +57,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     category: 'defense',
     position: 'DEF',
     description: 'Mollets de taureau et odeur de ferme : personne ne passe.',
-    effects: [{ type: 'modifier', scope: 'self', stat: 'defense', value: 0.4, duration: 10 }],
+    effects: [{ type: 'modifier', scope: 'self', stat: 'defense', value: 0.7, duration: 15 }],
   }),
   common({
     id: 'le-rugbyman-reconverti',
@@ -83,7 +83,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'DEF',
     trigger: 'opponentSetPiece',
     description: 'Un mur serré, épaule contre épaule, odeur de merguez.',
-    effects: [{ type: 'opponentChanceMalus', value: 0.5, shots: 1 }],
+    effects: [{ type: 'opponentChanceMalus', value: 0.7, shots: 1 }],
   }),
   common({
     id: 'le-videur-de-boite',
@@ -92,7 +92,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'DEF',
     targeting: { kind: 'opponent', count: 1, line: 'ATT' },
     description: 'Colle un attaquant et lui demande sa carte d’identité.',
-    effects: [{ type: 'modifier', scope: 'targets', stat: 'shooting', value: -0.4, duration: 10 }],
+    effects: [{ type: 'modifier', scope: 'targets', stat: 'shooting', value: -0.6, duration: 10 }],
   }),
 
   // --- Milieux -------------------------------------------------------------

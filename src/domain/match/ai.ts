@@ -7,6 +7,7 @@
 import type { AbilityCategory } from '../types';
 import { checkAvailability, performActivation } from './activation';
 import { opponentSide, teamOf, type Run } from './state';
+import { aiReplaceInjured } from './substitutions';
 import { chosenTargetCount, validTargets } from './targets';
 import type { MatchPlayer, MatchState, Side, TeamState } from './types';
 import { triggerIsOpen } from './windows';
@@ -35,6 +36,7 @@ function situationOf(state: MatchState, side: Side): Situation {
 /** Tour de l'IA à chaque minute de jeu. Mute l'état. */
 export function aiTakeTurn(run: Run, side: Side): void {
   const { state, rng } = run;
+  aiReplaceInjured(run, teamOf(state, side));
   const think = state.minute >= LATE_GAME_MINUTE ? LATE_GAME_THINK_CHANCE : THINK_CHANCE;
   if (!rng.chance(think)) return;
   const weights = CATEGORY_WEIGHTS[situationOf(state, side)];

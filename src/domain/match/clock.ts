@@ -43,7 +43,7 @@ function announceStoppage(run: Run): void {
   const range = state.status === 'firstHalf' ? FIRST_HALF_STOPPAGE : SECOND_HALF_STOPPAGE;
   state.stoppage = rng.int(range.min, range.max);
   state.stoppageAnnounced = true;
-  pushEvent(run, 'stoppage', null, comment(rng, 'stoppage', { n: state.stoppage }));
+  pushEvent(run, 'stoppage', null, comment(rng, 'stoppage', { n: state.stoppage }), { label: String(state.stoppage) });
 }
 
 function endPeriod(run: Run): void {

@@ -7,7 +7,9 @@
   import CoachBand from './CoachBand.svelte';
   import GaugePanel from './GaugePanel.svelte';
   import InstructionsPanel from './InstructionsPanel.svelte';
+  import EffectsHelp from './EffectsHelp.svelte';
   import LiveFeed from './LiveFeed.svelte';
+  import MiniMap from './MiniMap.svelte';
   import Pitch from './Pitch.svelte';
   import Scoreboard from './Scoreboard.svelte';
 
@@ -56,9 +58,10 @@
   <div class="disposition">
     <Pitch {controller} />
     <aside class="cote">
+      <MiniMap {controller} />
       <GaugePanel {controller} />
-      <InstructionsPanel {controller} />
       <LiveFeed {controller} />
+      <InstructionsPanel {controller} />
     </aside>
   </div>
 
@@ -67,6 +70,8 @@
       <ActivationPanel {controller} playerId={controller.inspectedId} />
     {/key}
   {/if}
+
+  <EffectsHelp {controller} />
 </main>
 
 <style>

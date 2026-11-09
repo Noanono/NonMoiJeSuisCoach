@@ -39,11 +39,13 @@ Le jeu mêle une vraie couche de gestion (effectif, tactique, mercato, budget) e
 | MATCH-01 | Le match est simulé par le jeu à partir des notes, de la fatigue, de la tactique et des capacités activées par les deux coachs. |
 | MATCH-02 | Le match se déroule en temps accéléré, avec pause et plusieurs vitesses (×1, ×2, ×4), pour laisser au coach le temps d'activer ses capacités. |
 | MATCH-03 | L'activation des capacités pendant le match est la mécanique centrale du jeu. |
-| MATCH-04 | Le match s'affiche en live texte minute par minute, avec les actions, les buts et chaque capacité activée, commentés avec humour. |
+| MATCH-04 | Le match s'affiche en fil concis : seules les actions importantes (buts, tirs, cartons, capacités, changements), en quelques mots. Le commentaire humoristique reste en infobulle. |
 | MATCH-05 | Avant le match et pendant les pauses, le coach donne des consignes tactiques (défensif, équilibré, offensif, pressing haut, jeu long…) qui modifient la simulation. |
 | MATCH-06 | À la fin du match, un résumé affiche le score, les buteurs, les cartons, les blessures et l'impact de chaque capacité utilisée. |
 | MATCH-07 | L'équipe adverse, pilotée par l'IA, active elle aussi ses capacités ; le coach les voit annoncées et peut riposter. |
-| MATCH-08 | Les remplacements en cours de match ne font pas partie de la première version. |
+| MATCH-08 | Le coach peut faire 5 remplacements par match, à tout moment. Un joueur sorti ne revient pas. Un blessé peut être remplacé, pas un exclu. L'IA remplace ses blessés. |
+| MATCH-09 | Une mini-carte animée montre les joueurs et le ballon. Le coach attaque toujours vers la droite et son équipe est à gauche du tableau de score. |
+| MATCH-10 | Un bouton en coin rappelle l'impact de chaque effet, match en pause. |
 
 ## Club, mercato et président
 
@@ -92,7 +94,7 @@ Le gameplay repose sur les capacités : chaque joueur en a une, personnelle, que
 | CAP-18 | Les capacités de zone se déclenchent à l'emplacement du joueur : le coach choisit le moment, pas la cible. Seules les capacités décrites « au hasard » gardent une cible aléatoire. |
 | CAP-19 | Les capacités liées à un événement (penalty, coup franc) restent manuelles : le jeu se met en pause et propose de les activer, sans obligation. |
 | CAP-20 | Le coach peut annuler une activation tant qu'il n'a pas validé la cible : la capacité n'est alors ni consommée ni mise en recharge. |
-| CAP-21 | Une activation est mise en scène sur le terrain : annonce centrale avec l'avatar du joueur, flèches vers les cibles, zone colorée, textes qui s'envolent au-dessus des joueurs touchés. |
+| CAP-21 | Une activation, du coach comme de l'adversaire, s'annonce au centre de l'écran pendant 5 secondes avec l'avatar du joueur et la description de l'effet, match en pause. Flèches vers les cibles, zone colorée et textes s'affichent sur le terrain. |
 
 ## Catalogue des capacités
 
@@ -108,16 +110,16 @@ CAT-01 : le jeu contient les 42 capacités ci-dessous. Valeurs données au nivea
 
 | Capacité | Poste | Cible | Effet |
 | --- | --- | --- | --- |
-| Le Bedonnant | GB | Soi | +40 % d'arrêts, 10 min |
-| Le Bavard | GB | Prochain tir adverse | −40 % de chances de but |
-| Le Danseur | GB | Penalty adverse | +40 % d'arrêt |
+| Le Bedonnant | GB | Soi | +60 % d'arrêts, 10 min |
+| Le Bavard | GB | Prochain tir adverse | −60 % de chances de but |
+| Le Danseur | GB | Penalty adverse | +60 % d'arrêt |
 | Le Dégagement de mule | GB | Équipe | +20 % au tir, 5 min |
 | Le Jardinier | DEF | Sa zone | Adversaires à −30 % de vitesse, 10 min |
-| L'Agriculteur | DEF | Soi | +40 % en défense, 10 min |
+| L'Agriculteur | DEF | Soi | +70 % en défense, 15 min |
 | Le Rugbyman reconverti | DEF | Action adverse | Annule l'action en cours |
 | Haleine de Ricard | DEF | 1 adversaire | −30 % de technique, 10 min |
-| Le Mur de saucisses | DEF | Coup franc adverse | −50 % de chances de but |
-| Le Videur de boîte | DEF | 1 attaquant | −40 % au tir, 10 min |
+| Le Mur de saucisses | DEF | Coup franc adverse | −70 % de chances de but |
+| Le Videur de boîte | DEF | 1 attaquant | −60 % au tir, 10 min |
 | Le Lacet fou | MIL | 1 adversaire | Au sol, 3 min |
 | Le Marchand de sable | MIL | 1 adversaire | −40 % de concentration, 10 min |
 | Le Chien de la casse | MIL | Soi | +40 % de physique, 10 min |
@@ -138,9 +140,9 @@ CAT-01 : le jeu contient les 42 capacités ci-dessous. Valeurs données au nivea
 
 | Capacité | Poste | Cible | Effet et mécanique |
 | --- | --- | --- | --- |
-| Le Gardien kamikaze | GB | Prochaine occasion adverse | L'annule et rend 1 point de jauge |
-| Le Gardien fumeur | GB | Soi | +30 % d'arrêts pendant 15 min, +30 % de plus par but encaissé dans ce match |
-| Le Bus de l'amicale | DEF | Équipe | +50 % en défense, 10 min. Sans but encaissé pendant l'effet : +2 points de jauge |
+| Le Gardien kamikaze | GB | 2 prochaines occasions adverses | Les annule et rend 1 point de jauge |
+| Le Gardien fumeur | GB | Soi | +50 % d'arrêts pendant 15 min, +30 % de plus par but encaissé dans ce match |
+| Le Bus de l'amicale | DEF | Équipe | +70 % en défense, 10 min. Sans but encaissé pendant l'effet : +2 points de jauge |
 | Le Boucher du village | DEF | 1 adversaire | Hors jeu 15 min |
 | Le Vomisseur | MIL | Sa zone | Tous les adversaires de la zone au sol, 3 min |
 | Le Retraité de 42 ans | MIL | Équipe | Les 2 prochaines occasions à +40 % |
@@ -160,6 +162,16 @@ CAT-01 : le jeu contient les 42 capacités ci-dessous. Valeurs données au nivea
 | La Mêlée générale | Tous | 3 adversaires choisis et le porteur hors jeu, 10 min |
 | La Coupure de courant | Banc | Annule le dernier but adverse s'il date de moins de 5 min |
 | La Malédiction de mémé | Banc | −30 % à toute l'équipe adverse, 15 min |
+
+## Entraînement
+
+| ID | Exigence |
+| --- | --- |
+| TRAIN-01 | Chaque semaine, chaque joueur non blessé travaille le programme que le coach lui a donné : un attribut ou sa capacité spéciale. |
+| TRAIN-02 | Le programme se règle joueur par joueur et reste actif tant qu'il n'est pas changé. |
+| TRAIN-03 | Aucun coût : le rythme dépend de l'âge. Passé son potentiel, un joueur progresse 4 fois moins vite, et de 5 points au maximum. |
+| TRAIN-04 | Le programme donne un petit bonus au prochain match : +5 % au tir, en défense ou aux arrêts, +3 % en vitesse, technique ou physique. |
+| TRAIN-05 | L'écran Effectif affiche l'évolution de la note de chaque joueur depuis le début de la saison. |
 
 ## Progression, rejouabilité et interface
 

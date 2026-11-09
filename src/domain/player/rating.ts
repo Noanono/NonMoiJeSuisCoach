@@ -26,6 +26,11 @@ export function ratingFor(attributes: Attributes, position: Position): number {
   return Math.round(total);
 }
 
+/** Travailler cet attribut fait-il monter la note de ce poste ? */
+export function focusRaisesOverall(position: Position, attribute: AttributeName): boolean {
+  return (WEIGHTS[position][attribute] ?? 0) > 0;
+}
+
 /** Note globale au poste principal (EFF-01). */
 export function overall(player: Player): number {
   return ratingFor(player.attributes, player.position);

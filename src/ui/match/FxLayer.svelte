@@ -2,7 +2,7 @@
   import { tick } from 'svelte';
   import PlayerAvatar from '../kit/PlayerAvatar.svelte';
   import { RARITY_LABEL } from '../../domain/abilities/progression';
-  import type { ActivationFx, MatchController } from './controller.svelte';
+  import { FX_DURATION_MS, type ActivationFx, type MatchController } from './controller.svelte';
 
   /** Mise en scène d'une capacité : annonce centrale, flèches vers les cibles, zone touchée, textes qui s'envolent. */
   interface Props {
@@ -89,7 +89,7 @@
 
 {#if controller.fx}
   {@const fx = controller.fx}
-  <div class="scene" aria-hidden="true">
+  <div class="scene">
     {#if staging && staging.key === fx.record.id}
       <svg class="traits" viewBox="0 0 {staging.width} {staging.height}" preserveAspectRatio="none">
         <defs>
@@ -109,13 +109,22 @@
       {/each}
     {/if}
 
-    <div class="annonce {fx.record.rarity}" class:leur={!fx.own}>
-      <PlayerAvatar player={fx.avatar} size={fx.record.rarity === 'legendary' ? 72 : 56} />
-      <div class="texte">
-        <p class="tampon">{fx.own ? 'Toi' : 'En face'} · {RARITY_LABEL[fx.record.rarity]} · {fx.playerName}</p>
-        <p class="capacite">{fx.record.abilityName}</p>
-      </div>
-    </div>
+    {#key fx.record.id}
+      <button type="button" class="annonce {fx.record.rarity}" class:leur={!fx.own} style:--duree="{FX_DURATION_MS}ms" onclick={() => controller.skipFx()} aria-label="Passer l'annonce">
+        <span class="haut">
+          <PlayerAvatar player={fx.avatar} size={96} />
+          <span class="texte">
+            <span class="tampon qui">{fx.own ? 'Toi' : 'En face'} · {RARITY_LABEL[fx.record.rarity]} · {fx.playerName}</span>
+            <span class="capacite">{fx.record.abilityName}</span>
+          </span>
+        </span>
+        <span class="description">{fx.description}</span>
+        <span class="effets texte-fort">
+          {#each fx.effects as line, index (index)}<span>{line}</span>{/each}
+        </span>
+        <span class="temps" aria-hidden="true"><span></span></span>
+      </button>
+    {/key}
   </div>
 {/if}
 
@@ -170,60 +179,89 @@
     color: var(--craie-fixe);
   }
   .annonce {
-    position: absolute;
-    top: var(--space-6);
-    left: 50%;
-    transform: translateX(-50%) rotate(var(--rotation-sticker));
-    display: flex;
-    align-items: center;
+    position: fixed;
+    z-index: 7;
+    inset: 0;
+    margin: auto;
+    height: fit-content;
+    transform: rotate(var(--rotation-sticker));
+    display: grid;
     gap: var(--space-2);
-    max-width: 92%;
-    padding: var(--space-2) var(--space-4);
+    width: min(92vw, 620px);
+    padding: var(--space-4) var(--space-6);
     background: var(--craie-fixe);
     color: var(--encre-fixe);
     border: var(--trait-epais) solid var(--encre-fixe);
-    box-shadow: 6px 6px 0 var(--encre-fixe);
+    box-shadow: 8px 8px 0 var(--encre-fixe);
+    text-align: left;
+    pointer-events: auto;
+    cursor: pointer;
   }
   .annonce.rare {
     background: var(--scotch);
   }
   .annonce.legendary {
-    top: 30%;
-    padding: var(--space-4) var(--space-6);
     background: var(--fumigene);
   }
   .annonce.leur {
     border-style: dashed;
   }
-  .texte p {
-    margin: 0;
+  .haut {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+  .texte {
+    display: grid;
+    min-width: 0;
   }
   .capacite {
     font-family: var(--font-display);
-    font-size: 28px;
-    line-height: 1.1;
+    font-size: 44px;
+    line-height: 1.05;
     text-transform: uppercase;
   }
-  .legendary .capacite {
-    font-size: 44px;
+  .description {
+    font-size: 18px;
+    line-height: 24px;
+  }
+  .effets {
+    display: grid;
+    gap: 2px;
+  }
+  .temps {
+    display: block;
+    height: 6px;
+    background: color-mix(in srgb, var(--encre-fixe) 20%, transparent);
+  }
+  .temps span {
+    display: block;
+    height: 100%;
+    background: var(--encre-fixe);
   }
   @media (max-width: 600px) {
     .capacite {
-      font-size: 20px;
-    }
-    .legendary .capacite {
       font-size: 28px;
     }
   }
   @media (prefers-reduced-motion: no-preference) {
     .annonce {
-      animation: tampon 180ms ease-out;
+      animation: tampon 220ms ease-out;
+    }
+    .temps span {
+      animation: ecoule var(--duree) linear both;
+      transform-origin: left;
     }
     .flottant {
-      animation: envol 1300ms ease-out both;
+      animation: envol 3500ms ease-out both;
     }
     .fleche {
       animation: avance 500ms linear infinite;
+    }
+  }
+  @keyframes ecoule {
+    to {
+      transform: scaleX(0);
     }
   }
   @keyframes tampon {

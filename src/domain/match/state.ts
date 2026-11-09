@@ -6,6 +6,7 @@ import { createRng, type Rng } from '../core/rng';
 import { effectiveRating, FORMATION_SLOTS } from '../player/rating';
 import { getAbility } from '../abilities/catalog';
 import { statsAtLevel } from '../abilities/progression';
+import { trainingMatchBonus } from '../club/training';
 import type {
   MatchEvent,
   MatchEventKind,
@@ -94,7 +95,7 @@ export function pushEvent(
   kind: MatchEventKind,
   side: Side | null,
   text: string,
-  extra: { playerId?: string; abilityId?: string } = {},
+  extra: Pick<MatchEvent, 'playerId' | 'abilityId' | 'score' | 'label'> = {},
 ): void {
   const { state } = run;
   const event: MatchEvent = { minute: state.minute, addedMinute: state.addedMinute, kind, side, text, ...extra };
@@ -152,9 +153,9 @@ function createTeam(sheet: TeamSheet, side: Side, lookup: AbilityLookup): TeamSt
   const slots = FORMATION_SLOTS[sheet.formation];
   const players: MatchPlayer[] = [];
   sheet.starters.forEach((player, index) => {
-    players.push(createMatchPlayer({ player, side, line: slots[index] ?? player.position, lookup }));
+    players.push(createMatchPlayer({ player, side, line: slots[index] ?? player.position, lookup, trained: sheet.isHuman }));
   });
-  for (const player of sheet.bench) players.push(createMatchPlayer({ player, side, line: null, lookup }));
+  for (const player of sheet.bench) players.push(createMatchPlayer({ player, side, line: null, lookup, trained: sheet.isHuman }));
   return {
     side,
     clubId: sheet.clubId,
@@ -170,6 +171,7 @@ function createTeam(sheet: TeamSheet, side: Side, lookup: AbilityLookup): TeamSt
     shotMaluses: [],
     pendingCancels: 0,
     delayed: [],
+    substitutionsUsed: 0,
     consequences: [],
   };
 }
@@ -179,11 +181,14 @@ interface PlayerSetup {
   side: Side;
   line: Position | null;
   lookup: AbilityLookup;
+  /** Applique le bonus de la séance de la semaine (TRAIN-04). */
+  trained: boolean;
 }
 
-function createMatchPlayer({ player, side, line, lookup }: PlayerSetup): MatchPlayer {
+function createMatchPlayer({ player, side, line, lookup, trained }: PlayerSetup): MatchPlayer {
   const profile: Player = { ...player };
   const ability = findAbility(lookup, player.ability.abilityId);
+  const bonus = trained ? trainingMatchBonus(player.training.focus) : null;
   return {
     id: player.id,
     name: `${player.firstName} ${player.lastName}`,
@@ -195,12 +200,14 @@ function createMatchPlayer({ player, side, line, lookup }: PlayerSetup): MatchPl
     sentOff: false,
     injured: false,
     knockedOutUntil: NEVER,
-    effects: [],
+    effects: bonus ? [{ label: 'Entraînement', stat: bonus.stat, value: bonus.value, endsAt: UNTIL_FINAL_WHISTLE, quiet: true }] : [],
     ability: ability && prepareAbility(ability, player.ability.level),
     abilityRevealed: player.ability.revealed,
     cooldownUntil: 0,
     fatigueRestored: 0,
     goals: 0,
+    hasPlayed: line !== null,
+    subbedOff: false,
   };
 }
 

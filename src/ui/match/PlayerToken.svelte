@@ -1,5 +1,6 @@
 <script lang="ts">
   import PlayerAvatar from '../kit/PlayerAvatar.svelte';
+  import RatingBadge from '../kit/RatingBadge.svelte';
   import StatIcon from '../kit/StatIcon.svelte';
   import type { TokenView } from './pitch';
 
@@ -33,10 +34,11 @@
 >
   {#if token.readyCost !== null}<span class="pret tampon {token.readyRarity}" aria-hidden="true">{token.readyCost}</span>{/if}
   <span class="portrait">
-    <PlayerAvatar player={token.avatar} size={38} />
-    <span class="note tampon" aria-hidden="true">{token.rating}</span>
+    <PlayerAvatar player={token.avatar} size={30} />
+    <span class="note" aria-hidden="true"><RatingBadge value={token.rating} size="s" /></span>
   </span>
   <span class="nom texte-fort">{token.name}</span>
+  <span class="poste tampon" class:deplace={token.displaced} aria-hidden="true">{token.position}</span>
   {#if token.reason}<span class="raison tampon" aria-hidden="true">{token.reason}</span>{/if}
   {#if token.chips.length > 0}
     <span class="effets" aria-hidden="true">
@@ -57,8 +59,8 @@
     justify-content: center;
     gap: 2px;
     width: 100%;
-    max-width: 92px;
-    min-height: 76px;
+    max-width: 72px;
+    min-height: 62px;
     padding: var(--space-1);
     background: var(--craie);
     color: var(--encre);
@@ -115,24 +117,27 @@
   }
   .note {
     position: absolute;
-    right: -10px;
+    right: -14px;
     bottom: -3px;
-    min-width: 20px;
-    padding: 0 2px;
-    font-size: 12px;
-    line-height: 15px;
+  }
+  .poste {
+    font-size: 10px;
+    line-height: 12px;
     letter-spacing: 0;
-    background: var(--encre-fixe);
-    color: var(--craie-fixe);
-    font-variant-numeric: tabular-nums;
+    padding: 0 2px;
+    color: var(--encre-pale);
+  }
+  .deplace {
+    background: var(--scotch);
+    color: var(--encre-fixe);
   }
   .nom {
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 13px;
-    line-height: 16px;
+    font-size: 12px;
+    line-height: 14px;
   }
   .raison {
     font-size: 10px;

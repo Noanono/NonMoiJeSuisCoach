@@ -2,6 +2,7 @@ import type { Ability, AttributeName, Attributes, Player, Position, Rarity } fro
 import { clamp, type Rng } from '../core/rng';
 import { ratingFor } from '../player/rating';
 import { RARITY_GENERATION_WEIGHTS } from '../abilities/progression';
+import { defaultTrainingFocus } from '../club/training';
 import { FIRST_NAMES, LAST_NAMES } from './names';
 import { pickWeighted, randomId } from './random';
 
@@ -79,6 +80,8 @@ export function generatePlayer(options: GeneratePlayerOptions): Player {
     position,
     attributes,
     potential: generatePotential(rng, rating, age),
+    overallAtSeasonStart: rating,
+    training: { focus: defaultTrainingFocus(position), progress: 0 },
     fatigue: 0,
     injuryWeeks: 0,
     suspendedMatches: 0,

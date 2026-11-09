@@ -74,6 +74,7 @@ export function finishHumanMatch(state: GameState, match: MatchState): MatchSumm
   const summary = summarize(match);
   fixture.result = toResult(summary, fixture);
   for (const report of summary.players) applyPlayerReport(state, report, summary);
+  state.lastAppearances = summary.players.filter((report) => report.played && state.players[report.playerId]?.clubId === state.humanClubId).map((report) => report.playerId);
   const humanSide: Side = fixture.homeId === state.humanClubId ? 'home' : 'away';
   for (const consequence of summary.consequences[humanSide]) applyConsequence(state, consequence);
   return summary;

@@ -110,7 +110,7 @@ export function describeEffect(effect: Effect): string {
     case 'revive':
       return 'Relève la cible immédiatement';
     case 'cancelAction':
-      return 'Annule la prochaine action adverse';
+      return effect.count ? `Annule les ${effect.count} prochaines actions adverses` : 'Annule la prochaine action adverse';
     case 'chanceBoost': {
       const carrier = effect.carrier ? " : il la tente lui-même, et s'il marque, sa recharge repart à zéro" : '';
       return `${signedPercent(effect.value)} de chances de but sur la prochaine occasion${carrier}`;

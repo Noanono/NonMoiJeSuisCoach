@@ -34,9 +34,9 @@
 <main class="resume">
   <header class="banderole">
     <h1 class="banderole-l" tabindex="-1" bind:this={heading}>
-      <span class="nom">{summary.homeName}</span>
-      <span class="score">{summary.homeGoals}-{summary.awayGoals}</span>
-      <span class="nom">{summary.awayName}</span>
+      <span class="nom">{coachSide === 'home' ? summary.homeName : summary.awayName}</span>
+      <span class="score">{coachSide === 'home' ? `${summary.homeGoals}-${summary.awayGoals}` : `${summary.awayGoals}-${summary.homeGoals}`}</span>
+      <span class="nom">{coachSide === 'home' ? summary.awayName : summary.homeName}</span>
     </h1>
     {#if summary.shootout}
       <p class="tampon">Tirs au but {summary.shootout.home}-{summary.shootout.away}</p>
@@ -51,7 +51,7 @@
   <div class="grille">
     <Card title="Buts">
       <div class="camps">
-        {#each SIDES as side (side)}
+        {#each coachSide === 'home' ? SIDES : [...SIDES].reverse() as side (side)}
           <div>
             <h3 class="tampon">{teamName(side)}</h3>
             <ul class="liste texte-s">

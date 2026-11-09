@@ -3,6 +3,7 @@
   import Button from '../kit/Button.svelte';
   import Card from '../kit/Card.svelte';
   import PlayerAvatar from '../kit/PlayerAvatar.svelte';
+  import RatingBadge from '../kit/RatingBadge.svelte';
   import OffersList from './parts/OffersList.svelte';
   import { store } from '../store.svelte';
   import { formatEuros } from '../format';
@@ -10,13 +11,15 @@
   import { RARITY_LABEL } from '../../domain/abilities/progression';
   import { MAX_SQUAD_SIZE } from '../../domain/club/transfers';
   import { buy, humanClub, market, transferWindowOpen } from '../../domain/game';
-  import type { Position } from '../../domain/types';
-  import { fullName, POSITION_LABEL, POSITION_SHORT } from './describe';
-  import { nextTransferWindowWeek, transferWindowLastWeek } from './views';
+  import type { Position, Rarity } from '../../domain/types';
+  import { fullName, POSITION_LABEL, POSITION_ORDER, POSITION_SHORT } from './describe';
+  import { AGE_BANDS, inAgeBand, nextTransferWindowWeek, sortRows, transferWindowLastWeek, type AgeBandId, type SortDirection } from './views';
 
   /** Mercato (CLUB-02) : liste filtrable, achats et offres reçues. */
   const PAGE_SIZE = 40;
   const POSITIONS = Object.keys(POSITION_LABEL) as Position[];
+  const RARITIES = Object.keys(RARITY_LABEL) as Rarity[];
+  const RARITY_ORDER: Record<Rarity, number> = { common: 1, rare: 2, legendary: 3 };
 
   const transferWindow = $derived(
     store.select((game) => {
@@ -47,6 +50,7 @@
           club: listing.clubId ? (game.clubs[listing.clubId]?.shortName ?? '?') : 'Libre',
           clubName: listing.clubId ? (game.clubs[listing.clubId]?.name ?? 'Club inconnu') : 'Sans club',
           ability: listing.ability ? `${getAbility(listing.ability.abilityId).name} · ${RARITY_LABEL[listing.ability.rarity]}` : null,
+          rarity: listing.ability?.rarity ?? null,
           price: listing.price,
           salary: listing.askingSalary,
         };
@@ -54,6 +58,32 @@
     ),
   );
 
+  type Listing = (typeof listings)[number];
+  type SortKey = 'name' | 'position' | 'age' | 'overall' | 'club' | 'ability' | 'price' | 'salary';
+
+  interface Column {
+    key: SortKey;
+    label: string;
+    numeric: boolean;
+    sortValue: (row: Listing) => number | string;
+    firstDirection: SortDirection;
+  }
+
+  const COLUMNS: Column[] = [
+    { key: 'name', label: 'Nom', numeric: false, sortValue: (row) => row.name, firstDirection: 'asc' },
+    { key: 'position', label: 'Poste', numeric: false, sortValue: (row) => POSITION_ORDER[row.position], firstDirection: 'asc' },
+    { key: 'age', label: 'Âge', numeric: true, sortValue: (row) => row.age, firstDirection: 'asc' },
+    { key: 'overall', label: 'Note', numeric: true, sortValue: (row) => row.overall, firstDirection: 'desc' },
+    { key: 'club', label: 'Club', numeric: false, sortValue: (row) => row.club, firstDirection: 'asc' },
+    { key: 'ability', label: 'Capacité', numeric: false, sortValue: (row) => (row.rarity ? RARITY_ORDER[row.rarity] : 0), firstDirection: 'desc' },
+    { key: 'price', label: 'Prix', numeric: true, sortValue: (row) => row.price, firstDirection: 'asc' },
+    { key: 'salary', label: 'Salaire / sem.', numeric: true, sortValue: (row) => row.salary, firstDirection: 'asc' },
+  ];
+
+  let sortKey = $state<SortKey>('overall');
+  let direction = $state<SortDirection>('desc');
+  let ageFilter = $state<AgeBandId | 'all'>('all');
+  let rarityFilter = $state<Rarity | 'all'>('all');
   let positionFilter = $state<Position | 'all'>('all');
   let minOverall = $state<number | null>(null);
   let maxPrice = $state<number | null>(null);
@@ -63,11 +93,28 @@
     listings.filter(
       (listing) =>
         (positionFilter === 'all' || listing.position === positionFilter) &&
+        (ageFilter === 'all' || inAgeBand(listing.age, ageFilter)) &&
+        (rarityFilter === 'all' || listing.rarity === rarityFilter) &&
         (minOverall === null || listing.overall >= minOverall) &&
         (maxPrice === null || listing.price <= maxPrice),
     ),
   );
-  const visible = $derived(filtered.slice(0, shown));
+  const sorted = $derived(sortRows(filtered, COLUMNS.find((column) => column.key === sortKey)!.sortValue, direction));
+  const visible = $derived(sorted.slice(0, shown));
+
+  function sortBy(column: Column): void {
+    if (sortKey === column.key) direction = direction === 'asc' ? 'desc' : 'asc';
+    else {
+      sortKey = column.key;
+      direction = column.firstDirection;
+    }
+    resetPaging();
+  }
+
+  function ariaSort(key: SortKey): 'ascending' | 'descending' | 'none' {
+    if (sortKey !== key) return 'none';
+    return direction === 'asc' ? 'ascending' : 'descending';
+  }
   const squadFull = $derived(transferWindow.squadSize >= MAX_SQUAD_SIZE);
 
   function resetPaging(): void {
@@ -114,6 +161,26 @@
         </select>
       </label>
       <label class="champ">
+        <span class="tampon">Âge</span>
+        <select bind:value={ageFilter} onchange={resetPaging}>
+          <option value="all">Tous</option>
+          {#each AGE_BANDS as band (band.id)}<option value={band.id}>{band.label}</option>{/each}
+        </select>
+      </label>
+      <label class="champ">
+        <span class="tampon">Rareté</span>
+        <select bind:value={rarityFilter} onchange={resetPaging}>
+          <option value="all">Toutes</option>
+          {#each RARITIES as rarity (rarity)}<option value={rarity}>{RARITY_LABEL[rarity]}</option>{/each}
+        </select>
+      </label>
+      <label class="champ">
+        <span class="tampon">Trier par</span>
+        <select bind:value={sortKey} onchange={resetPaging}>
+          {#each COLUMNS as column (column.key)}<option value={column.key}>{column.label}</option>{/each}
+        </select>
+      </label>
+      <label class="champ">
         <span class="tampon">Note minimale</span>
         <input type="number" min="1" max="99" inputmode="numeric" bind:value={minOverall} oninput={resetPaging} />
       </label>
@@ -128,17 +195,16 @@
     {:else}
       <div class="defilant">
         <table class="tableau">
-          <caption class="sr-only">Joueurs du mercato, du mieux noté au moins bien noté</caption>
+          <caption class="sr-only">Joueurs du mercato</caption>
           <thead>
             <tr>
-              <th scope="col">Nom</th>
-              <th scope="col">Poste</th>
-              <th scope="col" class="num">Âge</th>
-              <th scope="col" class="num">Note</th>
-              <th scope="col">Club</th>
-              <th scope="col">Capacité</th>
-              <th scope="col" class="num">Prix</th>
-              <th scope="col" class="num">Salaire / sem.</th>
+              {#each COLUMNS as column (column.key)}
+                <th scope="col" class:num={column.numeric} aria-sort={ariaSort(column.key)}>
+                  <button class="tri" onclick={() => sortBy(column)}>
+                    {column.label}{#if sortKey === column.key}<span aria-hidden="true">{direction === 'asc' ? ' ▲' : ' ▼'}</span>{/if}
+                  </button>
+                </th>
+              {/each}
               <th scope="col"><span class="sr-only">Action</span></th>
             </tr>
           </thead>
@@ -149,7 +215,7 @@
                 <td class="texte-fort"><span class="identite"><PlayerAvatar player={listing.avatar} size={32} />{listing.name}</span></td>
                 <td><abbr title={POSITION_LABEL[listing.position]}>{POSITION_SHORT[listing.position]}</abbr></td>
                 <td class="num">{listing.age}</td>
-                <td class="num texte-fort">{listing.overall}</td>
+                <td class="num"><RatingBadge value={listing.overall} size="s" /></td>
                 <td><abbr title={listing.clubName}>{listing.club}</abbr></td>
                 <td>{listing.ability ?? '???'}</td>
                 <td class="num">{formatEuros(listing.price)}</td>

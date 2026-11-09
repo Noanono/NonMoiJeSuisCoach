@@ -3,6 +3,7 @@
   import Button from '../kit/Button.svelte';
   import Gauge from '../kit/Gauge.svelte';
   import PlayerAvatar from '../kit/PlayerAvatar.svelte';
+  import RatingBadge from '../kit/RatingBadge.svelte';
   import Sticker from '../kit/Sticker.svelte';
   import { abilitySheet } from './activation';
   import type { MatchController } from './controller.svelte';
@@ -37,7 +38,7 @@
   <div class="entete">
     {#if sheet.avatar}<PlayerAvatar player={sheet.avatar} size={56} />{/if}
     <div>
-      <p class="tampon joueur">{sheet.playerName}</p>
+      <p class="tampon joueur">{sheet.playerName} · {sheet.position}</p>
       <h2 id="activation-titre" class="banderole-m" tabindex="-1" bind:this={heading}>{sheet.abilityName}</h2>
       {#if sheet.rarity}<Sticker tone={RARITY_TONE[sheet.rarity.key]}>{sheet.rarity.label}</Sticker>{/if}
     </div>
@@ -73,6 +74,31 @@
     <Button variant="primary" disabled={!sheet.available} onclick={() => controller.shout()}>Gueuler !</Button>
     <Button variant="ghost" onclick={() => controller.closeInspection()}>Laisser tomber</Button>
   </div>
+
+  {#if sheet.substitution}
+    {@const panel = sheet.substitution}
+    <section class="changements" aria-label="Remplacement">
+      <h3 class="tampon">{panel.title} · {panel.left}/{panel.max} restants</h3>
+      {#if panel.left === 0}
+        <p class="texte-s">Plus aucun changement disponible.</p>
+      {:else if panel.options.length === 0}
+        <p class="texte-s">Personne de disponible.</p>
+      {:else}
+        <ul>
+          {#each panel.options as option (option.leavingId + option.enteringId)}
+            <li>
+              <button type="button" class="option" onclick={() => controller.substitute(option.leavingId, option.enteringId)}>
+                <PlayerAvatar player={option.avatar} size={26} />
+                <span class="option-nom texte-s texte-fort">{option.name}</span>
+                <span class="tampon" class:hors={option.displaced}>{option.position}</span>
+                <RatingBadge value={option.rating} size="s" />
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </section>
+  {/if}
 </div>
 
 <style>
@@ -144,6 +170,49 @@
     margin: 0 0 var(--space-2);
     border-left: var(--trait-epais) solid var(--carton);
     padding-left: var(--space-2);
+  }
+  .changements {
+    margin-top: var(--space-4);
+    padding-top: var(--space-2);
+    border-top: var(--trait-fin) solid var(--encre);
+  }
+  .changements h3 {
+    margin: 0 0 var(--space-1);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .changements p {
+    margin: 0;
+  }
+  .changements ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 2px;
+  }
+  .option {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    padding: 2px var(--space-1);
+    background: var(--craie-2);
+    color: var(--encre);
+    border: var(--trait-fin) solid var(--encre);
+    cursor: pointer;
+    text-align: left;
+  }
+  .option-nom {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .hors {
+    background: var(--scotch);
+    color: var(--encre-fixe);
+    padding: 0 2px;
   }
   .actions {
     display: flex;

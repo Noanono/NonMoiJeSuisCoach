@@ -46,6 +46,21 @@ export function transferWindowLastWeek(week: number): number {
   return last;
 }
 
+/** Tranches d'âge du mercato. */
+export const AGE_BANDS = [
+  { id: 'under22', label: 'Moins de 22 ans', min: 0, max: 21 },
+  { id: '22to27', label: '22 à 27 ans', min: 22, max: 27 },
+  { id: '28to31', label: '28 à 31 ans', min: 28, max: 31 },
+  { id: 'over31', label: '32 ans et plus', min: 32, max: Number.POSITIVE_INFINITY },
+] as const;
+
+export type AgeBandId = (typeof AGE_BANDS)[number]['id'];
+
+export function inAgeBand(age: number, id: AgeBandId): boolean {
+  const band = AGE_BANDS.find((candidate) => candidate.id === id)!;
+  return age >= band.min && age <= band.max;
+}
+
 export type SortDirection = 'asc' | 'desc';
 
 /** Trie une copie des lignes selon une clé numérique ou textuelle (tri français pour le texte). */

@@ -35,6 +35,7 @@ export function newGame({ seed, clubName }: NewGameOptions): GameState {
     dialogue: null,
     recentDialogueIds: [],
     lastFinance: [],
+    lastAppearances: [],
     streak: { wins: 0, losses: 0 },
     news: [`Bienvenue à ${human.name}. Terrain boueux, buvette en préfabriqué, vestiaires qui fuient. C'est chez toi.`],
     history: [],

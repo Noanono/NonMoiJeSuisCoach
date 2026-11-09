@@ -71,8 +71,8 @@ export function applyEffect(context: EffectContext, effect: Effect): void {
       for (const player of scoped(context, effect)) revive(context, player);
       return;
     case 'cancelAction':
-      team.pendingCancels++;
-      float(context, source, 'ACTION ANNULÉE', 'bonus');
+      team.pendingCancels += effect.count ?? 1;
+      float(context, source, effect.count ? `${effect.count} ACTIONS ANNULÉES` : 'ACTION ANNULÉE', 'bonus');
       return;
     case 'chanceBoost':
       team.chanceBoosts.push(effect.carrier ? { value: effect.value, shooterId: source.id } : { value: effect.value });

@@ -1,7 +1,9 @@
 <script lang="ts">
   import './parts/screens.css';
   import Card from '../kit/Card.svelte';
+  import DeltaBadge from '../kit/DeltaBadge.svelte';
   import PlayerAvatar from '../kit/PlayerAvatar.svelte';
+  import RatingBadge from '../kit/RatingBadge.svelte';
   import type { AvatarPlayer } from '../kit/avatar';
   import PlayerSheet from './parts/PlayerSheet.svelte';
   import { store } from '../store.svelte';
@@ -28,6 +30,7 @@
     positionOrder: number;
     age: number;
     overall: number;
+    evolution: number;
     fatigue: number;
     availability: string | null;
     avatar: AvatarPlayer;
@@ -37,7 +40,7 @@
     value: number;
   }
 
-  type SortKey = 'name' | 'position' | 'age' | 'overall' | 'fatigue' | 'availability' | 'ability' | 'value';
+  type SortKey = 'name' | 'position' | 'age' | 'overall' | 'evolution' | 'fatigue' | 'availability' | 'ability' | 'value';
 
   interface Column {
     key: SortKey;
@@ -53,6 +56,7 @@
     { key: 'position', label: 'Poste', numeric: false, sortValue: (row) => row.positionOrder * 100 - row.overall, firstDirection: 'asc' },
     { key: 'age', label: 'Âge', numeric: true, sortValue: (row) => row.age, firstDirection: 'asc' },
     { key: 'overall', label: 'Note', numeric: true, sortValue: (row) => row.overall, firstDirection: 'desc' },
+    { key: 'evolution', label: 'Évol.', numeric: true, sortValue: (row) => row.evolution, firstDirection: 'desc' },
     { key: 'fatigue', label: 'Fatigue', numeric: true, sortValue: (row) => row.fatigue, firstDirection: 'desc' },
     { key: 'availability', label: 'Dispo', numeric: false, sortValue: (row) => row.availability ?? '', firstDirection: 'desc' },
     { key: 'ability', label: 'Capacité', numeric: false, sortValue: (row) => row.rarityOrder * 1000 - row.overall, firstDirection: 'desc' },
@@ -73,6 +77,7 @@
           positionOrder: POSITION_ORDER[player.position],
           age: player.age,
           overall: overall(player),
+          evolution: overall(player) - player.overallAtSeasonStart,
           fatigue: player.fatigue,
           availability: availabilityLabel(player),
           avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position },
@@ -112,9 +117,18 @@
     {#snippet actions()}
       <span class="tampon">{squad.rows.length} joueurs · salaires {formatEuros(squad.wages)} / sem.</span>
     {/snippet}
+    <div class="tri-barre">
+      <label class="champ">
+        <span class="tampon">Trier par</span>
+        <select bind:value={sortKey}>
+          {#each COLUMNS as column (column.key)}<option value={column.key}>{column.label}</option>{/each}
+        </select>
+      </label>
+      <button type="button" class="sens tampon" onclick={() => (direction = direction === 'asc' ? 'desc' : 'asc')}>{direction === 'asc' ? 'Croissant' : 'Décroissant'}</button>
+    </div>
     <div class="defilant">
       <table class="tableau">
-        <caption class="texte-s discret">Clique sur un nom pour ouvrir sa fiche. Clique sur un en-tête pour trier.</caption>
+        <caption class="texte-s discret">Clique sur un nom pour ouvrir sa fiche. Évol. : points gagnés ou perdus depuis le début de la saison.</caption>
         <thead>
           <tr>
             {#each COLUMNS as column (column.key)}
@@ -132,7 +146,8 @@
               <td><span class="identite"><PlayerAvatar player={row.avatar} size={32} /><button class="lien" onclick={() => (openPlayerId = row.id)}>{row.name}</button></span></td>
               <td><abbr title={row.positionLabel}>{row.position}</abbr></td>
               <td class="num">{row.age}</td>
-              <td class="num texte-fort">{row.overall}</td>
+              <td class="num"><RatingBadge value={row.overall} size="s" /></td>
+              <td class="num"><DeltaBadge value={row.evolution} /></td>
               <td class="num">{row.fatigue}</td>
               <td>
                 {#if row.availability}<span class="malus">{row.availability}</span>{:else}<span class="discret">Apte</span>{/if}
@@ -157,6 +172,19 @@
 <style>
   abbr {
     text-decoration: none;
+  }
+  .tri-barre {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+  .sens {
+    background: var(--craie);
+    color: var(--encre);
+    border: var(--trait-fin) solid var(--encre);
+    padding: var(--space-1) var(--space-2);
+    cursor: pointer;
   }
   .identite {
     display: flex;

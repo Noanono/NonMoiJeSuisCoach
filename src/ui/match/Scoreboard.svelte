@@ -11,12 +11,16 @@
   const board = $derived.by(() => {
     void controller.version;
     const match = controller.match;
+    const coachIsHome = controller.coachSide === 'home';
+    const [own, other] = coachIsHome ? [match.home, match.away] : [match.away, match.home];
     return {
-      homeGoals: match.home.goals,
-      awayGoals: match.away.goals,
+      ownName: own.name,
+      otherName: other.name,
+      ownGoals: own.goals,
+      otherGoals: other.goals,
       minute: minuteLabel(match.minute, match.addedMinute),
       period: periodLabel(match),
-      shootout: match.shootout,
+      shootout: match.shootout && (coachIsHome ? `${match.shootout.home}-${match.shootout.away}` : `${match.shootout.away}-${match.shootout.home}`),
     };
   });
 
@@ -33,24 +37,23 @@
 
 <header class="banderole" aria-label="Tableau de score">
   <div class="equipe domicile">
-    <span class="nom banderole-m">{controller.match.home.name}</span>
-    {#if controller.coachSide === 'home'}<span class="tampon toi">Ton équipe</span>{/if}
+    <span class="nom banderole-m">{board.ownName}</span>
+    <span class="tampon toi">Ton équipe</span>
   </div>
 
   <div class="centre">
-    <p class="score" aria-label="Score {board.homeGoals} à {board.awayGoals}">
-      <span>{board.homeGoals}</span><span aria-hidden="true">-</span><span>{board.awayGoals}</span>
+    <p class="score" aria-label="Score {board.ownGoals} à {board.otherGoals}">
+      <span>{board.ownGoals}</span><span aria-hidden="true">-</span><span>{board.otherGoals}</span>
     </p>
     <p class="horloge tampon">
       <span class="minute">{board.minute}</span>
       <span>{board.period}</span>
-      {#if board.shootout}<span>TAB {board.shootout.home}-{board.shootout.away}</span>{/if}
+      {#if board.shootout}<span>TAB {board.shootout}</span>{/if}
     </p>
   </div>
 
   <div class="equipe exterieur">
-    <span class="nom banderole-m">{controller.match.away.name}</span>
-    {#if controller.coachSide === 'away'}<span class="tampon toi">Ton équipe</span>{/if}
+    <span class="nom banderole-m">{board.otherName}</span>
   </div>
 
   {#if !controller.finished}

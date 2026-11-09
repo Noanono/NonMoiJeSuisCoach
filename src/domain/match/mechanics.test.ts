@@ -42,10 +42,10 @@ function advanceTo(state: MatchState, elapsed: number): void {
 }
 
 describe('mécaniques des rares', () => {
-  test('Le Gardien kamikaze annule la prochaine action et rend un point', () => {
+  test('Le Gardien kamikaze annule les deux prochaines actions et rend un point', () => {
     const state = match({ 0: 'le-gardien-kamikaze' });
     shout(state, 'h-0');
-    expect(state.home.pendingCancels).toBe(1);
+    expect(state.home.pendingCancels).toBe(2);
     expect(state.home.gauge).toBe(8);
   });
 
@@ -54,7 +54,7 @@ describe('mécaniques des rares', () => {
     goal(state, 'away');
     goal(state, 'away');
     shout(state, 'h-0');
-    expect(activeEffects(state, 'h-0')[0]!.value).toBeCloseTo(0.9);
+    expect(activeEffects(state, 'h-0')[0]!.value).toBeCloseTo(1.1);
   });
 
   test('Le Bus de l’amicale rend 2 points si la cage reste inviolée', () => {

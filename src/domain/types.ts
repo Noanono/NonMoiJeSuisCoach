@@ -23,6 +23,15 @@ export interface AbilityProgress {
   revealed: boolean;
 }
 
+/** Ce que le joueur travaille à l'entraînement : un attribut, ou sa capacité spéciale. */
+export type TrainingFocus = AttributeName | 'ability';
+
+export interface PlayerTraining {
+  focus: TrainingFocus;
+  /** Fraction du prochain point d'attribut, de 0 à 1. */
+  progress: number;
+}
+
 export interface Player {
   id: string;
   firstName: string;
@@ -32,6 +41,9 @@ export interface Player {
   attributes: Attributes;
   /** Note globale maximale atteignable (jeunes du centre de formation, CLUB-07). */
   potential: number;
+  /** Note au début de la saison : sert à afficher sa progression. */
+  overallAtSeasonStart: number;
+  training: PlayerTraining;
   /** 0 = frais, 100 = épuisé (EFF-04). */
   fatigue: number;
   /** Semaines d'indisponibilité restantes (EFF-05). */
@@ -125,8 +137,8 @@ export type Effect =
   | { type: 'knockout'; scope: Scope; duration: number; chaseDuration?: number }
   /** Relève immédiatement un joueur au sol. */
   | { type: 'revive'; scope: Scope }
-  /** Annule la prochaine action adverse. */
-  | { type: 'cancelAction' }
+  /** Annule les prochaines actions adverses (une par défaut). */
+  | { type: 'cancelAction'; count?: number }
   /** Bonus sur la prochaine occasion. `carrier` : le porteur la tente et sa recharge repart à zéro s'il marque. */
   | { type: 'chanceBoost'; value: number; carrier?: boolean }
   /** Crée tout de suite une occasion pour le porteur, avec cette probabilité de but. */

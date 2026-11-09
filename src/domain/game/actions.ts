@@ -8,7 +8,8 @@ import { acceptOffer, askingPrice, buyPlayer, marketListings, sellPlayer, type M
 import { askingSalary } from '../club/valuation';
 import { isTransferWindowOpen } from '../league/calendar';
 import { autoLineup, validateLineup, type LineupError } from '../league/lineup';
-import type { Instructions, Lineup } from '../types';
+import { defaultTrainingFocus } from '../club/training';
+import type { Instructions, Lineup, TrainingFocus } from '../types';
 import { humanClub, humanSquad, outlookOf, replacePlayers, writeOutlook } from './selectors';
 import type { GameState } from './state';
 import { withRng } from './week';
@@ -37,6 +38,18 @@ export function autoPickLineup(state: GameState): LineupError[] {
 export function setInstructions(state: GameState, instructions: Instructions): void {
   const club = humanClub(state);
   if (club.lineup) club.lineup = { ...club.lineup, instructions };
+}
+
+/** Programme d'entraînement d'un joueur (TRAIN-02). La progression en cours repart de zéro si l'axe change. */
+export function setTrainingFocus(state: GameState, playerId: string, focus: TrainingFocus): void {
+  const player = state.players[playerId];
+  if (!player || player.clubId !== state.humanClubId || player.training.focus === focus) return;
+  state.players[playerId] = { ...player, training: { focus, progress: 0 } };
+}
+
+/** Remet à chacun le programme de son poste. */
+export function resetTrainingFocus(state: GameState): void {
+  for (const player of humanSquad(state)) setTrainingFocus(state, player.id, defaultTrainingFocus(player.position));
 }
 
 export function transferWindowOpen(state: GameState): boolean {

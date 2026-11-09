@@ -1,12 +1,14 @@
 <script lang="ts">
   import Gauge from './kit/Gauge.svelte';
+  import RatingBadge from './kit/RatingBadge.svelte';
   import { store, type Screen } from './store.svelte';
-  import { humanClub } from '../domain/game';
+  import { humanClub, teamRating } from '../domain/game';
   import { formatEuros } from './format';
   import Dashboard from './screens/Dashboard.svelte';
   import Squad from './screens/Squad.svelte';
   import Tactics from './screens/Tactics.svelte';
   import Market from './screens/Market.svelte';
+  import Training from './screens/Training.svelte';
   import ClubScreen from './screens/ClubScreen.svelte';
   import Competitions from './screens/Competitions.svelte';
 
@@ -14,6 +16,7 @@
     { screen: 'dashboard', label: 'Bureau' },
     { screen: 'squad', label: 'Effectif' },
     { screen: 'tactics', label: 'Tactique' },
+    { screen: 'training', label: 'Entraînement' },
     { screen: 'market', label: 'Mercato' },
     { screen: 'club', label: 'Club' },
     { screen: 'competitions', label: 'Compétitions' },
@@ -29,6 +32,7 @@
     store.select((game) => ({
       club: humanClub(game).name,
       budget: humanClub(game).budget,
+      rating: teamRating(game),
       confidence: game.outlook.presidentConfidence,
       season: game.season,
       week: game.week,
@@ -43,6 +47,12 @@
       <span class="tampon">Saison {header.season} · semaine {header.week}</span>
     </div>
     <dl class="jauges">
+      {#if header.rating !== null}
+        <div>
+          <dt class="tampon">Général équipe</dt>
+          <dd><RatingBadge value={header.rating} size="l" /></dd>
+        </div>
+      {/if}
       <div>
         <dt class="tampon">Budget</dt>
         <dd class="chiffre">{formatEuros(header.budget)}</dd>
@@ -69,6 +79,7 @@
     {#if store.screen === 'dashboard'}<Dashboard />
     {:else if store.screen === 'squad'}<Squad />
     {:else if store.screen === 'tactics'}<Tactics />
+    {:else if store.screen === 'training'}<Training />
     {:else if store.screen === 'market'}<Market />
     {:else if store.screen === 'club'}<ClubScreen />
     {:else if store.screen === 'competitions'}<Competitions />

@@ -18,7 +18,7 @@
     bench: readonly string[];
     squad: readonly CardPlayer[];
     onmove: (playerId: string, drop: LineupDrop) => void;
-    /** Réglages affichés à côté du terrain. */
+    /** Réglages affichés sous le banc. */
     aside: Snippet;
   }
 
@@ -145,7 +145,7 @@
               <PlayerCard
                 {player}
                 rating={player.ratingAt[slot.position]}
-                outOfPosition={player.position !== slot.position}
+                positionPenalty={player.ratingAt[player.position] - player.ratingAt[slot.position]}
                 selected={selectedId === player.id}
                 dragging={drag?.moving === true && drag.playerId === player.id}
                 onpointerdown={(event) => startDrag(event, player.id)}
@@ -163,7 +163,7 @@
               </button>
             {/if}
             {#if target && previewPlayer}
-              <span class="apercu tampon">Note ici {previewPlayer.ratingAt[slot.position]}</span>
+              <span class="apercu tampon">Note ici {previewPlayer.ratingAt[slot.position]}{#if previewPlayer.position !== slot.position} · hors poste{/if}</span>
             {/if}
           </div>
         {/each}
@@ -172,8 +172,6 @@
   </div>
 
   <div class="cote">
-    {@render aside()}
-
     <Card title="Le banc">
       {#snippet actions()}
         <span class="tampon">{bench.length} / {MAX_BENCH_SIZE}</span>
@@ -199,6 +197,8 @@
         <button type="button" class="poser tampon" onclick={() => place({ kind: 'bench' })}>Poser sur le banc</button>
       {/if}
     </Card>
+
+    {@render aside()}
   </div>
 
   <div class="tribune">

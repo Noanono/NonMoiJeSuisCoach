@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { MatchEvent } from '../../domain/match';
-import { lastGoalText, liveLines, liveTone, minuteIntervalMs, minuteLabel } from './live';
+import { lastGoalText, liveHeadline, liveLines, liveTone, minuteIntervalMs, minuteLabel } from './live';
 
 function event(kind: MatchEvent['kind'], side: MatchEvent['side'], minute: number, text: string = kind): MatchEvent {
   return { kind, side, minute, addedMinute: 0, text };
@@ -24,12 +24,18 @@ describe('live texte (MATCH-04, MATCH-07)', () => {
     event('goal', 'home', 12, 'But de Michel'),
     event('activation', 'home', 13),
     event('ambiance', 'home', 14),
+    event('save', 'away', 15),
   ];
+  for (const entry of events) entry.playerId = 'p';
+  events[2]!.score = [1, 0];
+  events[1]!.label = 'Le Lacet fou';
+  events[3]!.label = 'La Mobylette';
+  const nameOf = () => 'Michel';
 
   test('le plus récent en haut, clés stables, affichage limité', () => {
-    const lines = liveLines(events, 'home', 3);
-    expect(lines.map((line) => line.key)).toEqual([4, 3, 2]);
-    expect(liveLines(events, 'home', 0)).toHaveLength(events.length);
+    const lines = liveLines(events, 'home', 3, nameOf);
+    expect(lines.map((line) => line.key)).toEqual([5, 3, 2]);
+    expect(liveLines(events, 'home', 0, nameOf)).toHaveLength(events.length - 1);
   });
 
   test('distingue les capacités du coach et celles d’en face', () => {
@@ -37,6 +43,13 @@ describe('live texte (MATCH-04, MATCH-07)', () => {
     expect(liveTone(events[3]!, 'home')).toBe('mine');
     expect(liveTone(events[4]!, 'home')).toBe('plain');
     expect(liveTone(events[2]!, 'away')).toBe('goal');
+  });
+
+  test('chaque action se lit en quelques mots, le score vu du coach', () => {
+    expect(liveHeadline(events[2]!, 'home', nameOf)).toBe('Michel marque · 1-0');
+    expect(liveHeadline(events[2]!, 'away', nameOf)).toBe('Michel marque · 0-1');
+    expect(liveHeadline(events[1]!, 'home', nameOf)).toBe('Michel : Le Lacet fou');
+    expect(liveHeadline(events[4]!, 'home', nameOf)).toBeNull();
   });
 
   test('annonce seulement le dernier but', () => {

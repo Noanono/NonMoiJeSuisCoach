@@ -10,6 +10,8 @@ export function makePlayer(overrides: Partial<Player> = {}): Player {
     position: 'ATT',
     attributes: { speed: 60, technique: 60, physical: 60, shooting: 80, defense: 30, goalkeeping: 10 },
     potential: 70,
+    overallAtSeasonStart: 69,
+    training: { focus: 'ability', progress: 0 },
     fatigue: 0,
     injuryWeeks: 0,
     suspendedMatches: 0,

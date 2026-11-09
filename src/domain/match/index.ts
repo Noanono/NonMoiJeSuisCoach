@@ -11,6 +11,7 @@ export {
   cancelActivation,
 } from './activation';
 export { dismissEventWindow } from './windows';
+export { canEnter, canLeave, MAX_SUBSTITUTIONS, substitutePlayer, substitutionsLeft } from './substitutions';
 export { summarize, toMatchResult } from './summary';
 export { simulateQuick } from './quick';
 export { activeEffects, type ActiveEffectView } from './queries';

@@ -3,10 +3,11 @@
  * tout vient de `previewActivation`, l'UI ne fait que mettre en mots.
  */
 import { RARITY_LABEL } from '../../domain/abilities/progression';
-import { previewActivation, type ActivationPreview, type MatchState, type Side } from '../../domain/match';
+import { canEnter, canLeave, MAX_SUBSTITUTIONS, previewActivation, substitutionsLeft, type ActivationPreview, type MatchPlayer, type MatchState, type Side } from '../../domain/match';
+import { effectiveRating } from '../../domain/player/rating';
 import type { Position, Rarity } from '../../domain/types';
 import type { AvatarPlayer } from '../kit/avatar';
-import { describeEffect } from '../screens/describe';
+import { describeEffect, POSITION_SHORT } from '../screens/describe';
 import { effectChips } from './pitch';
 
 const HIDDEN_DESCRIPTION = "Capacité cachée : tu sauras ce qu'elle fait en gueulant.";
@@ -30,6 +31,68 @@ export interface AbilitySheet {
   status: string | null;
   /** Effets actifs du joueur, en clair (CAP-09). */
   active: string[];
+  /** Poste naturel et poste occupé, s'il est sur le terrain. */
+  position: string;
+  substitution: SubstitutionPanel | null;
+}
+
+export interface SubstitutionOption {
+  /** Joueur qui sort et joueur qui entre si le coach choisit cette ligne. */
+  leavingId: string;
+  enteringId: string;
+  /** Le joueur proposé. */
+  name: string;
+  avatar: AvatarPlayer;
+  position: string;
+  /** Note de celui qui entrerait, au poste libéré. */
+  rating: number;
+  displaced: boolean;
+}
+
+export interface SubstitutionPanel {
+  title: string;
+  left: number;
+  max: number;
+  options: SubstitutionOption[];
+}
+
+function avatarOf(player: MatchPlayer): AvatarPlayer {
+  return { id: player.id, age: player.profile.age, clubId: player.profile.clubId, position: player.profile.position };
+}
+
+/** Changements possibles depuis le panneau d'un joueur (MATCH-08), `null` s'il n'est pas concerné. */
+export function substitutionPanel(state: MatchState, coachSide: Side, playerId: string): SubstitutionPanel | null {
+  const team = coachSide === 'home' ? state.home : state.away;
+  const player = team.players.find((candidate) => candidate.id === playerId);
+  if (!player || state.status === 'finished') return null;
+  const left = substitutionsLeft(team);
+  const base = { left, max: MAX_SUBSTITUTIONS };
+  if (canLeave(player)) {
+    const line = player.line!;
+    const options = team.players.filter(canEnter).map((entering) => ({
+      leavingId: player.id,
+      enteringId: entering.id,
+      name: entering.name,
+      avatar: avatarOf(entering),
+      position: POSITION_SHORT[entering.profile.position],
+      rating: Math.round(effectiveRating(entering.profile, line)),
+      displaced: entering.profile.position !== line,
+    }));
+    return { ...base, title: 'Remplacer par', options };
+  }
+  if (canEnter(player)) {
+    const options = team.players.filter(canLeave).map((leaving) => ({
+      leavingId: leaving.id,
+      enteringId: player.id,
+      name: leaving.name,
+      avatar: avatarOf(leaving),
+      position: POSITION_SHORT[leaving.line!],
+      rating: Math.round(effectiveRating(player.profile, leaving.line!)),
+      displaced: player.profile.position !== leaving.line,
+    }));
+    return { ...base, title: 'Entrer à la place de', options };
+  }
+  return null;
 }
 
 export function plural(count: number, word: string): string {
@@ -59,6 +122,12 @@ export function targetingText(preview: ActivationPreview): string {
   }
 }
 
+function positionText(player: MatchPlayer): string {
+  const natural = POSITION_SHORT[player.profile.position];
+  if (player.line === null) return `${natural} · sur le banc`;
+  return player.line === player.profile.position ? natural : `${natural}, joue ${POSITION_SHORT[player.line]} (hors poste)`;
+}
+
 export function abilitySheet(state: MatchState, coachSide: Side, playerId: string): AbilitySheet {
   const preview = previewActivation(state, coachSide, playerId);
   const team = coachSide === 'home' ? state.home : state.away;
@@ -68,7 +137,7 @@ export function abilitySheet(state: MatchState, coachSide: Side, playerId: strin
   const known = ability !== null && preview.revealed;
   return {
     playerName: player?.name ?? '?',
-    avatar: player ? { id: player.id, age: player.profile.age, clubId: player.profile.clubId, position: player.profile.position } : null,
+    avatar: player ? avatarOf(player) : null,
     abilityName: preview.abilityName,
     rarity: preview.rarity ? { key: preview.rarity, label: RARITY_LABEL[preview.rarity] } : null,
     description: !ability ? '' : known ? ability.description : HIDDEN_DESCRIPTION,
@@ -79,5 +148,7 @@ export function abilitySheet(state: MatchState, coachSide: Side, playerId: strin
     available: preview.available,
     status: preview.reason ?? cooldown,
     active: effectChips(state, playerId).map((chip) => chip.detail),
+    position: player ? positionText(player) : '',
+    substitution: substitutionPanel(state, coachSide, playerId),
   };
 }

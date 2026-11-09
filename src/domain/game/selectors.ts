@@ -1,5 +1,7 @@
 import type { ClubOutlook } from '../club/model';
+import { EMPTY_SLOT } from '../league/lineup';
 import { seasonWeek, type SeasonWeek } from '../league/calendar';
+import { effectiveRating, FORMATION_SLOTS } from '../player/rating';
 import type { Club, Division, Fixture, Player } from '../types';
 import type { GameState } from './state';
 
@@ -27,6 +29,18 @@ export function clubPlayers(state: GameState, clubId: string): Player[] {
 
 export function humanSquad(state: GameState): Player[] {
   return clubPlayers(state, state.humanClubId);
+}
+
+/** Général actuel de l'équipe : moyenne du onze à ses postes, fatigue comprise. `null` sans titulaire. */
+export function teamRating(state: GameState): number | null {
+  const lineup = humanClub(state).lineup;
+  if (!lineup) return null;
+  const ratings = lineup.starters.flatMap((id, index) => {
+    const player = id === EMPTY_SLOT ? undefined : state.players[id];
+    const position = FORMATION_SLOTS[lineup.formation][index];
+    return player && position ? [effectiveRating(player, position)] : [];
+  });
+  return ratings.length > 0 ? Math.round(ratings.reduce((total, rating) => total + rating, 0) / ratings.length) : null;
 }
 
 export function currentWeek(state: GameState): SeasonWeek {

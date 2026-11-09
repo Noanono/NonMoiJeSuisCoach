@@ -6,7 +6,7 @@ import type { CupState } from '../league/cup';
 import type { Club, Division, Fixture, Player } from '../types';
 
 /** Version du format de partie, à incrémenter à chaque changement incompatible de la sauvegarde. */
-export const GAME_VERSION = 2;
+export const GAME_VERSION = 3;
 
 export type GameStatus = 'playing' | 'fired';
 
@@ -47,6 +47,8 @@ export interface GameState {
   dialogue: PendingDialogue | null;
   recentDialogueIds: string[];
   lastFinance: FinanceLine[];
+  /** Joueurs ayant joué le match de la semaine, remplaçants entrés compris. */
+  lastAppearances: string[];
   streak: { wins: number; losses: number };
   /** Fil d'actualité de la semaine (messages du staff). */
   news: string[];
