@@ -1,0 +1,215 @@
+<script lang="ts">
+  import Button from '../../kit/Button.svelte';
+  import Gauge from '../../kit/Gauge.svelte';
+  import Modal from './Modal.svelte';
+  import AbilityPanel from './AbilityPanel.svelte';
+  import { store } from '../../store.svelte';
+  import { formatEuros } from '../../format';
+  import { getAbility } from '../../../domain/abilities/catalog';
+  import { RARITY_LABEL } from '../../../domain/abilities/progression';
+  import { fineAmount, rebellionChance, FINE_SALARY_RATIOS, type FineLevel } from '../../../domain/club/discipline';
+  import { playerValue } from '../../../domain/club/valuation';
+  import { fine, sellNow, transferWindowOpen } from '../../../domain/game';
+  import { overall } from '../../../domain/player/rating';
+  import type { AttributeName } from '../../../domain/types';
+  import { ATTRIBUTE_LABEL, availabilityLabel, fullName, percent, POSITION_LABEL } from '../describe';
+
+  /** Fiche joueur (CAP-08, CLUB-08, FRAS-02) : attributs, capacité complète, valeur, amendes et vente express. */
+  interface Props {
+    playerId: string;
+    onclose: () => void;
+  }
+
+  let { playerId, onclose }: Props = $props();
+
+  const FINE_LABEL: Record<FineLevel, string> = { light: 'Légère', heavy: 'Lourde', exemplary: 'Exemplaire' };
+  const FINE_LEVELS = Object.keys(FINE_SALARY_RATIOS) as FineLevel[];
+  const ATTRIBUTES = Object.keys(ATTRIBUTE_LABEL) as AttributeName[];
+  const ATTRIBUTE_MAX = 99;
+
+  const view = $derived(
+    store.select((game) => {
+      const player = game.players[playerId];
+      if (!player || player.clubId !== game.humanClubId) return null;
+      const ability = getAbility(player.ability.abilityId);
+      return {
+        name: fullName(player),
+        position: POSITION_LABEL[player.position],
+        age: player.age,
+        overall: overall(player),
+        potential: player.potential,
+        fatigue: player.fatigue,
+        morale: player.morale,
+        salary: player.salary,
+        availability: availabilityLabel(player),
+        transferRequested: player.transferRequested,
+        stats: { ...player.seasonStats },
+        attributes: ATTRIBUTES.map((name) => ({ name, value: player.attributes[name] })),
+        ability,
+        progress: { ...player.ability },
+        value: playerValue(player, ability.rarity),
+        fines: FINE_LEVELS.map((level) => {
+          const amount = fineAmount(player, level);
+          return { level, amount, rebellion: rebellionChance(player, amount) };
+        }),
+        windowOpen: transferWindowOpen(game),
+      };
+    }),
+  );
+
+  let confirmSale = $state(false);
+  /** Le toast passe sous la modale (couche supérieure du navigateur) : on répète le message ici. */
+  let feedback = $state<string | null>(null);
+
+  function inflict(level: FineLevel): void {
+    const result = store.run((game) => fine(game, playerId, level));
+    feedback = result.message;
+    store.notify(result.message);
+  }
+
+  function sell(): void {
+    const result = store.run((game) => sellNow(game, playerId));
+    store.notify(result.message);
+    confirmSale = false;
+    feedback = result.message;
+    if (result.ok) onclose();
+  }
+</script>
+
+{#if view}
+  <Modal title={view.name} kicker="Fiche joueur · {view.position} · {view.age} ans" {onclose}>
+    <div class="haut">
+      <dl class="chiffres">
+        <div><dt class="tampon">Note</dt><dd class="stat">{view.overall}</dd></div>
+        <div><dt class="tampon">Potentiel</dt><dd class="stat">{view.potential}</dd></div>
+        <div><dt class="tampon">Valeur</dt><dd class="valeur mono">{formatEuros(view.value)}</dd></div>
+      </dl>
+      <dl class="paire texte-s">
+        <dt>Rareté</dt>
+        <dd>
+          {#if view.progress.revealed}{RARITY_LABEL[view.ability.rarity]}{:else}???{/if}
+        </dd>
+        <dt>Salaire</dt>
+        <dd class="mono">{formatEuros(view.salary)} / sem.</dd>
+        <dt>Dispo</dt>
+        <dd>
+          {#if view.availability}<span class="malus">{view.availability}</span>{:else}Apte{/if}
+          {#if view.transferRequested}<span class="malus"> · veut partir</span>{/if}
+        </dd>
+        <dt>Saison</dt>
+        <dd class="mono">{view.stats.matches} m. · {view.stats.goals} b. · {view.stats.yellowCards} J · {view.stats.redCards} R</dd>
+      </dl>
+    </div>
+
+    <div class="colonnes-fiche">
+      <table class="tableau">
+        <caption class="tampon">Attributs</caption>
+        <tbody>
+          {#each view.attributes as attribute (attribute.name)}
+            <tr>
+              <th scope="row">{ATTRIBUTE_LABEL[attribute.name]}</th>
+              <td class="jauge"><Gauge value={attribute.value} max={ATTRIBUTE_MAX} label={ATTRIBUTE_LABEL[attribute.name]} tone="scotch" /></td>
+              <td class="num">{attribute.value}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+      <table class="tableau">
+        <caption class="tampon">Forme</caption>
+        <tbody>
+          <tr>
+            <th scope="row">Fatigue</th>
+            <td class="jauge"><Gauge value={view.fatigue} max={100} label="Fatigue" tone="carton" /></td>
+            <td class="num">{view.fatigue}</td>
+          </tr>
+          <tr>
+            <th scope="row">Moral</th>
+            <td class="jauge"><Gauge value={view.morale} max={100} label="Moral" tone="victoire" /></td>
+            <td class="num">{view.morale}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    {#if view.progress.revealed}
+      <AbilityPanel ability={view.ability} progress={view.progress} />
+    {:else}
+      <p class="texte-s"><span class="tampon">Capacité</span> ??? Elle se dévoilera à sa première activation en match.</p>
+    {/if}
+
+    <section class="actions" aria-label="Sanctions et transfert">
+      <h3 class="tampon">Amende (encaissée au bilan de la semaine)</h3>
+      <div class="ligne-actions">
+        {#each view.fines as option (option.level)}
+          <Button size="s" onclick={() => inflict(option.level)}>
+            {FINE_LABEL[option.level]} · {formatEuros(option.amount)}
+          </Button>
+        {/each}
+      </div>
+      <p class="texte-s discret">
+        Risque de rébellion : {view.fines.map((option) => `${FINE_LABEL[option.level].toLowerCase()} ${percent(option.rebellion)}`).join(', ')}.
+      </p>
+
+      <h3 class="tampon">Vente express</h3>
+      {#if !view.windowOpen}
+        <p class="texte-s discret">Mercato fermé : la vente express attendra la prochaine fenêtre.</p>
+      {:else if confirmSale}
+        <div class="ligne-actions">
+          <Button size="s" onclick={sell}>Confirmer la vente</Button>
+          <Button size="s" variant="ghost" onclick={() => (confirmSale = false)}>Annuler</Button>
+        </div>
+      {:else}
+        <Button size="s" variant="ghost" onclick={() => (confirmSale = true)}>Vendre tout de suite (sous sa valeur)</Button>
+      {/if}
+      <p class="texte-s texte-fort" role="status">{feedback ?? ''}</p>
+    </section>
+  </Modal>
+{/if}
+
+<style>
+  .haut {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4) var(--space-10);
+    align-items: start;
+  }
+  .chiffres {
+    display: flex;
+    gap: var(--space-6);
+    margin: 0;
+  }
+  .chiffres div {
+    display: grid;
+    gap: var(--space-1);
+  }
+  .chiffres dd {
+    margin: 0;
+  }
+  .valeur {
+    font-weight: 700;
+    font-size: 20px;
+    line-height: 32px;
+  }
+  .colonnes-fiche {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    align-items: start;
+    gap: var(--space-4);
+  }
+  .jauge {
+    width: 50%;
+  }
+  .actions {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-2);
+  }
+  h3.tampon {
+    margin: var(--space-2) 0 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  p {
+    margin: 0;
+  }
+</style>
