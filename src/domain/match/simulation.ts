@@ -19,7 +19,7 @@ export const GAUGE_RECHARGE_INTERVAL = 10;
 const GAUGE_RECHARGE_POINTS = 1;
 /** La fatigue et les notes sont mises à jour par paquets de 5 minutes (green code). */
 const FATIGUE_INTERVAL = 5;
-const FATIGUE_PER_MINUTE = 0.3;
+const FATIGUE_PER_MINUTE = 0.5;
 const HIGH_PRESS_FATIGUE = 1.35;
 const FATIGUE_MAX = 100;
 /** Chance d'une ligne d'ambiance quand la minute n'a rien produit (MATCH-04). */

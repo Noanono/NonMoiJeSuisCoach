@@ -1,6 +1,7 @@
 <script lang="ts">
   import { GAUGE_MAX } from '../../domain/match';
   import Button from '../kit/Button.svelte';
+  import EnergyBar from '../kit/EnergyBar.svelte';
   import Gauge from '../kit/Gauge.svelte';
   import PlayerAvatar from '../kit/PlayerAvatar.svelte';
   import RatingBadge from '../kit/RatingBadge.svelte';
@@ -54,6 +55,10 @@
     <div><dt class="tampon">Cible</dt><dd class="texte-s">{sheet.targeting}</dd></div>
     <div><dt class="tampon">Coût</dt><dd class="stat-s">{sheet.cost} pts</dd></div>
     <div>
+      <dt class="tampon">Énergie</dt>
+      <dd class="jauge"><EnergyBar energy={sheet.energy} /><span class="stat-s">{sheet.energy} %</span></dd>
+    </div>
+    <div>
       <dt class="tampon">Jauge</dt>
       <dd class="jauge">
         <Gauge value={sheet.gauge} max={GAUGE_MAX} label="Jauge de Gueulante" />
@@ -92,6 +97,7 @@
                 <span class="option-nom texte-s texte-fort">{option.name}</span>
                 <span class="tampon" class:hors={option.displaced}>{option.position}</span>
                 <RatingBadge value={option.rating} size="s" />
+                <span class="option-energie"><EnergyBar energy={option.energy} /></span>
               </button>
             </li>
           {/each}
@@ -193,7 +199,7 @@
   }
   .option {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto 44px;
     align-items: center;
     gap: var(--space-2);
     width: 100%;
@@ -208,6 +214,9 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .option-energie {
+    display: block;
   }
   .hors {
     background: var(--scotch);

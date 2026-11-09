@@ -1,7 +1,9 @@
 /**
  * Textes du match en direct et du résumé (CAP-19, MATCH-06) : l'info d'abord, la blague après.
  */
-import type { Consequence, EventWindow, MatchSummary, PendingPlay, Side } from '../../domain/match';
+import type { Consequence, EventWindow, GoalRecord, MatchState, MatchSummary, PendingPlay, Side } from '../../domain/match';
+import type { AvatarPlayer } from '../kit/avatar';
+import { minuteLabel } from './live';
 
 export type Outcome = 'V' | 'N' | 'D';
 
@@ -76,4 +78,41 @@ export function consequenceText(consequence: Consequence, playerName: (id: strin
     case 'abilityRevealed':
       return `Capacité révélée chez ${playerName(consequence.playerId)}`;
   }
+}
+
+export interface GoalAlert {
+  /** But pour le coach, ou encaissé. */
+  own: boolean;
+  title: string;
+  scorer: string;
+  avatar: AvatarPlayer;
+  team: string;
+  minute: string;
+  penalty: boolean;
+  ownName: string;
+  otherName: string;
+  ownGoals: number;
+  otherGoals: number;
+}
+
+/** De quoi annoncer un but, score vu du coach. */
+export function goalAlert(state: MatchState, goal: GoalRecord, coachSide: Side): GoalAlert {
+  const own = goal.side === coachSide;
+  const [coach, other] = coachSide === 'home' ? [state.home, state.away] : [state.away, state.home];
+  const scoringTeam = own ? coach : other;
+  const scorer = scoringTeam.players.find((player) => player.id === goal.playerId)!;
+  const { age, clubId, position } = scorer.profile;
+  return {
+    own,
+    title: own ? 'But !' : 'But encaissé',
+    scorer: scorer.name,
+    avatar: { id: scorer.id, age, clubId, position },
+    team: scoringTeam.name,
+    minute: minuteLabel(goal.minute, goal.addedMinute),
+    penalty: goal.penalty,
+    ownName: coach.name,
+    otherName: other.name,
+    ownGoals: coach.goals,
+    otherGoals: other.goals,
+  };
 }

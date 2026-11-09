@@ -8,6 +8,7 @@
   import GaugePanel from './GaugePanel.svelte';
   import InstructionsPanel from './InstructionsPanel.svelte';
   import EffectsHelp from './EffectsHelp.svelte';
+  import GoalOverlay from './GoalOverlay.svelte';
   import LiveFeed from './LiveFeed.svelte';
   import MiniMap from './MiniMap.svelte';
   import Pitch from './Pitch.svelte';
@@ -72,6 +73,10 @@
   {/if}
 
   <EffectsHelp {controller} />
+
+  {#if controller.goal}
+    <GoalOverlay goal={controller.goal} onresume={() => controller.resumeAfterGoal()} />
+  {/if}
 </main>
 
 <style>

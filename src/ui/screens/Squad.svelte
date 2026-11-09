@@ -3,6 +3,7 @@
   import Card from '../kit/Card.svelte';
   import DeltaBadge from '../kit/DeltaBadge.svelte';
   import PlayerAvatar from '../kit/PlayerAvatar.svelte';
+  import RarityTag from '../kit/RarityTag.svelte';
   import RatingBadge from '../kit/RatingBadge.svelte';
   import type { AvatarPlayer } from '../kit/avatar';
   import PlayerSheet from './parts/PlayerSheet.svelte';
@@ -36,6 +37,7 @@
     avatar: AvatarPlayer;
     abilityName: string;
     rarity: string;
+    rarityKey: Rarity | null;
     rarityOrder: number;
     value: number;
   }
@@ -83,6 +85,7 @@
           avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position },
           abilityName: known ? ability.name : UNKNOWN_ABILITY,
           rarity: known ? RARITY_LABEL[ability.rarity] : '',
+          rarityKey: known ? ability.rarity : null,
           rarityOrder: known ? RARITY_ORDER[ability.rarity] : 0,
           value: playerValue(player, ability.rarity),
         };
@@ -153,8 +156,7 @@
                 {#if row.availability}<span class="malus">{row.availability}</span>{:else}<span class="discret">Apte</span>{/if}
               </td>
               <td>
-                {row.abilityName}
-                {#if row.rarity}<span class="discret"> · {row.rarity}</span>{/if}
+                <RarityTag rarity={row.rarityKey} text={row.rarity ? `${row.abilityName} · ${row.rarity}` : row.abilityName} />
               </td>
               <td class="num">{formatEuros(row.value)}</td>
             </tr>

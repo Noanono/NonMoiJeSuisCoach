@@ -1,4 +1,5 @@
 <script lang="ts">
+  import EnergyBar from '../kit/EnergyBar.svelte';
   import PlayerAvatar from '../kit/PlayerAvatar.svelte';
   import RatingBadge from '../kit/RatingBadge.svelte';
   import StatIcon from '../kit/StatIcon.svelte';
@@ -39,6 +40,7 @@
   </span>
   <span class="nom texte-fort">{token.name}</span>
   <span class="poste tampon" class:deplace={token.displaced} aria-hidden="true">{token.position}</span>
+  <EnergyBar energy={token.energy} />
   {#if token.reason}<span class="raison tampon" aria-hidden="true">{token.reason}</span>{/if}
   {#if token.chips.length > 0}
     <span class="effets" aria-hidden="true">

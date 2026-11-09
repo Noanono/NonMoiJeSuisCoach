@@ -4,7 +4,7 @@ import { defineAbility } from './define';
 /** Rares (CAT-01) : plus fortes que les communes, avec une petite mécanique en plus. */
 const rare = (spec: Parameters<typeof defineAbility>[1]): Ability => defineAbility('rare', spec);
 
-const UNTIL_END_OF_EFFECT = 10;
+const UNTIL_END_OF_EFFECT = 15;
 
 export const RARE_ABILITIES: readonly Ability[] = [
   rare({
@@ -21,7 +21,7 @@ export const RARE_ABILITIES: readonly Ability[] = [
     category: 'defense',
     position: 'GK',
     description: 'Pause clope au poteau. Plus il encaisse, plus il se concentre.',
-    effects: [{ type: 'scaledModifier', scope: 'self', stat: 'goalkeeping', base: 0.5, perUnit: 0.3, per: 'concededGoal', duration: 15 }],
+    effects: [{ type: 'scaledModifier', scope: 'self', stat: 'goalkeeping', base: 0.5, perUnit: 0.3, per: 'concededGoal', duration: 23 }],
   }),
   rare({
     id: 'le-bus-de-l-amicale',
@@ -42,7 +42,7 @@ export const RARE_ABILITIES: readonly Ability[] = [
     position: 'DEF',
     targeting: { kind: 'opponent', count: 1 },
     description: 'Tacle par derrière, comme au marché : au poids.',
-    effects: [{ type: 'knockout', scope: 'targets', duration: 15 }],
+    effects: [{ type: 'knockout', scope: 'targets', duration: 23 }],
   }),
   rare({
     id: 'le-vomisseur',
@@ -51,7 +51,7 @@ export const RARE_ABILITIES: readonly Ability[] = [
     position: 'MID',
     targeting: { kind: 'zone' },
     description: 'Le déjeuner remonte. Tout le monde glisse autour de lui.',
-    effects: [{ type: 'knockout', scope: 'zoneOpponents', duration: 3 }],
+    effects: [{ type: 'knockout', scope: 'zoneOpponents', duration: 5 }],
   }),
   rare({
     id: 'le-retraite-de-42-ans',
@@ -87,7 +87,7 @@ export const RARE_ABILITIES: readonly Ability[] = [
     category: 'attack',
     position: 'ATT',
     description: 'La gueule de bois se dissipe : plus il est tard, plus il est fort.',
-    effects: [{ type: 'scaledModifier', scope: 'self', stat: 'shooting', base: 0, perUnit: 0.01, per: 'minute', duration: 15 }],
+    effects: [{ type: 'scaledModifier', scope: 'self', stat: 'shooting', base: 0, perUnit: 0.01, per: 'minute', duration: 23 }],
   }),
   rare({
     id: 'le-chef-de-chant',
@@ -114,6 +114,6 @@ export const RARE_ABILITIES: readonly Ability[] = [
     position: 'BENCH',
     targeting: { kind: 'opponent', count: 1 },
     description: 'Lâché sur la pelouse, il change de victime quand il s’ennuie.',
-    effects: [{ type: 'knockout', scope: 'targets', duration: 5, chaseDuration: 5 }],
+    effects: [{ type: 'knockout', scope: 'targets', duration: 8, chaseDuration: 8 }],
   }),
 ];

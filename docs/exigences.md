@@ -27,7 +27,7 @@ Le jeu mêle une vraie couche de gestion (effectif, tactique, mercato, budget) e
 | EFF-01 | Chaque joueur possède des attributs (vitesse, technique, physique, tir, défense, gardien…) et une note globale calculée à partir d'eux. |
 | EFF-02 | Chaque joueur a un poste principal (gardien, défenseur, milieu, attaquant) ; un joueur hors de son poste est moins performant. |
 | EFF-03 | Le coach choisit le onze de départ, les remplaçants et la formation (4-4-2, 4-3-3, 3-5-2, 5-3-2…) en déplaçant des cartes entre le terrain, le banc et la tribune. |
-| EFF-04 | Les joueurs accumulent de la fatigue uniquement en jouant et récupèrent au repos ; un joueur fatigué joue moins bien et se blesse plus souvent. |
+| EFF-04 | Les joueurs accumulent de la fatigue uniquement en jouant et récupèrent au repos. Plus un joueur est fatigué, moins il est bon (jusqu'à −50 %) et plus il risque de se blesser. Son énergie restante est visible en match et dans Tactique. |
 | EFF-05 | Les joueurs peuvent se blesser en match. La plupart des blessures se soignent en moins d'une semaine ; seules les grosses blessures, rares, font manquer plusieurs matchs. |
 | EFF-06 | Chaque joueur a un avatar dessiné, déduit de son identité : il garde le même toute sa carrière. |
 | EFF-08 | Chaque joueur possède une seule capacité personnelle, activable par le coach pendant le match. |
@@ -46,6 +46,7 @@ Le jeu mêle une vraie couche de gestion (effectif, tactique, mercato, budget) e
 | MATCH-08 | Le coach peut faire 5 remplacements par match, à tout moment. Un joueur sorti ne revient pas. Un blessé peut être remplacé, pas un exclu. L'IA remplace ses blessés. |
 | MATCH-09 | Une mini-carte animée montre les joueurs et le ballon. Le coach attaque toujours vers la droite et son équipe est à gauche du tableau de score. |
 | MATCH-10 | Un bouton en coin rappelle l'impact de chaque effet, match en pause. |
+| MATCH-11 | Un but arrête le match et s'annonce au centre de l'écran (buteur, minute, score). Le coach reprend quand il veut. |
 
 ## Club, mercato et président
 
@@ -93,6 +94,7 @@ Le gameplay repose sur les capacités : chaque joueur en a une, personnelle, que
 | CAP-17 | Une cible est valide si elle est sur le terrain, n'est pas déjà hors jeu et appartient à la ligne visée. Pour une capacité à plusieurs cibles, le coach les choisit une à une. |
 | CAP-18 | Les capacités de zone se déclenchent à l'emplacement du joueur : le coach choisit le moment, pas la cible. Seules les capacités décrites « au hasard » gardent une cible aléatoire. |
 | CAP-19 | Les capacités liées à un événement (penalty, coup franc) restent manuelles : le jeu se met en pause et propose de les activer, sans obligation. |
+| CAP-22 | Relancer une capacité dont l'effet est encore actif le prolonge sans le cumuler. |
 | CAP-20 | Le coach peut annuler une activation tant qu'il n'a pas validé la cible : la capacité n'est alors ni consommée ni mise en recharge. |
 | CAP-21 | Une activation, du coach comme de l'adversaire, s'annonce au centre de l'écran pendant 5 secondes avec l'avatar du joueur et la description de l'effet, match en pause. Flèches vers les cibles, zone colorée et textes s'affichent sur le terrain. |
 
@@ -110,30 +112,30 @@ CAT-01 : le jeu contient les 42 capacités ci-dessous. Valeurs données au nivea
 
 | Capacité | Poste | Cible | Effet |
 | --- | --- | --- | --- |
-| Le Bedonnant | GB | Soi | +60 % d'arrêts, 10 min |
+| Le Bedonnant | GB | Soi | +60 % d'arrêts, 15 min |
 | Le Bavard | GB | Prochain tir adverse | −60 % de chances de but |
 | Le Danseur | GB | Penalty adverse | +60 % d'arrêt |
-| Le Dégagement de mule | GB | Équipe | +20 % au tir, 5 min |
-| Le Jardinier | DEF | Sa zone | Adversaires à −30 % de vitesse, 10 min |
-| L'Agriculteur | DEF | Soi | +70 % en défense, 15 min |
+| Le Dégagement de mule | GB | Équipe | +20 % au tir, 8 min |
+| Le Jardinier | DEF | Sa zone | Adversaires à −30 % de vitesse, 15 min |
+| L'Agriculteur | DEF | Soi | +70 % en défense, 23 min |
 | Le Rugbyman reconverti | DEF | Action adverse | Annule l'action en cours |
-| Haleine de Ricard | DEF | 1 adversaire | −30 % de technique, 10 min |
+| Haleine de Ricard | DEF | 1 adversaire | −30 % de technique, 15 min |
 | Le Mur de saucisses | DEF | Coup franc adverse | −70 % de chances de but |
-| Le Videur de boîte | DEF | 1 attaquant | −60 % au tir, 10 min |
-| Le Lacet fou | MIL | 1 adversaire | Au sol, 3 min |
-| Le Marchand de sable | MIL | 1 adversaire | −40 % de concentration, 10 min |
-| Le Chien de la casse | MIL | Soi | +40 % de physique, 10 min |
-| Le Ruisselant | MIL | Soi | +40 % de technique, 10 min |
-| Les Pigeons | MIL | 2 adversaires au hasard | −30 % de concentration, 5 min |
-| La Mobylette | ATT | Soi | +60 % de vitesse, 5 min |
-| Le Buteur de comptoir | ATT | Soi | +40 % au tir, 10 min |
+| Le Videur de boîte | DEF | 1 attaquant | −60 % au tir, 15 min |
+| Le Lacet fou | MIL | 1 adversaire | Au sol, 5 min |
+| Le Marchand de sable | MIL | 1 adversaire | −40 % de concentration, 15 min |
+| Le Chien de la casse | MIL | Soi | +40 % de physique, 15 min |
+| Le Ruisselant | MIL | Soi | +40 % de technique, 15 min |
+| Les Pigeons | MIL | 2 adversaires au hasard | −30 % de concentration, 8 min |
+| La Mobylette | ATT | Soi | +60 % de vitesse, 8 min |
+| Le Buteur de comptoir | ATT | Soi | +40 % au tir, 15 min |
 | Bière tiède | ATT | Penalty ou coup franc | +40 % de réussite |
-| Le Bulldozer | ATT | 2 défenseurs | Au sol, 2 min |
+| Le Bulldozer | ATT | 2 défenseurs | Au sol, 3 min |
 | La Frappe de mule | ATT | Prochaine occasion | +40 % de chances de but |
-| Le Chambreur | Tous | 1 adversaire | −30 % à toutes ses stats, 5 min |
-| Short trop court | Tous | 2 adversaires | −25 % de concentration, 5 min |
+| Le Chambreur | Tous | 1 adversaire | −30 % à toutes ses stats, 8 min |
+| Short trop court | Tous | 2 adversaires | −25 % de concentration, 8 min |
 | Le Porteur d'eau | Banc | 1 coéquipier | Efface 50 % de sa fatigue |
-| Le DJ du vestiaire | Banc | Équipe | +15 % de vitesse, 10 min |
+| Le DJ du vestiaire | Banc | Équipe | +15 % de vitesse, 15 min |
 | Le Kiné douteux | Banc | 1 coéquipier au sol | Le relève immédiatement |
 
 ### Rares (12)
@@ -141,27 +143,27 @@ CAT-01 : le jeu contient les 42 capacités ci-dessous. Valeurs données au nivea
 | Capacité | Poste | Cible | Effet et mécanique |
 | --- | --- | --- | --- |
 | Le Gardien kamikaze | GB | 2 prochaines occasions adverses | Les annule et rend 1 point de jauge |
-| Le Gardien fumeur | GB | Soi | +50 % d'arrêts pendant 15 min, +30 % de plus par but encaissé dans ce match |
-| Le Bus de l'amicale | DEF | Équipe | +70 % en défense, 10 min. Sans but encaissé pendant l'effet : +2 points de jauge |
-| Le Boucher du village | DEF | 1 adversaire | Hors jeu 15 min |
-| Le Vomisseur | MIL | Sa zone | Tous les adversaires de la zone au sol, 3 min |
+| Le Gardien fumeur | GB | Soi | +50 % d'arrêts pendant 23 min, +30 % de plus par but encaissé dans ce match |
+| Le Bus de l'amicale | DEF | Équipe | +70 % en défense, 15 min. Sans but encaissé pendant l'effet : +2 points de jauge |
+| Le Boucher du village | DEF | 1 adversaire | Hors jeu 23 min |
+| Le Vomisseur | MIL | Sa zone | Tous les adversaires de la zone au sol, 5 min |
 | Le Retraité de 42 ans | MIL | Équipe | Les 2 prochaines occasions à +40 % |
 | Le Pique-assiette | MIL | Coach adverse | Vole 2 points de jauge |
 | Le Sombrero bourré | ATT | Soi | Prochaine occasion franche. S'il marque, sa recharge est remise à zéro |
-| Le Revenant de la Feria | ATT | Soi | Bonus au tir égal à la minute de jeu pendant 15 min (70e = +70 %) |
-| Le Chef de chant | Tous | Équipe | +20 % à toutes les stats, 10 min. Chaque but marqué prolonge de 5 min |
+| Le Revenant de la Feria | ATT | Soi | Bonus au tir égal à la minute de jeu pendant 23 min (70e = +70 %) |
+| Le Chef de chant | Tous | Équipe | +20 % à toutes les stats, 15 min. Chaque but marqué prolonge de 5 min |
 | Le Capitaine gueulard | Tous | Équipe | Retire tous les malus en cours. +1 point de jauge si au moins 3 sont retirés |
-| Le Chien du président | Banc | 1 adversaire | Hors jeu 5 min, puis le chien poursuit un autre adversaire 5 min |
+| Le Chien du président | Banc | 1 adversaire | Hors jeu 8 min, puis le chien poursuit un autre adversaire 8 min |
 
 ### Légendaires (5)
 
 | Capacité | Poste | Effet |
 | --- | --- | --- |
 | La Panenka ivre | ATT | Crée immédiatement une occasion à 75 % de but |
-| L'Échange de maillots | Tous | Inverse les niveaux des deux équipes pendant 10 min |
-| La Mêlée générale | Tous | 3 adversaires choisis et le porteur hors jeu, 10 min |
+| L'Échange de maillots | Tous | Inverse les niveaux des deux équipes pendant 15 min |
+| La Mêlée générale | Tous | 3 adversaires choisis et le porteur hors jeu, 15 min |
 | La Coupure de courant | Banc | Annule le dernier but adverse s'il date de moins de 5 min |
-| La Malédiction de mémé | Banc | −30 % à toute l'équipe adverse, 15 min |
+| La Malédiction de mémé | Banc | −30 % à toute l'équipe adverse, 23 min |
 
 ## Entraînement
 

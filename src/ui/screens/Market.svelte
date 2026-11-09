@@ -3,6 +3,7 @@
   import Button from '../kit/Button.svelte';
   import Card from '../kit/Card.svelte';
   import PlayerAvatar from '../kit/PlayerAvatar.svelte';
+  import RarityTag from '../kit/RarityTag.svelte';
   import RatingBadge from '../kit/RatingBadge.svelte';
   import OffersList from './parts/OffersList.svelte';
   import { store } from '../store.svelte';
@@ -217,7 +218,7 @@
                 <td class="num">{listing.age}</td>
                 <td class="num"><RatingBadge value={listing.overall} size="s" /></td>
                 <td><abbr title={listing.clubName}>{listing.club}</abbr></td>
-                <td>{listing.ability ?? '???'}</td>
+                <td><RarityTag rarity={listing.rarity} text={listing.ability ?? '???'} /></td>
                 <td class="num">{formatEuros(listing.price)}</td>
                 <td class="num">{formatEuros(listing.salary)}</td>
                 <td>

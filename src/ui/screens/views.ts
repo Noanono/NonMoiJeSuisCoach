@@ -46,6 +46,18 @@ export function transferWindowLastWeek(week: number): number {
   return last;
 }
 
+/** Périodes de mercato de la saison, en semaines consécutives. */
+export function transferWindows(): { first: number; last: number }[] {
+  const windows: { first: number; last: number }[] = [];
+  for (const entry of SEASON_CALENDAR) {
+    if (entry.kind !== 'transferWindow') continue;
+    const current = windows.at(-1);
+    if (current && current.last === entry.week - 1) current.last = entry.week;
+    else windows.push({ first: entry.week, last: entry.week });
+  }
+  return windows;
+}
+
 /** Tranches d'âge du mercato. */
 export const AGE_BANDS = [
   { id: 'under22', label: 'Moins de 22 ans', min: 0, max: 21 },

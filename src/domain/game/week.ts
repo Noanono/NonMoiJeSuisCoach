@@ -17,7 +17,7 @@ import { clubPlayers, humanClub, humanDivision, humanFixture, humanSquad, replac
 import type { GameState } from './state';
 
 /** Récupération hebdomadaire des joueurs des clubs IA, version allégée de la vie d'effectif. */
-const AI_WEEKLY_RECOVERY = 30;
+const AI_WEEKLY_RECOVERY = 35;
 const DIALOGUE_CHANCE = 0.6;
 const RECENT_DIALOGUES_KEPT = 6;
 

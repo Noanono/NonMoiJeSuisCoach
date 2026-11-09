@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { seasonWeek } from '../../domain/league/calendar';
 import type { CupState } from '../../domain/league/cup';
 import type { Fixture } from '../../domain/types';
-import { nextTransferWindowWeek, recentForm, sortRows, transferWindowLastWeek, weekLabel } from './views';
+import { nextTransferWindowWeek, recentForm, sortRows, transferWindowLastWeek, weekLabel, transferWindows } from './views';
 
 function fixture(week: number, homeGoals: number, awayGoals: number, homeId = 'moi', awayId = 'eux'): Fixture {
   return {
@@ -57,5 +57,14 @@ describe('sortRows', () => {
     expect(sortRows(rows, (row) => row.note, 'desc').map((row) => row.note)).toEqual([62, 51, 40]);
     expect(sortRows(rows, (row) => row.name, 'asc').map((row) => row.name)).toEqual(['Bruno', 'Émile', 'Zoé']);
     expect(rows[0]!.name).toBe('Émile');
+  });
+});
+
+describe('périodes de mercato', () => {
+  test('deux fenêtres de deux semaines : avant la saison et à mi-saison', () => {
+    const windows = transferWindows();
+    expect(windows).toHaveLength(2);
+    expect(windows[0]).toEqual({ first: 1, last: 2 });
+    expect(windows[1]!.last - windows[1]!.first).toBe(1);
   });
 });

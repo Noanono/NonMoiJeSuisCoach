@@ -27,7 +27,7 @@ describe('progression des capacités', () => {
   test('sinon +50 % de durée', () => {
     const mobylette = getAbility('la-mobylette');
     expect(level5Bonus(mobylette)).toBe('longerDuration');
-    expect((statsAtLevel(mobylette, 5).effects[0] as { duration: number }).duration).toBe(8);
+    expect((statsAtLevel(mobylette, 5).effects[0] as { duration: number }).duration).toBe(12);
   });
 
   test('sinon une recharge plus courte', () => {
@@ -38,6 +38,6 @@ describe('progression des capacités', () => {
 
   test('la contrepartie de La Mêlée générale ne grandit pas avec le niveau', () => {
     const [, self] = statsAtLevel(getAbility('la-melee-generale'), 4).effects;
-    expect(self).toMatchObject({ scope: 'self', duration: 10 });
+    expect(self).toMatchObject({ scope: 'self', duration: 15 });
   });
 });

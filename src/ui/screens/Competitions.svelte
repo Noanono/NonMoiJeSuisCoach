@@ -8,7 +8,7 @@
   import { goalDifference } from '../../domain/league/standings';
   import type { Fixture } from '../../domain/types';
   import { signed } from './describe';
-  import type { FormLetter } from './views';
+  import { transferWindows, type FormLetter } from './views';
 
   /** Divisions et classements (UNIV-03 à UNIV-05), calendrier du coach et coupe (UNIV-06). */
   const FORM_LETTER = { win: 'V', draw: 'N', loss: 'D' } as const;
@@ -75,6 +75,23 @@
         }),
     ),
   );
+
+  const WINDOWS = transferWindows();
+  const currentWeek = $derived(store.select((game) => game.week));
+
+  /** Matchs et périodes de mercato, dans l'ordre de la saison. */
+  const agenda = $derived([
+    ...calendar.map((match) => ({ kind: 'match' as const, key: match.id, week: match.week, match })),
+    ...WINDOWS.map((window) => ({
+      kind: 'mercato' as const,
+      key: `mercato-${window.first}`,
+      week: window.first,
+      first: window.first,
+      last: window.last,
+      status: currentWeek > window.last ? 'Terminé' : currentWeek >= window.first ? 'Ouvert en ce moment' : 'À venir',
+      open: currentWeek >= window.first && currentWeek <= window.last,
+    })),
+  ].sort((a, b) => a.week - b.week));
 
   const cup = $derived(
     store.select((game) => {
@@ -166,6 +183,10 @@
     </Card>
 
     <Card title="Ton calendrier">
+      <p class="texte-s rappel">
+        <span class="tampon pastille-mercato">Mercato</span>
+        {#each WINDOWS as window, index (window.first)}{index > 0 ? ' et ' : ''}semaines <span class="mono texte-fort">{window.first} à {window.last}</span>{/each}
+      </p>
       <div class="defilant">
         <table class="tableau">
           <caption class="sr-only">Matchs de ton club cette saison, championnat et coupe</caption>
@@ -179,17 +200,25 @@
             </tr>
           </thead>
           <tbody>
-            {#each calendar as match (match.id)}
-              <tr class:surligne={match.current}>
-                <td class="num">{match.week}</td>
-                <td class="texte-s">{match.competition}</td>
-                <td>
-                  {match.opponent}
-                  <span class="discret texte-s">{match.isHome ? 'dom.' : 'ext.'}</span>
-                </td>
-                <td class="num">{match.score ?? (match.current ? 'Cette sem.' : '')}</td>
-                <td>{#if match.result}<FormBadge result={match.result} />{/if}</td>
-              </tr>
+            {#each agenda as entry (entry.key)}
+              {#if entry.kind === 'mercato'}
+                <tr class="mercato" class:ouvert={entry.open}>
+                  <td class="num">{entry.first}-{entry.last}</td>
+                  <td colspan="4"><span class="tampon">Mercato</span> <span class="texte-s">{entry.status}</span></td>
+                </tr>
+              {:else}
+                {@const match = entry.match}
+                <tr class:surligne={match.current}>
+                  <td class="num">{match.week}</td>
+                  <td class="texte-s">{match.competition}</td>
+                  <td>
+                    {match.opponent}
+                    <span class="discret texte-s">{match.isHome ? 'dom.' : 'ext.'}</span>
+                  </td>
+                  <td class="num">{match.score ?? (match.current ? 'Cette sem.' : '')}</td>
+                  <td>{#if match.result}<FormBadge result={match.result} />{/if}</td>
+                </tr>
+              {/if}
             {/each}
           </tbody>
         </table>
@@ -237,6 +266,27 @@
   }
   abbr {
     text-decoration: none;
+  }
+  .rappel {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .pastille-mercato {
+    padding: 0 var(--space-1);
+    background: var(--scotch);
+    color: var(--encre-fixe);
+    border: var(--trait-fin) solid var(--encre-fixe);
+  }
+  .tableau tbody tr.mercato {
+    background: repeating-linear-gradient(45deg, var(--scotch) 0 10px, color-mix(in srgb, var(--scotch) 80%, var(--craie)) 10px 20px);
+    color: var(--encre-fixe);
+    font-weight: 700;
+  }
+  .tableau tbody tr.mercato.ouvert {
+    outline: var(--trait-epais) solid var(--fumigene);
+    outline-offset: -3px;
   }
   .tours {
     display: flex;

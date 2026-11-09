@@ -33,6 +33,7 @@ export interface AbilitySheet {
   active: string[];
   /** Poste naturel et poste occupé, s'il est sur le terrain. */
   position: string;
+  energy: number;
   substitution: SubstitutionPanel | null;
 }
 
@@ -47,6 +48,8 @@ export interface SubstitutionOption {
   /** Note de celui qui entrerait, au poste libéré. */
   rating: number;
   displaced: boolean;
+  /** Énergie du joueur proposé. */
+  energy: number;
 }
 
 export interface SubstitutionPanel {
@@ -58,6 +61,10 @@ export interface SubstitutionPanel {
 
 function avatarOf(player: MatchPlayer): AvatarPlayer {
   return { id: player.id, age: player.profile.age, clubId: player.profile.clubId, position: player.profile.position };
+}
+
+function energyOf(player: MatchPlayer): number {
+  return Math.round(100 - player.profile.fatigue);
 }
 
 /** Changements possibles depuis le panneau d'un joueur (MATCH-08), `null` s'il n'est pas concerné. */
@@ -77,6 +84,7 @@ export function substitutionPanel(state: MatchState, coachSide: Side, playerId: 
       position: POSITION_SHORT[entering.profile.position],
       rating: Math.round(effectiveRating(entering.profile, line)),
       displaced: entering.profile.position !== line,
+      energy: energyOf(entering),
     }));
     return { ...base, title: 'Remplacer par', options };
   }
@@ -89,6 +97,7 @@ export function substitutionPanel(state: MatchState, coachSide: Side, playerId: 
       position: POSITION_SHORT[leaving.line!],
       rating: Math.round(effectiveRating(player.profile, leaving.line!)),
       displaced: player.profile.position !== leaving.line,
+      energy: energyOf(leaving),
     }));
     return { ...base, title: 'Entrer à la place de', options };
   }
@@ -149,6 +158,7 @@ export function abilitySheet(state: MatchState, coachSide: Side, playerId: strin
     status: preview.reason ?? cooldown,
     active: effectChips(state, playerId).map((chip) => chip.detail),
     position: player ? positionText(player) : '',
+    energy: player ? energyOf(player) : 0,
     substitution: substitutionPanel(state, coachSide, playerId),
   };
 }

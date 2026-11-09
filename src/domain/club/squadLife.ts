@@ -4,8 +4,8 @@ import { clampGauge } from './model';
 /** Vie de l'effectif entre deux matchs (EFF-04, EFF-05) : récupération, blessures, suspensions. */
 
 /** Fatigue effacée en une semaine (EFF-04). */
-const REST_RECOVERY = 35;
-const PLAYED_RECOVERY = 27;
+const REST_RECOVERY = 50;
+const PLAYED_RECOVERY = 35;
 
 export interface WeeklySquadInput {
   squad: readonly Player[];

@@ -102,7 +102,7 @@ describe('mécaniques des rares', () => {
     const state = match({ 5: 'le-chef-de-chant' });
     shout(state, 'h-5');
     goal(state, 'home');
-    expect(activeEffects(state, 'h-3')[0]!.remaining).toBe(15);
+    expect(activeEffects(state, 'h-3')[0]!.remaining).toBe(20);
   });
 
   test('Le Capitaine gueulard efface les malus et rend un point à partir de trois', () => {
@@ -117,9 +117,9 @@ describe('mécaniques des rares', () => {
   test('Le Chien du président change de victime', () => {
     const state = match({}, ['le-chien-du-president']);
     shout(state, 'h-b0', ['a-9']);
-    expect(requirePlayer(state, 'a-9').knockedOutUntil).toBe(5);
-    advanceTo(state, 6);
-    const others = state.away.players.filter((player) => player.id !== 'a-9' && player.knockedOutUntil >= 6);
+    expect(requirePlayer(state, 'a-9').knockedOutUntil).toBe(8);
+    advanceTo(state, 9);
+    const others = state.away.players.filter((player) => player.id !== 'a-9' && player.knockedOutUntil >= 9);
     expect(others).toHaveLength(1);
   });
 
@@ -128,6 +128,16 @@ describe('mécaniques des rares', () => {
     shout(state, 'h-9');
     expect(state.home.chanceBoosts[0]).toMatchObject({ shooterId: 'h-9' });
     expect(requirePlayer(state, 'h-9').cooldownUntil).toBe(15);
+  });
+});
+
+describe('durée des effets', () => {
+  test('relancer une capacité encore active la prolonge sans la cumuler', () => {
+    const state = match({ 3: 'l-agriculteur' });
+    shout(state, 'h-3');
+    requirePlayer(state, 'h-3').cooldownUntil = 0;
+    shout(state, 'h-3');
+    expect(activeEffects(state, 'h-3')).toHaveLength(1);
   });
 });
 
@@ -151,7 +161,7 @@ describe('mécaniques des légendaires', () => {
   test('L’Échange de maillots inverse les niveaux et se voit sur tous les joueurs', () => {
     const state = match({ 5: 'l-echange-de-maillots' });
     shout(state, 'h-5');
-    expect(state.swappedUntil).toBe(10);
+    expect(state.swappedUntil).toBe(15);
     expect(activeEffects(state, 'h-1')[0]).toMatchObject({ stat: 'swap', value: 1 });
     expect(activeEffects(state, 'a-1')[0]).toMatchObject({ stat: 'swap', value: -1 });
   });
@@ -159,7 +169,7 @@ describe('mécaniques des légendaires', () => {
   test('La Mêlée générale sort trois adversaires et le porteur', () => {
     const state = match({ 5: 'la-melee-generale' });
     shout(state, 'h-5', ['a-1', 'a-2', 'a-3']);
-    for (const id of ['a-1', 'a-2', 'a-3', 'h-5']) expect(requirePlayer(state, id).knockedOutUntil).toBe(10);
+    for (const id of ['a-1', 'a-2', 'a-3', 'h-5']) expect(requirePlayer(state, id).knockedOutUntil).toBe(15);
   });
 
   test('La Coupure de courant n’est possible que juste après un but adverse', () => {

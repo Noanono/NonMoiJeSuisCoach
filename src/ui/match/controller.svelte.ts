@@ -20,6 +20,7 @@ import {
 import type { Instructions } from '../../domain/types';
 import type { AvatarPlayer } from '../kit/avatar';
 import { describeEffect } from '../screens/describe';
+import { goalAlert, type GoalAlert } from './verdict';
 import { store } from '../store.svelte';
 import type { Speed } from './live';
 
@@ -51,6 +52,9 @@ export class MatchController {
   fx = $state.raw<ActivationFx | null>(null);
   /** Rappel des effets ouvert : l'horloge s'arrête le temps de lire. */
   helpOpen = $state(false);
+  /** But à annoncer : le match attend que le coach reprenne. */
+  goal = $state.raw<GoalAlert | null>(null);
+  #goalsSeen = 0;
   #fxQueue: ActivationRecord[] = [];
   #fxSeen = 0;
   #fxTimer: ReturnType<typeof setTimeout> | undefined;
@@ -59,6 +63,7 @@ export class MatchController {
     this.match = match;
     this.coachSide = coachSide;
     this.#fxSeen = match.activations.length;
+    this.#goalsSeen = match.goals.length;
   }
 
   /** Lecture abonnée au moteur : à appeler dans chaque `$derived` qui lit `match`. */
@@ -78,7 +83,7 @@ export class MatchController {
   });
 
   /** L'horloge tourne : une seule boucle active, coupée dès que quelque chose attend (green code). */
-  readonly running = $derived(!this.paused && this.inspectedId === null && !this.engineWaiting && this.fx === null && !this.helpOpen);
+  readonly running = $derived(!this.paused && this.inspectedId === null && !this.engineWaiting && this.fx === null && !this.helpOpen && this.goal === null);
 
   /** Une minute de jeu (MATCH-02). Pause automatique à la mi-temps pour les consignes (MATCH-05). */
   step(): void {
@@ -157,11 +162,24 @@ export class MatchController {
 
   /** Repère les capacités parties depuis le dernier appel et les met en file d'affichage. */
   #collectFx(): void {
+    this.#collectGoal();
     const fresh = this.match.activations.slice(this.#fxSeen);
     if (fresh.length === 0) return;
     this.#fxSeen = this.match.activations.length;
     this.#fxQueue = [...this.#fxQueue, ...fresh].slice(-FX_QUEUE_LIMIT);
     if (!this.fx) this.#showNextFx();
+  }
+
+  /** Un but arrête le match tant que le coach n'a pas repris. */
+  #collectGoal(): void {
+    const latest = this.match.goals.at(-1);
+    const scored = this.match.goals.length > this.#goalsSeen;
+    this.#goalsSeen = this.match.goals.length;
+    if (scored && latest && !latest.cancelled) this.goal = goalAlert(this.match, latest, this.coachSide);
+  }
+
+  resumeAfterGoal(): void {
+    this.goal = null;
   }
 
   #showNextFx(): void {

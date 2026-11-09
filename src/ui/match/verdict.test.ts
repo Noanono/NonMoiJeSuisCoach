@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import type { MatchSummary } from '../../domain/match';
-import { consequenceText, outcomeFor, outcomeLine, windowTitle } from './verdict';
+import { createMatch } from '../../domain/match';
+import { makeSheet, testMatchOptions } from '../../domain/match/fixtures';
+import { beginRun, endRun } from '../../domain/match/state';
+import { recordGoal } from '../../domain/match/actions';
+import { consequenceText, goalAlert, outcomeFor, outcomeLine, windowTitle } from './verdict';
 
 function summary(homeGoals: number, awayGoals: number, shootout: MatchSummary['shootout'] = null): MatchSummary {
   return {
@@ -48,5 +52,25 @@ describe("fenêtres d'événement (CAP-19)", () => {
       "Coup franc pour toi : quelqu'un a une idée ?",
     );
     expect(windowTitle(window, { kind: 'corner', side: 'home', takerId: null }).startsWith('Corner pour toi')).toBe(true);
+  });
+});
+
+describe('annonce des buts', () => {
+  function afterGoal(side: 'home' | 'away') {
+    const state = createMatch(testMatchOptions(makeSheet({ clubId: 'h', isHuman: true }), makeSheet({ clubId: 'a' })));
+    const run = beginRun(state);
+    recordGoal(run, side, state[side].players[9]!);
+    endRun(run);
+    return state;
+  }
+
+  test('un but du coach, score de son point de vue', () => {
+    const state = afterGoal('home');
+    expect(goalAlert(state, state.goals[0]!, 'home')).toMatchObject({ own: true, title: 'But !', ownGoals: 1, otherGoals: 0, team: 'FC h' });
+  });
+
+  test('un but encaissé se dit clairement', () => {
+    const state = afterGoal('away');
+    expect(goalAlert(state, state.goals[0]!, 'home')).toMatchObject({ own: false, title: 'But encaissé', ownGoals: 0, otherGoals: 1 });
   });
 });

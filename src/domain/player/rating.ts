@@ -9,6 +9,12 @@ const WEIGHTS: Record<Position, Partial<Record<AttributeName, number>>> = {
   ATT: { shooting: 0.45, speed: 0.25, technique: 0.2, physical: 0.1 },
 };
 
+/** Part de sa note perdue par un joueur complètement épuisé (EFF-04). */
+const FATIGUE_MAX_PENALTY = 0.5;
+const BASE_INJURY_RISK = 0.01;
+/** Risque de blessure par match ajouté à fatigue maximale : il grimpe vite quand le joueur est cuit. */
+const FATIGUE_INJURY_RISK = 0.25;
+
 /** Coefficient appliqué quand un joueur évolue hors de son poste (EFF-02). */
 const OUT_OF_POSITION: Record<Position, Record<Position, number>> = {
   GK: { GK: 1, DEF: 0.5, MID: 0.45, ATT: 0.4 },
@@ -46,13 +52,13 @@ export function positionFactor(natural: Position, played: Position): number {
  */
 export function effectiveRating(player: Player, played: Position): number {
   const base = overall(player) * positionFactor(player.position, played);
-  const fatiguePenalty = 1 - (player.fatigue / 100) * 0.35;
+  const fatiguePenalty = 1 - (player.fatigue / 100) * FATIGUE_MAX_PENALTY;
   return clamp(base * fatiguePenalty, 1, 99);
 }
 
 /** Probabilité de blessure par match, plus forte quand le joueur est fatigué (EFF-04). */
 export function injuryRisk(player: Player): number {
-  return 0.01 + (player.fatigue / 100) ** 2 * 0.08;
+  return BASE_INJURY_RISK + (player.fatigue / 100) ** 2 * FATIGUE_INJURY_RISK;
 }
 
 export function isAvailable(player: Player): boolean {

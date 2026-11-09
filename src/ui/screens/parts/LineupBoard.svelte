@@ -18,11 +18,13 @@
     bench: readonly string[];
     squad: readonly CardPlayer[];
     onmove: (playerId: string, drop: LineupDrop) => void;
-    /** Réglages affichés sous le banc. */
+    /** Ouvre la fiche d'un joueur. */
+    oninfo: (playerId: string) => void;
+    /** Réglages affichés à droite. */
     aside: Snippet;
   }
 
-  let { formation, starters, bench, squad, onmove, aside }: Props = $props();
+  let { formation, starters, bench, squad, onmove, oninfo, aside }: Props = $props();
 
   /** Distance à parcourir avant qu'un appui devienne un glisser. */
   const DRAG_THRESHOLD_PX = 6;
@@ -150,6 +152,7 @@
                 dragging={drag?.moving === true && drag.playerId === player.id}
                 onpointerdown={(event) => startDrag(event, player.id)}
                 onclick={() => touchCard(player.id, { kind: 'slot', index: slot.index })}
+                oninfo={() => oninfo(player.id)}
               />
             {:else}
               <button
@@ -183,6 +186,8 @@
             <div class:survole={hovered === `bench:${id}`} data-drop="bench:{id}">
               <PlayerCard
                 {player}
+                compact
+                oninfo={() => oninfo(id)}
                 selected={selectedId === id}
                 dragging={drag?.moving === true && drag.playerId === id}
                 onpointerdown={(event) => startDrag(event, id)}
@@ -198,10 +203,6 @@
       {/if}
     </Card>
 
-    {@render aside()}
-  </div>
-
-  <div class="tribune">
     <Card title="La tribune">
       {#snippet actions()}
         <span class="tampon">{standing.length} joueurs</span>
@@ -211,6 +212,8 @@
           <div class:survole={hovered === `stand:${player.id}`} data-drop="stand:{player.id}">
             <PlayerCard
               {player}
+              compact
+              oninfo={() => oninfo(player.id)}
               selected={selectedId === player.id}
               dragging={drag?.moving === true && drag.playerId === player.id}
               onpointerdown={(event) => startDrag(event, player.id)}
@@ -225,6 +228,10 @@
       {/if}
     </Card>
   </div>
+
+  <div class="reglages">
+    {@render aside()}
+  </div>
 </div>
 
 {#if drag?.moving && dragged}
@@ -234,10 +241,11 @@
 {/if}
 
 <style>
+  /* Terrain, puis banc et tribune, puis réglages : tout tient sur un écran. */
   .plateau {
     display: grid;
-    grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
-    gap: var(--space-6);
+    grid-template-columns: minmax(0, 15fr) minmax(0, 10fr) minmax(0, 7fr);
+    gap: var(--space-4);
     align-items: start;
   }
   .en-glisse {
@@ -249,8 +257,9 @@
     gap: var(--space-2);
     padding: var(--space-4) var(--space-2);
     border: var(--trait-epais) solid var(--ligne);
-    min-height: 560px;
+    min-height: 540px;
     align-content: space-between;
+    --largeur-carte: 96px;
   }
   .rond {
     position: absolute;
@@ -280,7 +289,7 @@
   .poste {
     position: relative;
   }
-  .survole > :global(.carte),
+  .survole > :global(.conteneur) > :global(.carte),
   .survole > .vide-poste {
     outline: 5px solid var(--scotch);
     outline-offset: 2px;
@@ -290,7 +299,7 @@
     place-content: center;
     justify-items: center;
     gap: var(--space-1);
-    width: 104px;
+    width: var(--largeur-carte);
     height: 108px;
     background: color-mix(in srgb, var(--craie) 35%, transparent);
     color: var(--encre-fixe);
@@ -308,20 +317,19 @@
     background: var(--encre-fixe);
     color: var(--scotch);
   }
-  .cote {
+  .cote,
+  .reglages {
     display: grid;
-    gap: var(--space-6);
+    gap: var(--space-4);
     min-width: 0;
-  }
-  .tribune {
-    grid-column: 1 / -1;
   }
   .zone {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
-    min-height: 124px;
+    min-height: 96px;
     padding: var(--space-1);
+    --largeur-carte: 76px;
     border: var(--trait-fin) dashed transparent;
   }
   .zone.survole {
@@ -343,17 +351,23 @@
     left: 0;
     pointer-events: none;
   }
+  @media (max-width: 1100px) {
+    .plateau {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    }
+    .reglages {
+      grid-column: 1 / -1;
+    }
+  }
   @media (max-width: 900px) {
     .plateau {
       grid-template-columns: minmax(0, 1fr);
     }
   }
   @media (max-width: 600px) {
-    .vide-poste {
-      width: 84px;
-    }
     .pelouse {
       min-height: 480px;
+      --largeur-carte: 66px;
     }
   }
 </style>

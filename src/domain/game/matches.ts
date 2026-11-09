@@ -9,7 +9,7 @@ import { clubPlayers, humanFixture, humanSquad } from './selectors';
 import type { GameState } from './state';
 
 /** Fatigue d'un match simulé rapidement (matchs IA contre IA). */
-const QUICK_MATCH_FATIGUE = 25;
+const QUICK_MATCH_FATIGUE = 40;
 
 export function teamSheet(state: GameState, clubId: string): TeamSheet {
   const club = state.clubs[clubId];

@@ -22,7 +22,7 @@ export const LEGENDARY_ABILITIES: readonly Ability[] = [
     position: 'ANY',
     targeting: { kind: 'opponentTeam' },
     description: 'À la faveur d’une embrouille, plus personne ne sait qui joue pour qui.',
-    effects: [{ type: 'swapTeams', duration: 10 }],
+    effects: [{ type: 'swapTeams', duration: 15 }],
   }),
   legendary({
     id: 'la-melee-generale',
@@ -31,8 +31,8 @@ export const LEGENDARY_ABILITIES: readonly Ability[] = [
     targeting: { kind: 'opponent', count: 3 },
     description: 'Bagarre organisée : il entraîne trois adversaires, et il y reste aussi.',
     effects: [
-      { type: 'knockout', scope: 'targets', duration: 10 },
-      { type: 'knockout', scope: 'self', duration: 10 },
+      { type: 'knockout', scope: 'targets', duration: 15 },
+      { type: 'knockout', scope: 'self', duration: 15 },
     ],
   }),
   legendary({
@@ -49,6 +49,6 @@ export const LEGENDARY_ABILITIES: readonly Ability[] = [
     position: 'BENCH',
     targeting: { kind: 'opponentTeam' },
     description: 'Mémé jette un sort depuis la tribune. Personne n’ose la regarder.',
-    effects: [{ type: 'modifier', scope: 'opponents', stat: 'all', value: -0.3, duration: 15 }],
+    effects: [{ type: 'modifier', scope: 'opponents', stat: 'all', value: -0.3, duration: 23 }],
   }),
 ];

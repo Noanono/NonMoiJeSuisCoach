@@ -12,7 +12,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     category: 'defense',
     position: 'GK',
     description: 'Gonfle le ventre et bouche la moitié de la cage.',
-    effects: [{ type: 'modifier', scope: 'self', stat: 'goalkeeping', value: 0.6, duration: 10 }],
+    effects: [{ type: 'modifier', scope: 'self', stat: 'goalkeeping', value: 0.6, duration: 15 }],
   }),
   common({
     id: 'le-bavard',
@@ -38,7 +38,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'GK',
     targeting: { kind: 'team' },
     description: 'Relance jusque chez le voisin. Tout le monde remonte en courant.',
-    effects: [{ type: 'modifier', scope: 'team', stat: 'shooting', value: 0.2, duration: 5 }],
+    effects: [{ type: 'modifier', scope: 'team', stat: 'shooting', value: 0.2, duration: 8 }],
   }),
 
   // --- Défenseurs ----------------------------------------------------------
@@ -49,7 +49,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'DEF',
     targeting: { kind: 'zone' },
     description: 'Arrose sa zone à la main. Le terrain devient une patinoire.',
-    effects: [{ type: 'modifier', scope: 'zoneOpponents', stat: 'speed', value: -0.3, duration: 10 }],
+    effects: [{ type: 'modifier', scope: 'zoneOpponents', stat: 'speed', value: -0.3, duration: 15 }],
   }),
   common({
     id: 'l-agriculteur',
@@ -57,7 +57,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     category: 'defense',
     position: 'DEF',
     description: 'Mollets de taureau et odeur de ferme : personne ne passe.',
-    effects: [{ type: 'modifier', scope: 'self', stat: 'defense', value: 0.7, duration: 15 }],
+    effects: [{ type: 'modifier', scope: 'self', stat: 'defense', value: 0.7, duration: 23 }],
   }),
   common({
     id: 'le-rugbyman-reconverti',
@@ -74,7 +74,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'DEF',
     targeting: { kind: 'opponent', count: 1 },
     description: 'Souffle sur son adversaire. Les pieds ne répondent plus.',
-    effects: [{ type: 'modifier', scope: 'targets', stat: 'technique', value: -0.3, duration: 10 }],
+    effects: [{ type: 'modifier', scope: 'targets', stat: 'technique', value: -0.3, duration: 15 }],
   }),
   common({
     id: 'le-mur-de-saucisses',
@@ -92,7 +92,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'DEF',
     targeting: { kind: 'opponent', count: 1, line: 'ATT' },
     description: 'Colle un attaquant et lui demande sa carte d’identité.',
-    effects: [{ type: 'modifier', scope: 'targets', stat: 'shooting', value: -0.6, duration: 10 }],
+    effects: [{ type: 'modifier', scope: 'targets', stat: 'shooting', value: -0.6, duration: 15 }],
   }),
 
   // --- Milieux -------------------------------------------------------------
@@ -103,7 +103,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'MID',
     targeting: { kind: 'opponent', count: 1 },
     description: 'Noue discrètement les lacets d’un adversaire au sol.',
-    effects: [{ type: 'knockout', scope: 'targets', duration: 3 }],
+    effects: [{ type: 'knockout', scope: 'targets', duration: 5 }],
   }),
   common({
     id: 'le-marchand-de-sable',
@@ -112,7 +112,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'MID',
     targeting: { kind: 'opponent', count: 1 },
     description: 'Raconte sa vie à un adversaire, qui s’endort debout.',
-    effects: [{ type: 'modifier', scope: 'targets', stat: 'concentration', value: -0.4, duration: 10 }],
+    effects: [{ type: 'modifier', scope: 'targets', stat: 'concentration', value: -0.4, duration: 15 }],
   }),
   common({
     id: 'le-chien-de-la-casse',
@@ -120,7 +120,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     category: 'support',
     position: 'MID',
     description: 'Court partout, mord tout, ne comprend rien.',
-    effects: [{ type: 'modifier', scope: 'self', stat: 'physical', value: 0.4, duration: 10 }],
+    effects: [{ type: 'modifier', scope: 'self', stat: 'physical', value: 0.4, duration: 15 }],
   }),
   common({
     id: 'le-ruisselant',
@@ -128,7 +128,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     category: 'attack',
     position: 'MID',
     description: 'Tellement trempé que personne n’arrive à le tenir.',
-    effects: [{ type: 'modifier', scope: 'self', stat: 'technique', value: 0.4, duration: 10 }],
+    effects: [{ type: 'modifier', scope: 'self', stat: 'technique', value: 0.4, duration: 15 }],
   }),
   common({
     id: 'les-pigeons',
@@ -137,7 +137,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'MID',
     targeting: { kind: 'randomOpponent', count: 2 },
     description: 'Graines dans les poches : les fientes tombent au hasard.',
-    effects: [{ type: 'modifier', scope: 'targets', stat: 'concentration', value: -0.3, duration: 5 }],
+    effects: [{ type: 'modifier', scope: 'targets', stat: 'concentration', value: -0.3, duration: 8 }],
   }),
 
   // --- Attaquants ----------------------------------------------------------
@@ -147,7 +147,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     category: 'attack',
     position: 'ATT',
     description: 'Démarre au kick et part plein gaz sur l’aile.',
-    effects: [{ type: 'modifier', scope: 'self', stat: 'speed', value: 0.6, duration: 5 }],
+    effects: [{ type: 'modifier', scope: 'self', stat: 'speed', value: 0.6, duration: 8 }],
   }),
   common({
     id: 'le-buteur-de-comptoir',
@@ -155,7 +155,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     category: 'attack',
     position: 'ATT',
     description: 'Annonce au bar qu’il va marquer. Pour une fois, il y croit.',
-    effects: [{ type: 'modifier', scope: 'self', stat: 'shooting', value: 0.4, duration: 10 }],
+    effects: [{ type: 'modifier', scope: 'self', stat: 'shooting', value: 0.4, duration: 15 }],
   }),
   common({
     id: 'biere-tiede',
@@ -173,7 +173,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'ATT',
     targeting: { kind: 'opponent', count: 2, line: 'DEF' },
     description: 'Charge plein axe. La défense se souvient de son passage.',
-    effects: [{ type: 'knockout', scope: 'targets', duration: 2 }],
+    effects: [{ type: 'knockout', scope: 'targets', duration: 3 }],
   }),
   common({
     id: 'la-frappe-de-mule',
@@ -192,7 +192,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'ANY',
     targeting: { kind: 'opponent', count: 1 },
     description: 'Une remarque sur sa coupe de cheveux, et il ne joue plus au foot.',
-    effects: [{ type: 'modifier', scope: 'targets', stat: 'all', value: -0.3, duration: 5 }],
+    effects: [{ type: 'modifier', scope: 'targets', stat: 'all', value: -0.3, duration: 8 }],
   }),
   common({
     id: 'short-trop-court',
@@ -201,7 +201,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'ANY',
     targeting: { kind: 'opponent', count: 2 },
     description: 'Remonte son short. Deux adversaires ne savent plus où regarder.',
-    effects: [{ type: 'modifier', scope: 'targets', stat: 'concentration', value: -0.25, duration: 5 }],
+    effects: [{ type: 'modifier', scope: 'targets', stat: 'concentration', value: -0.25, duration: 8 }],
   }),
 
   // --- Banc ----------------------------------------------------------------
@@ -221,7 +221,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'BENCH',
     targeting: { kind: 'team' },
     description: 'Enceinte au bord du terrain, tout le monde court en rythme.',
-    effects: [{ type: 'modifier', scope: 'team', stat: 'speed', value: 0.15, duration: 10 }],
+    effects: [{ type: 'modifier', scope: 'team', stat: 'speed', value: 0.15, duration: 15 }],
   }),
   common({
     id: 'le-kine-douteux',

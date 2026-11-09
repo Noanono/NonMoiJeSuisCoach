@@ -123,6 +123,8 @@ function applyModifier(context: EffectContext, effect: Extract<Effect, { scope: 
   const endsAt = context.run.state.elapsed + effect.duration;
   const extendOnGoal = effect.type === 'modifier' ? effect.extendOnGoal : undefined;
   for (const player of scoped(context, effect)) {
+    // Relancer une capacité encore active prolonge son effet, sans le cumuler.
+    player.effects = player.effects.filter((active) => active.label !== context.label || active.stat !== effect.stat);
     player.effects.push({ label: context.label, stat: effect.stat, value, endsAt, ...(extendOnGoal ? { extendOnGoal } : {}) });
     const friendly = player.side === context.side;
     float(context, player, `${percentText(value)} ${STAT_SHORT[effect.stat]}`, friendly === value > 0 ? 'bonus' : 'malus');

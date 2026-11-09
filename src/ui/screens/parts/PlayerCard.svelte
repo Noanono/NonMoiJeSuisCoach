@@ -20,7 +20,9 @@
 </script>
 
 <script lang="ts">
+  import EnergyBar from '../../kit/EnergyBar.svelte';
   import PlayerAvatar from '../../kit/PlayerAvatar.svelte';
+  import RarityTag from '../../kit/RarityTag.svelte';
   import RatingBadge from '../../kit/RatingBadge.svelte';
   import { POSITION_SHORT } from '../describe';
 
@@ -33,61 +35,73 @@
     positionPenalty?: number;
     selected?: boolean;
     dragging?: boolean;
+    /** Version resserrée, pour le banc et la tribune. */
+    compact?: boolean;
     onpointerdown?: (event: PointerEvent) => void;
     onclick?: () => void;
+    /** Ouvre la fiche du joueur. */
+    oninfo?: () => void;
     ghost?: boolean;
   }
 
-  let { player, rating, positionPenalty = 0, selected = false, dragging = false, onpointerdown, onclick, ghost = false }: Props = $props();
+  let { player, rating, positionPenalty = 0, selected = false, dragging = false, compact = false, onpointerdown, onclick, oninfo, ghost = false }: Props = $props();
   const shownRating = $derived(rating ?? player.overall);
   const label = $derived(
-    `${player.name}, ${POSITION_SHORT[player.position]}, note ${shownRating}${positionPenalty > 0 ? `, hors poste, moins ${positionPenalty}` : ''}${player.availability ? `, ${player.availability}` : ''}${selected ? ', sélectionné' : ''}`,
+    `${player.name}, ${POSITION_SHORT[player.position]}, note ${shownRating}, énergie ${100 - player.fatigue} %${positionPenalty > 0 ? `, hors poste, moins ${positionPenalty}` : ''}${player.availability ? `, ${player.availability}` : ''}${selected ? ', sélectionné' : ''}`,
   );
 </script>
 
 {#snippet face()}
-  <span class="bandeau {player.rarity ?? 'inconnue'}" aria-hidden="true"></span>
   <span class="tete">
-    <PlayerAvatar player={player.avatar} size={46} />
+    <PlayerAvatar player={player.avatar} size={compact ? 32 : 44} />
     <span class="chiffres">
-      <RatingBadge value={shownRating} />
+      <RatingBadge value={shownRating} size={compact ? 's' : 'm'} />
       <span class="poste tampon">{POSITION_SHORT[player.position]}</span>
     </span>
   </span>
   <span class="nom">{player.lastName}</span>
-  <span class="capacite">{player.abilityName}</span>
-  <span class="fatigue" aria-hidden="true"><span style:width="{player.fatigue}%"></span></span>
+  <span class="capacite"><RarityTag rarity={player.rarity} text={player.abilityName} /></span>
+  <EnergyBar energy={100 - player.fatigue} />
   {#if positionPenalty > 0}<span class="tampon alerte">Hors poste −{positionPenalty}</span>{/if}
   {#if player.availability}<span class="tampon indispo">{player.availability}</span>{/if}
 {/snippet}
 
 {#if ghost}
-  <div class="carte fantome" aria-hidden="true">{@render face()}</div>
+  <div class="carte fantome" class:compacte={compact} aria-hidden="true">{@render face()}</div>
 {:else}
-  <button
-    type="button"
-    class="carte"
-    class:choisie={selected}
-    class:absente={dragging}
-    class:hors-service={!player.available}
-    aria-label={label}
-    aria-pressed={selected}
-    title={label}
-    {onpointerdown}
-    {onclick}
-  >
-    {@render face()}
-  </button>
+  <div class="conteneur">
+    <button
+      type="button"
+      class="carte"
+      class:compacte={compact}
+      class:choisie={selected}
+      class:absente={dragging}
+      class:hors-service={!player.available}
+      aria-label={label}
+      aria-pressed={selected}
+      title={label}
+      {onpointerdown}
+      {onclick}
+    >
+      {@render face()}
+    </button>
+    {#if oninfo}
+      <button type="button" class="info tampon" aria-label="Fiche de {player.name}" title="Voir la fiche" onclick={oninfo}>i</button>
+    {/if}
+  </div>
 {/if}
 
 <style>
+  .conteneur {
+    position: relative;
+  }
   .carte {
     position: relative;
     display: grid;
     gap: 2px;
     align-content: start;
-    width: 104px;
-    padding: 0 var(--space-1) var(--space-1);
+    width: var(--largeur-carte, 104px);
+    padding: var(--space-1);
     background: var(--craie);
     color: var(--encre);
     border: var(--trait-epais) solid var(--encre-fixe);
@@ -98,6 +112,12 @@
     user-select: none;
     font-size: 13px;
     line-height: 16px;
+  }
+  .compacte {
+    font-size: 11px;
+    line-height: 13px;
+    box-shadow: 2px 2px 0 var(--encre-fixe);
+    border-width: var(--trait-fin);
   }
   .carte:focus-visible {
     outline: var(--trait-epais) dashed var(--fumigene);
@@ -118,18 +138,20 @@
   .hors-service .tete {
     filter: grayscale(1);
   }
-  .bandeau {
-    display: block;
-    height: 6px;
-    margin: 0 calc(var(--space-1) * -1) var(--space-1);
-    background: var(--craie-2);
-    border-bottom: var(--trait-fin) solid var(--encre-fixe);
-  }
-  .bandeau.rare {
-    background: var(--scotch);
-  }
-  .bandeau.legendary {
-    background: var(--fumigene);
+  .info {
+    position: absolute;
+    z-index: 1;
+    top: -7px;
+    left: -7px;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    font-size: 11px;
+    line-height: 14px;
+    background: var(--encre-fixe);
+    color: var(--craie-fixe);
+    border: 1px solid var(--craie-fixe);
+    cursor: pointer;
   }
   .tete {
     display: flex;
@@ -152,23 +174,14 @@
     white-space: nowrap;
   }
   .capacite {
+    display: block;
     font-size: 11px;
-    line-height: 13px;
-    color: var(--encre-pale);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 14px;
+    min-width: 0;
   }
-  .fatigue {
-    display: block;
-    height: 4px;
-    background: var(--craie-2);
-    border: 1px solid var(--encre);
-  }
-  .fatigue span {
-    display: block;
-    height: 100%;
-    background: var(--carton);
+  .compacte .capacite {
+    font-size: 10px;
+    line-height: 12px;
   }
   .alerte,
   .indispo {
@@ -184,11 +197,5 @@
   .indispo {
     background: var(--carton);
     color: var(--craie);
-  }
-  @media (max-width: 600px) {
-    .carte {
-      width: 84px;
-      font-size: 12px;
-    }
   }
 </style>

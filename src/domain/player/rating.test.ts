@@ -18,7 +18,11 @@ describe('note des joueurs', () => {
   });
 
   test('un joueur fatigué se blesse plus souvent (EFF-04)', () => {
-    expect(injuryRisk(makePlayer({ fatigue: 90 }))).toBeGreaterThan(injuryRisk(makePlayer()));
+    expect(injuryRisk(makePlayer({ fatigue: 90 }))).toBeGreaterThan(injuryRisk(makePlayer()) * 10);
+  });
+
+  test('un joueur épuisé perd la moitié de sa note (EFF-04)', () => {
+    expect(effectiveRating(makePlayer({ fatigue: 100 }), 'ATT')).toBeCloseTo(effectiveRating(makePlayer(), 'ATT') / 2);
   });
 
   test('chaque formation aligne 11 joueurs dont un gardien', () => {

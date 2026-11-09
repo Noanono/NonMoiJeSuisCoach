@@ -3,6 +3,7 @@
   import Button from '../kit/Button.svelte';
   import Card from '../kit/Card.svelte';
   import LineupBoard from './parts/LineupBoard.svelte';
+  import PlayerSheet from './parts/PlayerSheet.svelte';
   import type { CardPlayer } from './parts/PlayerCard.svelte';
   import { store } from '../store.svelte';
   import { getAbility } from '../../domain/abilities/catalog';
@@ -87,11 +88,13 @@
     store.notify(errors.length === 0 ? 'L’adjoint a fait la compo. Il a même pensé au gardien.' : errors[0]!.message);
   }
 
+  let openPlayerId = $state<string | null>(null);
+
   const placed = $derived(starters.filter((id) => id !== EMPTY_SLOT).length);
 </script>
 
 <div class="ecran">
-  <LineupBoard {formation} {starters} {bench} squad={view.squad} onmove={move}>
+  <LineupBoard {formation} {starters} {bench} squad={view.squad} onmove={move} oninfo={(playerId) => (openPlayerId = playerId)}>
     {#snippet aside()}
       <Card title="Le onze">
         {#snippet actions()}
@@ -112,7 +115,7 @@
               <p class="texte-s texte-fort">Compo valide : {placed} / {STARTERS_COUNT} titulaires et {bench.length} remplaçants.</p>
             {/if}
           </div>
-          <p class="texte-s discret">Glisse les cartes. Sans souris : touche une carte, puis sa destination.</p>
+          <p class="texte-s discret">Glisse les cartes. Le « i » ouvre la fiche du joueur.</p>
         </div>
       </Card>
 
@@ -154,6 +157,10 @@
     {/snippet}
   </LineupBoard>
 </div>
+
+{#if openPlayerId}
+  <PlayerSheet playerId={openPlayerId} onclose={() => (openPlayerId = null)} />
+{/if}
 
 <style>
   .pile-serree {

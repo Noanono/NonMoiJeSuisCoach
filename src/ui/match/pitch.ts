@@ -105,6 +105,8 @@ export interface TokenView {
   /** Il joue hors de son poste (EFF-02). */
   displaced: boolean;
   rating: number;
+  /** Énergie restante, de 0 à 100. */
+  energy: number;
   own: boolean;
   status: Availability;
   /** Raison affichée sur le jeton grisé (« Exclu », « Banc »…). */
@@ -137,16 +139,17 @@ export function tokenView(state: MatchState, player: MatchPlayer, coachSide: Sid
   const halo = chips.some((chip) => chip.tone === 'malus') ? 'malus' : chips.length > 0 ? 'bonus' : null;
   const avatar = { id: player.id, age: player.profile.age, clubId: player.profile.clubId, position: player.profile.position };
   const rating = Math.round(player.rating);
+  const energy = Math.round(100 - player.profile.fatigue);
   const position = POSITION_SHORT[player.profile.position];
   const displaced = player.line !== null && player.line !== player.profile.position;
-  const parts = [player.name, position, player.line ? LINE_LABEL[player.line] : 'remplaçant', `note ${rating}`];
+  const parts = [player.name, position, player.line ? LINE_LABEL[player.line] : 'remplaçant', `note ${rating}`, `énergie ${energy} %`];
   if (displaced) parts.push('hors poste');
   if (reason) parts.push(reason);
   parts.push(...chips.map((chip) => chip.detail));
   if (readyCost !== null) parts.push(`capacité prête, coût ${readyCost}`);
   if (focus.chosen) parts.push('cible choisie');
   else if (focus.highlighted) parts.push(state.pending ? 'cible valide' : 'peut agir maintenant');
-  return { id: player.id, name: shortName(player), avatar, position, displaced, rating, own, status, reason, chips, focus, readyCost, readyRarity, halo, label: parts.join(', ') };
+  return { id: player.id, name: shortName(player), avatar, position, displaced, rating, energy, own, status, reason, chips, focus, readyCost, readyRarity, halo, label: parts.join(', ') };
 }
 
 export interface PitchView {
