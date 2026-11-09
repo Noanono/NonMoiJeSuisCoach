@@ -72,6 +72,15 @@ describe('ciblage sur le terrain (CAP-16, CAP-17)', () => {
     expect(focus('h-9')).toMatchObject({ chosen: true, interactive: false });
     expect(focus('h-10').interactive).toBe(false);
   });
+
+  test("fenêtre d'événement : les joueurs éligibles du coach ressortent (CAP-19)", () => {
+    const state = armed();
+    state.awaiting = { side: 'away', trigger: 'ownSetPiece', eligiblePlayerIds: ['a-5'] };
+    const focus = (id: string) => tokenFocus(state, findPlayer(state, id)!, 'away');
+    expect(focus('a-5')).toMatchObject({ highlighted: true, interactive: true });
+    expect(focus('a-2')).toMatchObject({ highlighted: false, interactive: true });
+    expect(focus('h-5').interactive).toBe(false);
+  });
 });
 
 describe('effets actifs (CAP-09)', () => {

@@ -33,7 +33,14 @@
     }
     return null;
   });
+
+  /** Échap annule le ciblage en cours, sans rien consommer (CAP-20). */
+  function cancelOnEscape(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && prompt?.kind === 'targeting') controller.cancel();
+  }
 </script>
+
+<svelte:window onkeydown={cancelOnEscape} />
 
 {#if prompt}
   <div class="bandeau" role="region" aria-label="Le match t'attend">
