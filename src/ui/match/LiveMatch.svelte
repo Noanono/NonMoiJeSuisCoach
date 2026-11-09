@@ -3,6 +3,8 @@
   import Button from '../kit/Button.svelte';
   import { MatchController } from './controller.svelte';
   import { minuteIntervalMs } from './live';
+  import ActivationPanel from './ActivationPanel.svelte';
+  import CoachBand from './CoachBand.svelte';
   import Pitch from './Pitch.svelte';
   import Scoreboard from './Scoreboard.svelte';
 
@@ -42,10 +44,20 @@
     </div>
   {/if}
 
+  <div class="attente">
+    <CoachBand {controller} />
+  </div>
+
   <div class="disposition">
     <Pitch {controller} />
     <aside class="cote"></aside>
   </div>
+
+  {#if controller.inspectedId}
+    {#key controller.inspectedId}
+      <ActivationPanel {controller} playerId={controller.inspectedId} />
+    {/key}
+  {/if}
 </main>
 
 <style>
@@ -60,6 +72,15 @@
   .sifflet {
     display: flex;
     justify-content: center;
+  }
+  /* Le bandeau d'attente reste visible quand on fait défiler le terrain. */
+  .attente {
+    position: sticky;
+    top: var(--space-2);
+    z-index: 4;
+  }
+  .attente:empty {
+    display: none;
   }
   .disposition {
     display: grid;
