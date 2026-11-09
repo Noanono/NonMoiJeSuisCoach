@@ -16,8 +16,6 @@
     rarity: Rarity | null;
     /** Note d'un joueur frais à chaque poste (EFF-02). */
     ratingAt: Record<Position, number>;
-    /** Points que la fatigue lui retire à chaque poste (EFF-04). */
-    malusAt: Record<Position, number>;
   }
 </script>
 
@@ -35,8 +33,6 @@
     rating?: number;
     /** Points perdus hors de son poste (EFF-02), 0 s'il y est. */
     positionPenalty?: number;
-    /** Points perdus à cause de la fatigue, au poste occupé (son poste naturel par défaut). */
-    malus?: number;
     selected?: boolean;
     dragging?: boolean;
     /** Version resserrée, pour le banc et la tribune. */
@@ -48,11 +44,10 @@
     ghost?: boolean;
   }
 
-  let { player, rating, positionPenalty = 0, malus, selected = false, dragging = false, compact = false, onpointerdown, onclick, oninfo, ghost = false }: Props = $props();
+  let { player, rating, positionPenalty = 0, selected = false, dragging = false, compact = false, onpointerdown, onclick, oninfo, ghost = false }: Props = $props();
   const shownRating = $derived(rating ?? player.overall);
-  const shownMalus = $derived(malus ?? player.malusAt[player.position]);
   const label = $derived(
-    `${player.name}, ${POSITION_SHORT[player.position]}, note ${shownRating}${shownMalus > 0 ? `, moins ${shownMalus} de fatigue` : ''}, énergie ${100 - player.fatigue} %${positionPenalty > 0 ? `, hors poste, moins ${positionPenalty}` : ''}${player.availability ? `, ${player.availability}` : ''}${selected ? ', sélectionné' : ''}`,
+    `${player.name}, ${POSITION_SHORT[player.position]}, note ${shownRating}, énergie ${100 - player.fatigue} %${positionPenalty > 0 ? `, hors poste, moins ${positionPenalty}` : ''}${player.availability ? `, ${player.availability}` : ''}${selected ? ', sélectionné' : ''}`,
   );
 </script>
 
@@ -60,7 +55,7 @@
   <span class="tete">
     <PlayerAvatar player={player.avatar} size={compact ? 32 : 44} />
     <span class="chiffres">
-      <RatingBadge value={shownRating} malus={shownMalus} size={compact ? 's' : 'm'} />
+      <RatingBadge value={shownRating} size={compact ? 's' : 'm'} />
       <span class="poste tampon">{POSITION_SHORT[player.position]}</span>
     </span>
   </span>

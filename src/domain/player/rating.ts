@@ -51,11 +51,6 @@ export function ratingAtPosition(player: Player, played: Position): number {
   return clamp(overall(player) * positionFactor(player.position, played), 1, 99);
 }
 
-/** Points de note affichée que la fatigue lui fait perdre en ce moment (EFF-04). */
-export function fatigueMalus(player: Player, played: Position): number {
-  return Math.round(ratingAtPosition(player, played)) - Math.round(effectiveRating(player, played));
-}
-
 /**
  * Performance réelle d'un joueur à un poste donné, en tenant compte
  * du poste (EFF-02) et de la fatigue (EFF-04).

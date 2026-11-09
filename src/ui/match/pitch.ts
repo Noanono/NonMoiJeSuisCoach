@@ -3,7 +3,7 @@
  * joueurs par ligne, état de chaque jeton et effets actifs. Fonctions pures, sans Svelte.
  */
 import { activeEffects, previewActivation, type ActiveEffectView, type MatchPlayer, type MatchState, type Side } from '../../domain/match';
-import { fatigueMalus, ratingAtPosition } from '../../domain/player/rating';
+import { ratingAtPosition } from '../../domain/player/rating';
 import type { Position, Rarity } from '../../domain/types';
 import type { AvatarPlayer } from '../kit/avatar';
 import { POSITION_SHORT } from '../screens/describe';
@@ -107,8 +107,6 @@ export interface TokenView {
   displaced: boolean;
   /** Note au poste occupé, sans la fatigue. */
   rating: number;
-  /** Points que la fatigue lui retire en ce moment. */
-  malus: number;
   /** Énergie restante, de 0 à 100. */
   energy: number;
   own: boolean;
@@ -142,20 +140,18 @@ export function tokenView(state: MatchState, player: MatchPlayer, coachSide: Sid
   const readyRarity = readyCost !== null ? (player.ability?.rarity ?? null) : null;
   const halo = chips.some((chip) => chip.tone === 'malus') ? 'malus' : chips.length > 0 ? 'bonus' : null;
   const avatar = { id: player.id, age: player.profile.age, clubId: player.profile.clubId, position: player.profile.position };
-  const played = player.line ?? player.profile.position;
-  const rating = Math.round(ratingAtPosition(player.profile, played));
-  const malus = fatigueMalus(player.profile, played);
+  const rating = Math.round(ratingAtPosition(player.profile, player.line ?? player.profile.position));
   const energy = Math.round(100 - player.profile.fatigue);
   const position = POSITION_SHORT[player.profile.position];
   const displaced = player.line !== null && player.line !== player.profile.position;
-  const parts = [player.name, position, player.line ? LINE_LABEL[player.line] : 'remplaçant', `note ${rating}`, ...(malus > 0 ? [`moins ${malus} de fatigue`] : []), `énergie ${energy} %`];
+  const parts = [player.name, position, player.line ? LINE_LABEL[player.line] : 'remplaçant', `note ${rating}`, `énergie ${energy} %`];
   if (displaced) parts.push('hors poste');
   if (reason) parts.push(reason);
   parts.push(...chips.map((chip) => chip.detail));
   if (readyCost !== null) parts.push(`capacité prête, coût ${readyCost}`);
   if (focus.chosen) parts.push('cible choisie');
   else if (focus.highlighted) parts.push(state.pending ? 'cible valide' : 'peut agir maintenant');
-  return { id: player.id, name: shortName(player), avatar, position, displaced, rating, malus, energy, own, status, reason, chips, focus, readyCost, readyRarity, halo, label: parts.join(', ') };
+  return { id: player.id, name: shortName(player), avatar, position, displaced, rating, energy, own, status, reason, chips, focus, readyCost, readyRarity, halo, label: parts.join(', ') };
 }
 
 export interface PitchView {

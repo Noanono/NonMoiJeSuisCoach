@@ -36,7 +36,7 @@
   {#if token.readyCost !== null}<span class="pret tampon {token.readyRarity}" aria-hidden="true">{token.readyCost}</span>{/if}
   <span class="portrait">
     <PlayerAvatar player={token.avatar} size={30} />
-    <span class="note" aria-hidden="true"><RatingBadge value={token.rating} malus={token.malus} size="s" stacked /></span>
+    <span class="note" aria-hidden="true"><RatingBadge value={token.rating} size="s" /></span>
   </span>
   <span class="nom texte-fort">{token.name}</span>
   <span class="poste tampon" class:deplace={token.displaced} aria-hidden="true">{token.position}</span>

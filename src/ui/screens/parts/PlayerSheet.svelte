@@ -12,7 +12,7 @@
   import { RARITY_LABEL } from '../../../domain/abilities/progression';
   import { playerValue } from '../../../domain/club/valuation';
   import { sellNow, transferWindowOpen } from '../../../domain/game';
-  import { fatigueMalus, overall } from '../../../domain/player/rating';
+  import { overall } from '../../../domain/player/rating';
   import type { AttributeName } from '../../../domain/types';
   import { ATTRIBUTE_LABEL, availabilityLabel, fullName, POSITION_LABEL } from '../describe';
 
@@ -38,7 +38,6 @@
         position: POSITION_LABEL[player.position],
         age: player.age,
         overall: overall(player),
-        malus: fatigueMalus(player, player.position),
         evolution: overall(player) - player.overallAtSeasonStart,
         potential: player.potential,
         fatigue: player.fatigue,
@@ -72,7 +71,7 @@
     <div class="haut">
       <PlayerAvatar player={view.avatar} size={88} />
       <dl class="chiffres">
-        <div><dt class="tampon">Note</dt><dd class="stat"><RatingBadge value={view.overall} malus={view.malus} size="l" /> <DeltaBadge value={view.evolution} /></dd></div>
+        <div><dt class="tampon">Note</dt><dd class="stat"><RatingBadge value={view.overall} size="l" /> <DeltaBadge value={view.evolution} /></dd></div>
         <div><dt class="tampon">Potentiel</dt><dd class="stat">{view.potential}</dd></div>
         <div><dt class="tampon">Valeur</dt><dd class="valeur mono">{formatEuros(view.value)}</dd></div>
       </dl>

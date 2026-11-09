@@ -49,7 +49,7 @@
         </li>
       {/each}
     </ul>
-    <p class="texte-s">La barre sous le nom montre l'énergie restante : un joueur à bout joue moins bien et se blesse plus. Le petit chiffre rouge sous la note est ce que la fatigue lui retire. Le carré indique le coût de sa capacité quand elle est prête.</p>
+    <p class="texte-s">La barre sous le nom montre l'énergie restante : un joueur à bout joue moins bien et se blesse plus. Le carré indique le coût de sa capacité quand elle est prête.</p>
   </div>
 {/if}
 

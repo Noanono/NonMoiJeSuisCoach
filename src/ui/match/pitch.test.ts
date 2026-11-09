@@ -101,14 +101,12 @@ describe('effets actifs (CAP-09)', () => {
     );
   });
 
-  test('la note reste celle du joueur frais, la fatigue s’affiche à part', () => {
+  test('la note affichée reste celle du joueur frais', () => {
     const state = match();
     const player = state.home.players[3]!;
     const fresh = tokenView(state, player, 'home').rating;
     player.profile.fatigue = 60;
-    const view = tokenView(state, player, 'home');
-    expect(view.rating).toBe(fresh);
-    expect(view.malus).toBeGreaterThan(0);
+    expect(tokenView(state, player, 'home').rating).toBe(fresh);
   });
 
   test('un joueur sous effet porte un halo, le malus l’emporte', () => {

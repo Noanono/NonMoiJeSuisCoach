@@ -1,7 +1,7 @@
 import type { ClubOutlook } from '../club/model';
 import { EMPTY_SLOT } from '../league/lineup';
 import { seasonWeek, type SeasonWeek } from '../league/calendar';
-import { effectiveRating, FORMATION_SLOTS, ratingAtPosition } from '../player/rating';
+import { FORMATION_SLOTS, ratingAtPosition } from '../player/rating';
 import type { Club, Division, Fixture, Player } from '../types';
 import type { GameState } from './state';
 
@@ -31,19 +31,16 @@ export function humanSquad(state: GameState): Player[] {
   return clubPlayers(state, state.humanClubId);
 }
 
-/** Général de l'équipe : moyenne du onze à ses postes, et ce que la fatigue lui retire. `null` sans titulaire. */
-export function teamRating(state: GameState): { base: number; malus: number } | null {
+/** Général de l'équipe : moyenne du onze à ses postes. `null` sans titulaire. */
+export function teamRating(state: GameState): number | null {
   const lineup = humanClub(state).lineup;
   if (!lineup) return null;
   const ratings = lineup.starters.flatMap((id, index) => {
     const player = id === EMPTY_SLOT ? undefined : state.players[id];
     const position = FORMATION_SLOTS[lineup.formation][index];
-    return player && position ? [{ base: ratingAtPosition(player, position), real: effectiveRating(player, position) }] : [];
+    return player && position ? [ratingAtPosition(player, position)] : [];
   });
-  if (ratings.length === 0) return null;
-  const average = (value: (rating: (typeof ratings)[number]) => number) => Math.round(ratings.reduce((total, rating) => total + value(rating), 0) / ratings.length);
-  const base = average((rating) => rating.base);
-  return { base, malus: base - average((rating) => rating.real) };
+  return ratings.length > 0 ? Math.round(ratings.reduce((total, rating) => total + rating, 0) / ratings.length) : null;
 }
 
 export function currentWeek(state: GameState): SeasonWeek {

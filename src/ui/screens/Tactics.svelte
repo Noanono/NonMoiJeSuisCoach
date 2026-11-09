@@ -9,7 +9,7 @@
   import { getAbility } from '../../domain/abilities/catalog';
   import { autoPickLineup, humanClub, humanLineupErrors, humanSquad, setInstructions, setLineup } from '../../domain/game';
   import { EMPTY_SLOT, MAX_BENCH_SIZE, STARTERS_COUNT } from '../../domain/league/lineup';
-  import { fatigueMalus, FORMATIONS, isAvailable, overall, ratingAtPosition } from '../../domain/player/rating';
+  import { FORMATIONS, isAvailable, overall, ratingAtPosition } from '../../domain/player/rating';
   import type { Formation, Instructions, Mentality } from '../../domain/types';
   import { availabilityLabel, fullName, MENTALITY_LABEL, POSITION_ORDER } from './describe';
   import { emptyLineup, movePlayer, type LineupDrop } from './lineupEdit';
@@ -42,12 +42,6 @@
               DEF: Math.round(ratingAtPosition(player, 'DEF')),
               MID: Math.round(ratingAtPosition(player, 'MID')),
               ATT: Math.round(ratingAtPosition(player, 'ATT')),
-            },
-            malusAt: {
-              GK: fatigueMalus(player, 'GK'),
-              DEF: fatigueMalus(player, 'DEF'),
-              MID: fatigueMalus(player, 'MID'),
-              ATT: fatigueMalus(player, 'ATT'),
             },
           };
         })

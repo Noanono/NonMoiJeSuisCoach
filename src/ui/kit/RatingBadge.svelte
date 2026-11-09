@@ -1,35 +1,19 @@
 <script lang="ts">
   import { ratingColors } from './rating';
 
-  /** Note du joueur, sur un fond du rouge (faible) au vert (fort), avec en petit ce que lui coûte la fatigue. */
+  /** Note générale, sur un fond qui va du rouge (faible) au vert (fort). */
   interface Props {
     value: number;
     size?: 's' | 'm' | 'l';
-    /** Points perdus à cause de la fatigue, 0 = rien à afficher. */
-    malus?: number;
-    /** Place le malus sous la note, là où la largeur manque. */
-    stacked?: boolean;
   }
 
-  let { value, size = 'm', malus = 0, stacked = false }: Props = $props();
+  let { value, size = 'm' }: Props = $props();
   const colors = $derived(ratingColors(value));
 </script>
 
-<span class="bloc" class:empile={stacked}>
-  <span class="note {size}" style:background={colors.background} style:color={colors.color}>{value}</span>
-  {#if malus > 0}<span class="malus" title="Malus de fatigue : la note réelle est {value - malus}">−{malus}</span>{/if}
-</span>
+<span class="note {size}" style:background={colors.background} style:color={colors.color}>{value}</span>
 
 <style>
-  .bloc {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-  }
-  .empile {
-    flex-direction: column;
-    gap: 0;
-  }
   .note {
     display: inline-block;
     min-width: 1.9em;
@@ -51,15 +35,5 @@
   .l {
     font-size: 26px;
     line-height: 34px;
-  }
-  .malus {
-    padding: 0 2px;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    line-height: 12px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    background: var(--carton);
-    color: var(--craie-fixe);
   }
 </style>

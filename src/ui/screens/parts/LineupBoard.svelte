@@ -147,7 +147,6 @@
               <PlayerCard
                 {player}
                 rating={player.ratingAt[slot.position]}
-                malus={player.malusAt[slot.position]}
                 positionPenalty={player.ratingAt[player.position] - player.ratingAt[slot.position]}
                 selected={selectedId === player.id}
                 dragging={drag?.moving === true && drag.playerId === player.id}

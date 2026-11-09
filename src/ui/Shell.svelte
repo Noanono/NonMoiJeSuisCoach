@@ -50,7 +50,7 @@
       {#if header.rating !== null}
         <div>
           <dt class="tampon">Général équipe</dt>
-          <dd><RatingBadge value={header.rating.base} malus={header.rating.malus} size="l" /></dd>
+          <dd><RatingBadge value={header.rating} size="l" /></dd>
         </div>
       {/if}
       <div>
