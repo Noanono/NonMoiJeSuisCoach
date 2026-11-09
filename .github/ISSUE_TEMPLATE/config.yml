@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question ou discussion générale
+    url: https://github.com/Noanono/NonMoiJeSuisCoach/discussions
+    about: Pose tes questions ou partage tes idées ici plutôt que dans une issue.
+  - name: Faille de sécurité
+    url: https://github.com/Noanono/NonMoiJeSuisCoach/security/advisories/new
+    about: Ne signale jamais une faille de sécurité dans une issue publique.

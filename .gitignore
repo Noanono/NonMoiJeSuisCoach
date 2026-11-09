@@ -1,0 +1,24 @@
+# Dépendances
+node_modules/
+
+# Builds et caches
+dist/
+build/
+.nuxt/
+.output/
+.cache/
+coverage/
+*.log
+
+# Variables d'environnement
+.env
+.env.*
+!.env.example
+
+# Éditeurs et OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+*.swp
