@@ -1,7 +1,9 @@
 import type { Ability, Combo, Rarity } from '../types';
 import { ATTACK_ABILITIES } from './data/attack';
+import { CHAOS_ABILITIES } from './data/chaos';
 import { DEFENSE_ABILITIES } from './data/defense';
 import { GOALKEEPER_ABILITIES } from './data/goalkeeper';
+import { LEGENDARY_ABILITIES } from './data/legendary';
 import { PROVOC_ABILITIES } from './data/provoc';
 import { SABOTAGE_ABILITIES } from './data/sabotage';
 import { SUPPORT_ABILITIES } from './data/support';
@@ -14,6 +16,8 @@ export const ABILITIES: readonly Ability[] = [
   ...DEFENSE_ABILITIES,
   ...SUPPORT_ABILITIES,
   ...GOALKEEPER_ABILITIES,
+  ...CHAOS_ABILITIES,
+  ...LEGENDARY_ABILITIES,
 ];
 
 /** Combos déclenchés par deux capacités à moins de 5 minutes d'intervalle (CAP-15). */

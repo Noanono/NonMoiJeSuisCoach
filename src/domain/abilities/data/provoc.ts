@@ -136,7 +136,7 @@ export const PROVOC_ABILITIES: readonly Ability[] = [
     rarity: 'common',
     category: 'provoc',
     position: 'ANY',
-    targeting: { kind: 'self' },
+    targeting: { kind: 'opponentTeam' },
     trigger: 'anytime',
     description: 'Insulte l’arbitre : −15 % d’agressivité pour les adversaires, intimidés, pendant 15 min',
     downside: 'L’arbitre se venge : +30 % de fautes sifflées contre l’équipe pendant 15 min',
