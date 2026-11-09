@@ -210,7 +210,8 @@ function applyStandingTrend(state: GameState): void {
 /** Offres des clubs IA sur les joueurs du coach (CLUB-03). */
 function updateOffers(state: GameState, rng: Rng): void {
   const nextWeek = state.week + 1;
-  state.offers = activeOffers(state.offers, nextWeek);
+  // Une offre ne peut être acceptée que mercato ouvert : elle tombe à la fermeture (CLUB-02).
+  state.offers = isTransferWindowOpen(nextWeek) ? activeOffers(state.offers, nextWeek) : [];
   const offers = generateIncomingOffers(
     { clubs: state.clubs, players: state.players },
     { coachClubId: state.humanClubId, week: nextWeek, windowOpen: isTransferWindowOpen(nextWeek), abilityOf: getAbility, rng },

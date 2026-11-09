@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { DIALOGUES } from '../club/dialogues';
 import { dismissEventWindow, tick } from '../match';
 import { SEASON_WEEKS } from '../league/calendar';
-import { answerDialogue, autoPickLineup } from './actions';
+import { answerDialogue, autoPickLineup, sellNow, setLineup } from './actions';
 import { humanLineupErrors } from './matches';
 import { finishHumanMatch, startHumanMatch } from './matches';
 import { newGame } from './newGame';
@@ -84,5 +84,25 @@ describe('boucle de saison', () => {
     saves.save(1, state, { clubName: humanClub(state).name, season: state.season, week: state.week });
     expect(saves.load(1)).toEqual(state);
     expect(saves.list()[0]).toMatchObject({ status: 'ok' });
+  });
+
+  test('vendre un titulaire garde une composition valide et la formation du coach (CLUB-02)', () => {
+    const state = newGame({ seed: 21 });
+    const lineup = humanClub(state).lineup!;
+    setLineup(state, { ...lineup, formation: '4-3-3' });
+    autoPickLineup(state);
+    const starter = humanClub(state).lineup!.starters[5]!;
+    expect(sellNow(state, starter).ok).toBe(true);
+    expect(humanClub(state).lineup!.formation).toBe('4-3-3');
+    expect(humanLineupErrors(state)).toEqual([]);
+  });
+
+  test('les offres tombent quand le mercato ferme (CLUB-02, CLUB-03)', () => {
+    const state = newGame({ seed: 4 });
+    state.offers = [{ id: 'o1', playerId: humanClub(state).playerIds[0]!, fromClubId: 'club-01', amount: 1000, expiresWeek: 10 }];
+    playWeek(state);
+    playWeek(state);
+    expect(state.week).toBe(3);
+    expect(state.offers).toEqual([]);
   });
 });

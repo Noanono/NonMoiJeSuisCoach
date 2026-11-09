@@ -117,11 +117,12 @@ export function sellNow(state: GameState, playerId: string): ActionResult {
   const buyers = Object.values(state.clubs).filter((club) => !club.isHuman && club.budget >= price);
   if (buyers.length === 0) return refused('Personne ne veut de lui. Pour l’instant.');
   const buyer = withRng(state, (rng) => rng.pick(buyers));
+  const lineup = humanClub(state).lineup;
   const result = applyTransfer(
     state,
     sellPlayer({ clubs: state.clubs, players: state.players }, { playerId, toClubId: buyer.id, price, windowOpen: transferWindowOpen(state) }),
   );
-  if (result.ok) removeFromLineup(state, playerId);
+  if (result.ok) refillLineup(state, lineup);
   return result;
 }
 
@@ -137,19 +138,15 @@ export function answerOffer(state: GameState, offerId: string, accept: boolean):
     state.players = rejection.world.players;
     return done(rejection.messages.join(' '));
   }
+  const lineup = humanClub(state).lineup;
   const result = applyTransfer(state, acceptOffer(world, offer, { week: state.week, windowOpen: transferWindowOpen(state) }));
-  if (result.ok) removeFromLineup(state, offer.playerId);
+  if (result.ok) refillLineup(state, lineup);
   return result;
 }
 
-function removeFromLineup(state: GameState, playerId: string): void {
-  const club = humanClub(state);
-  if (!club.lineup) return;
-  club.lineup = {
-    ...club.lineup,
-    starters: club.lineup.starters.filter((id) => id !== playerId),
-    bench: club.lineup.bench.filter((id) => id !== playerId),
-  };
+/** Après un départ, l'adjoint recompose le onze en gardant la formation et les consignes du coach. */
+function refillLineup(state: GameState, previous: Lineup | null): void {
+  setLineup(state, autoLineup(humanSquad(state), previous?.formation ?? '4-4-2', previous?.instructions));
 }
 
 /** Réponse au dialogue de la semaine (CLUB-06). */

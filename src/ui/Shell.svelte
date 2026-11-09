@@ -19,6 +19,12 @@
     { screen: 'competitions', label: 'Compétitions' },
   ];
 
+  /** Licencié : plus d'accès aux écrans du club, seul le Bureau (et son écran de fin) reste. */
+  const fired = $derived(store.select((game) => game.status === 'fired'));
+  $effect(() => {
+    if (fired && store.screen !== 'dashboard') store.go('dashboard');
+  });
+
   const header = $derived(
     store.select((game) => ({
       club: humanClub(game).name,
@@ -49,6 +55,7 @@
     <button class="quitter tampon" onclick={() => store.quitToTitle()}>Quitter</button>
   </header>
 
+  {#if !fired}
   <nav aria-label="Écrans du club">
     {#each TABS as tab (tab.screen)}
       <button class="onglet tampon" class:actif={store.screen === tab.screen} aria-current={store.screen === tab.screen ? 'page' : undefined} onclick={() => store.go(tab.screen)}>
@@ -56,6 +63,7 @@
       </button>
     {/each}
   </nav>
+  {/if}
 
   <main>
     {#if store.screen === 'dashboard'}<Dashboard />
