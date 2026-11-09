@@ -39,6 +39,9 @@ export const MYTHIC_ABILITIES: readonly Ability[] = [
     position: 'DEF',
     targeting: { kind: 'team' },
     description: 'Une pommade inconnue de la science. Même l’arbitre revient sur sa décision.',
-    effects: [{ type: 'miracle' }],
+    effects: [
+      { type: 'miracle' },
+      { type: 'modifier', scope: 'team', stat: 'all', value: 0.3, duration: 15 },
+    ],
   }),
 ];

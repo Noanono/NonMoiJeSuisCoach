@@ -16,7 +16,7 @@
   import type { AttributeName } from '../../../domain/types';
   import { ATTRIBUTE_LABEL, availabilityLabel, fullName, POSITION_LABEL } from '../describe';
 
-  /** Fiche joueur (CAP-08, CLUB-08) : attributs, capacité complète, valeur et vente express. */
+  /** Fiche joueur (CAP-08, CLUB-08) : attributs, capacité, valeur, et vente express pour les joueurs du coach. */
   interface Props {
     playerId: string;
     onclose: () => void;
@@ -30,9 +30,12 @@
   const view = $derived(
     store.select((game) => {
       const player = game.players[playerId];
-      if (!player || player.clubId !== game.humanClubId) return null;
+      if (!player) return null;
       const ability = getAbility(player.ability.abilityId);
+      const own = player.clubId === game.humanClubId;
       return {
+        own,
+        club: own ? null : player.clubId ? (game.clubs[player.clubId]?.name ?? 'Club inconnu') : 'Sans club',
         name: fullName(player),
         avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position },
         position: POSITION_LABEL[player.position],
@@ -67,7 +70,7 @@
 </script>
 
 {#if view}
-  <Modal title={view.name} kicker="Fiche joueur · {view.position} · {view.age} ans" {onclose}>
+  <Modal title={view.name} kicker="Fiche joueur · {view.position} · {view.age} ans{view.club ? ` · ${view.club}` : ''}" {onclose}>
     <div class="haut">
       <PlayerAvatar player={view.avatar} size={88} />
       <dl class="chiffres">
@@ -119,9 +122,10 @@
     {#if view.progress.revealed}
       <AbilityPanel ability={view.ability} progress={view.progress} />
     {:else}
-      <p class="texte-s"><span class="tampon">Capacité</span> ??? Elle se dévoilera à sa première activation en match.</p>
+      <p class="texte-s"><span class="tampon">Capacité</span> ??? {view.own ? 'Elle se dévoilera à sa première activation en match.' : 'Elle se dévoilera à son arrivée au club.'}</p>
     {/if}
 
+    {#if view.own}
     <section class="actions" aria-label="Transfert">
       <h3 class="tampon">Vente express</h3>
       {#if !view.windowOpen}
@@ -136,6 +140,7 @@
       {/if}
       <p class="texte-s texte-fort" role="status">{feedback ?? ''}</p>
     </section>
+    {/if}
   </Modal>
 {/if}
 

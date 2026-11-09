@@ -258,6 +258,14 @@ describe('mécaniques des mythiques', () => {
     expect(summarize(state).players.find((report) => report.playerId === 'h-4')!.fatigue).toBe(60);
   });
 
+  test('Le Miracle du kiné booste toute l’équipe, joueurs revenus compris', () => {
+    const state = match({ 3: 'le-miracle-du-kine' });
+    requirePlayer(state, 'h-1').sentOff = true;
+    shout(state, 'h-3');
+    expect(activeEffects(state, 'h-1')[0]).toMatchObject({ stat: 'all', value: 0.3, remaining: 15 });
+    expect(activeEffects(state, 'h-6')[0]).toMatchObject({ stat: 'all', value: 0.3 });
+  });
+
   test('l’IA économise sa jauge et déclenche sa mythique', () => {
     const state = createMatch({
       home: makeSheet({ clubId: 'h', isHuman: true }),

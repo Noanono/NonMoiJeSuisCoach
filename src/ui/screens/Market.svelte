@@ -6,6 +6,7 @@
   import RarityTag from '../kit/RarityTag.svelte';
   import RatingBadge from '../kit/RatingBadge.svelte';
   import OffersList from './parts/OffersList.svelte';
+  import PlayerSheet from './parts/PlayerSheet.svelte';
   import { store } from '../store.svelte';
   import { formatEuros } from '../format';
   import { getAbility } from '../../domain/abilities/catalog';
@@ -81,6 +82,7 @@
     { key: 'salary', label: 'Salaire / sem.', numeric: true, sortValue: (row) => row.salary, firstDirection: 'asc' },
   ];
 
+  let openPlayerId = $state<string | null>(null);
   let sortKey = $state<SortKey>('overall');
   let direction = $state<SortDirection>('desc');
   let ageFilter = $state<AgeBandId | 'all'>('all');
@@ -213,7 +215,7 @@
             {#each visible as listing (listing.id)}
               {@const affordable = listing.price <= transferWindow.budget}
               <tr>
-                <td class="texte-fort"><span class="identite"><PlayerAvatar player={listing.avatar} size={32} />{listing.name}</span></td>
+                <td><span class="identite"><PlayerAvatar player={listing.avatar} size={32} /><button class="lien" onclick={() => (openPlayerId = listing.id)}>{listing.name}</button></span></td>
                 <td><abbr title={POSITION_LABEL[listing.position]}>{POSITION_SHORT[listing.position]}</abbr></td>
                 <td class="num">{listing.age}</td>
                 <td class="num"><RatingBadge value={listing.overall} size="s" /></td>
@@ -246,6 +248,10 @@
     {/if}
   </Card>
 </div>
+
+{#if openPlayerId}
+  <PlayerSheet playerId={openPlayerId} onclose={() => (openPlayerId = null)} />
+{/if}
 
 <style>
   p {

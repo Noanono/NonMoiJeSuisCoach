@@ -173,7 +173,7 @@ CAT-01 : le jeu contient les 46 capacités ci-dessous. Valeurs données au nivea
 | Le Transfert du parking | MIL | Le meilleur joueur de champ adverse rejoint ton équipe jusqu'à la fin du match |
 | Le But en or massif | ATT | Pendant 15 min, chaque but compte double et toute l'équipe gagne +30 % à toutes les stats |
 | Le Kebab du siècle | Banc | 6 adversaires au hasard hors jeu pendant 15 min |
-| Le Miracle du kiné | DEF | Tes exclus et tes blessés reviennent, et toute l'équipe repart à 100 % d'énergie |
+| Le Miracle du kiné | DEF | Tes exclus et tes blessés reviennent, toute l'équipe repart à 100 % d'énergie et gagne +30 % à toutes les stats pendant 15 min |
 
 ## Entraînement
 
