@@ -43,7 +43,7 @@ Le jeu mêle une vraie couche de gestion (effectif, tactique, mercato, budget) e
 | MATCH-05 | Avant le match et pendant les pauses, le coach donne des consignes tactiques (défensif, équilibré, offensif, pressing haut, jeu long…) qui modifient la simulation. |
 | MATCH-06 | À la fin du match, un résumé affiche le score, les buteurs, les cartons, les blessures et l'impact de chaque capacité utilisée. |
 | MATCH-07 | L'équipe adverse, pilotée par l'IA, active elle aussi ses capacités ; le coach les voit annoncées et peut riposter. |
-| MATCH-08 | Le coach peut faire 5 remplacements par match, à tout moment. Un joueur sorti ne revient pas. Un blessé peut être remplacé, pas un exclu. L'IA remplace ses blessés. |
+| MATCH-08 | Le coach peut faire 5 remplacements par match, à tout moment, en glissant un remplaçant sur un joueur du terrain (ou l'inverse) ou depuis le panneau du joueur. Un joueur sorti ne revient pas. Un blessé peut être remplacé, pas un exclu. L'IA remplace ses blessés. |
 | MATCH-09 | Une mini-carte animée montre les joueurs et le ballon. Le coach attaque toujours vers la droite et son équipe est à gauche du tableau de score. |
 | MATCH-10 | Un bouton en coin rappelle l'impact de chaque effet, match en pause. |
 | MATCH-11 | Un but arrête le match et s'annonce au centre de l'écran (buteur, minute, score). Le coach reprend quand il veut. |

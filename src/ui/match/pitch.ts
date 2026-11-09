@@ -2,7 +2,7 @@
  * Présentation du terrain en direct (CAP-03, CAP-09, CAP-16, CAP-17) : placement des
  * joueurs par ligne, état de chaque jeton et effets actifs. Fonctions pures, sans Svelte.
  */
-import { activeEffects, previewActivation, type ActiveEffectView, type MatchPlayer, type MatchState, type Side } from '../../domain/match';
+import { activeEffects, canEnter, canLeave, previewActivation, type ActiveEffectView, type MatchPlayer, type MatchState, type Side } from '../../domain/match';
 import { ratingAtPosition } from '../../domain/player/rating';
 import type { Position, Rarity } from '../../domain/types';
 import type { AvatarPlayer } from '../kit/avatar';
@@ -115,6 +115,8 @@ export interface TokenView {
   reason: string | null;
   chips: EffectChip[];
   focus: TokenFocus;
+  /** Le jeton peut être glissé pour faire un changement. */
+  draggable: boolean;
   /** Coût de la capacité si elle peut partir maintenant, `null` sinon. */
   readyCost: number | null;
   readyRarity: Rarity | null;
@@ -151,7 +153,7 @@ export function tokenView(state: MatchState, player: MatchPlayer, coachSide: Sid
   if (readyCost !== null) parts.push(`capacité prête, coût ${readyCost}`);
   if (focus.chosen) parts.push('cible choisie');
   else if (focus.highlighted) parts.push(state.pending ? 'cible valide' : 'peut agir maintenant');
-  return { id: player.id, name: shortName(player), avatar, position, displaced, rating, energy, own, status, reason, chips, focus, readyCost, readyRarity, halo, label: parts.join(', ') };
+  return { id: player.id, name: shortName(player), avatar, position, displaced, rating, energy, own, status, reason, chips, focus, readyCost, readyRarity, halo, draggable: own && focus.interactive && state.pending === null && (canLeave(player) || canEnter(player)), label: parts.join(', ') };
 }
 
 export interface PitchView {

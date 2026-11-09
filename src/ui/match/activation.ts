@@ -63,6 +63,20 @@ function avatarOf(player: MatchPlayer): AvatarPlayer {
   return { id: player.id, age: player.profile.age, clubId: player.profile.clubId, position: player.profile.position };
 }
 
+/**
+ * Changement obtenu en lâchant un jeton sur un autre (MATCH-08), dans un sens ou dans l'autre :
+ * remplaçant sur titulaire, ou titulaire sur remplaçant. `null` si ce n'est pas un changement possible.
+ */
+export function substitutionFromDrag(state: MatchState, coachSide: Side, draggedId: string, targetId: string): { leavingId: string; enteringId: string } | null {
+  const team = coachSide === 'home' ? state.home : state.away;
+  const dragged = team.players.find((player) => player.id === draggedId);
+  const target = team.players.find((player) => player.id === targetId);
+  if (!dragged || !target || state.status === 'finished' || state.pending !== null || substitutionsLeft(team) <= 0) return null;
+  if (canLeave(dragged) && canEnter(target)) return { leavingId: dragged.id, enteringId: target.id };
+  if (canEnter(dragged) && canLeave(target)) return { leavingId: target.id, enteringId: dragged.id };
+  return null;
+}
+
 function energyOf(player: MatchPlayer): number {
   return Math.round(100 - player.profile.fatigue);
 }

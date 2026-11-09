@@ -79,6 +79,7 @@
   }
 
   function startDrag(event: PointerEvent, playerId: string): void {
+    ignoreNextClick = false;
     if (event.button !== 0) return;
     drag = { playerId, startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY, moving: false };
   }

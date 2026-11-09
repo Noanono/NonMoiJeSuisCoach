@@ -12,6 +12,7 @@ import {
   setInstructions,
   startActivation,
   substitutePlayer,
+  substitutionsLeft,
   tick,
   type ActivationRecord,
   type MatchState,
@@ -20,6 +21,7 @@ import {
 import type { Instructions } from '../../domain/types';
 import type { AvatarPlayer } from '../kit/avatar';
 import { describeEffect } from '../screens/describe';
+import { substitutionFromDrag } from './activation';
 import { goalAlert, type GoalAlert } from './verdict';
 import { store } from '../store.svelte';
 import type { Speed } from './live';
@@ -52,6 +54,8 @@ export class MatchController {
   fx = $state.raw<ActivationFx | null>(null);
   /** Rappel des effets ouvert : l'horloge s'arrête le temps de lire. */
   helpOpen = $state(false);
+  /** Un joueur est en train d'être glissé : l'horloge attend la fin du geste. */
+  dragging = $state(false);
   /** But à annoncer : le match attend que le coach reprenne. */
   goal = $state.raw<GoalAlert | null>(null);
   #goalsSeen = 0;
@@ -83,7 +87,7 @@ export class MatchController {
   });
 
   /** L'horloge tourne : une seule boucle active, coupée dès que quelque chose attend (green code). */
-  readonly running = $derived(!this.paused && this.inspectedId === null && !this.engineWaiting && this.fx === null && !this.helpOpen && this.goal === null);
+  readonly running = $derived(!this.paused && this.inspectedId === null && !this.engineWaiting && this.fx === null && !this.helpOpen && this.goal === null && !this.dragging);
 
   /** Une minute de jeu (MATCH-02). Pause automatique à la mi-temps pour les consignes (MATCH-05). */
   step(): void {
@@ -151,6 +155,15 @@ export class MatchController {
   dismissWindow(): void {
     dismissEventWindow(this.match);
     store.touchMatch();
+  }
+
+  /** Fin d'un glisser sur le terrain : `targetId` est le jeton visé, s'il y en a un. */
+  dropPlayer(draggedId: string, targetId: string | null): void {
+    this.dragging = false;
+    if (!targetId || targetId === draggedId) return;
+    const change = substitutionFromDrag(this.match, this.coachSide, draggedId, targetId);
+    if (change) this.substitute(change.leavingId, change.enteringId);
+    else if (substitutionsLeft(this.coachSide === 'home' ? this.match.home : this.match.away) === 0) store.notify('Plus aucun changement disponible.');
   }
 
   /** Consignes tactiques pendant une pause (MATCH-05). */

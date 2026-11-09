@@ -8,9 +8,16 @@
   interface Props {
     token: TokenView;
     onactivate: (playerId: string) => void;
+    ondragstart?: (event: PointerEvent, playerId: string) => void;
+    /** Pendant un glisser : ce jeton accepte le changement. */
+    dropTarget?: boolean;
+    /** Pendant un glisser : le pointeur est dessus. */
+    hovered?: boolean;
+    /** Ce jeton est celui qu'on déplace. */
+    lifted?: boolean;
   }
 
-  let { token, onactivate }: Props = $props();
+  let { token, onactivate, ondragstart, dropTarget = false, hovered = false, lifted = false }: Props = $props();
 
   /** Au-delà, un « +n » : le détail complet est dans le panneau du joueur. */
   const VISIBLE_CHIPS = 2;
@@ -27,11 +34,16 @@
   class:grise={token.focus.dimmed}
   class:halo-bonus={token.halo === 'bonus'}
   class:halo-malus={token.halo === 'malus'}
+  class:a-glisser={token.draggable}
+  class:cible-changement={dropTarget}
+  class:survol-changement={hovered && dropTarget}
+  class:souleve={lifted}
   data-player-id={token.id}
   disabled={!token.focus.interactive}
   aria-label={token.label}
   title={token.label}
   onclick={() => onactivate(token.id)}
+  onpointerdown={(event) => token.draggable && ondragstart?.(event, token.id)}
 >
   {#if token.readyCost !== null}<span class="pret tampon {token.readyRarity}" aria-hidden="true">{token.readyCost}</span>{/if}
   <span class="portrait">
@@ -108,6 +120,22 @@
     background: var(--scotch);
     color: var(--encre-fixe);
     border-color: var(--encre-fixe);
+  }
+  .a-glisser {
+    touch-action: none;
+    user-select: none;
+  }
+  .cible-changement {
+    outline: var(--trait-epais) dashed var(--scotch);
+    outline-offset: 1px;
+  }
+  .survol-changement {
+    outline: 5px solid var(--scotch);
+    background: var(--scotch);
+    color: var(--encre-fixe);
+  }
+  .souleve {
+    opacity: 0.3;
   }
   .jeton:focus-visible {
     outline: var(--trait-epais) dashed var(--fumigene);
