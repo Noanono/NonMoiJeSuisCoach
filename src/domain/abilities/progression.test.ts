@@ -52,3 +52,19 @@ describe('progression des capacités', () => {
     expect(bridled.risk).toBeLessThan(1);
   });
 });
+
+describe('cohérence du niveau 5', () => {
+  test('la surcharge du niveau 5 ne fait jamais régresser un effet du niveau 4', () => {
+    const l5: Ability = {
+      ...ability,
+      level5: { effects: [{ type: 'modifier', scope: 'self', stat: 'all', value: 0.4, duration: 20 }] },
+    };
+    const value = (level: number) => (statsAtLevel(l5, level).effects[0] as { value: number }).value;
+    expect(value(5)).toBeGreaterThanOrEqual(value(4));
+  });
+
+  test('un malus certain reste certain quel que soit le niveau', () => {
+    const certain: Ability = { ...ability, base: { ...ability.base, risks: [{ chance: 1, label: 'Gueule de bois', effects: [] }] } };
+    expect(statsAtLevel(certain, 4).risks[0]!.chance).toBe(1);
+  });
+});

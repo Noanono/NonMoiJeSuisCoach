@@ -40,18 +40,23 @@ export function xpForActivation(impact: number): number {
 /** Statistiques d'une capacité à un niveau donné (CAP-08, CAP-11). */
 export function statsAtLevel(ability: Ability, level: number): AbilityStats {
   const lvl = clamp(Math.round(level), 1, MAX_LEVEL);
+  // Le niveau 5 garde la progression du niveau 4 et y ajoute sa surcharge propre.
   const steps = Math.min(lvl, MAX_LEVEL - 1) - 1;
-  const scaled: AbilityStats = {
-    successChance: clamp(ability.base.successChance * (1 + steps * EFFECT_GAIN_PER_LEVEL), 0, 1),
-    effects: ability.base.effects.map((effect) => scaleEffect(effect, 1 + steps * EFFECT_GAIN_PER_LEVEL)),
-    risks: ability.base.risks.map((risk) => scaleRisk(risk, 1 - steps * RISK_DROP_PER_LEVEL)),
-    cooldown: shortenCooldown(ability.base.cooldown, steps * COOLDOWN_GAIN_PER_LEVEL),
-    cost: ability.base.cost,
+  const source = lvl === MAX_LEVEL ? { ...ability.base, ...ability.level5 } : ability.base;
+  const effectFactor = 1 + steps * EFFECT_GAIN_PER_LEVEL;
+  const riskFactor = 1 - steps * RISK_DROP_PER_LEVEL;
+  return {
+    successChance: clamp(source.successChance * effectFactor, 0, 1),
+    effects: source.effects.map((effect) => scaleEffect(effect, effectFactor)),
+    risks: source.risks.map((risk) => scaleRisk(risk, riskFactor)),
+    cooldown: lvl === MAX_LEVEL && ability.level5.cooldown ? source.cooldown : shortenCooldown(source.cooldown, steps * COOLDOWN_GAIN_PER_LEVEL),
+    cost: source.cost,
   };
-  return lvl === MAX_LEVEL ? { ...scaled, ...ability.level5 } : scaled;
 }
 
+/** Un malus certain (chance 1) reste certain : seul le hasard diminue avec le niveau. */
 export function scaleRisk(risk: Risk, factor: number): Risk {
+  if (risk.chance >= 1) return risk;
   return { ...risk, chance: clamp(risk.chance * factor, 0, 1) };
 }
 
