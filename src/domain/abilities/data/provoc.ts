@@ -190,8 +190,8 @@ export const PROVOC_ABILITIES: readonly Ability[] = [
       cooldown: { kind: 'minutes', value: 20 },
       cost: 1,
     },
-    // Le nombre de cibles est porté par `targeting`, hors de portée de la surcharge de niveau 5.
     level5: {},
+    level5Targeting: { count: 2 },
     tags: ['vice'],
     hidden: false,
   },

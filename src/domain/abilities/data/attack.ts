@@ -253,8 +253,8 @@ export const ATTACK_ABILITIES: readonly Ability[] = [
       cooldown: { kind: 'minutes', value: 20 },
       cost: 2,
     },
-    // Le nombre de cibles est porté par `targeting`, hors de portée de la surcharge de niveau 5.
     level5: {},
+    level5Targeting: { count: 3 },
     tags: [],
     hidden: false,
   },

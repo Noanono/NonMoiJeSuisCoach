@@ -178,8 +178,8 @@ export const LEGENDARY_ABILITIES: readonly Ability[] = [
       cooldown: LEGENDARY_COOLDOWN,
       cost: LEGENDARY_COST,
     },
-    // Le nombre de cibles est porté par `targeting`, hors de portée de la surcharge de niveau 5.
     level5: {},
+    level5Targeting: { count: 4 },
     tags: ['vice'],
     hidden: true,
   },

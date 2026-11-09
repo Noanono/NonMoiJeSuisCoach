@@ -70,3 +70,13 @@ describe('combos (CAP-15)', () => {
     expect(findCombo('le-peteur', 'le-plongeur')).toBeUndefined();
   });
 });
+
+describe('ciblage du niveau 5 (CAP-11)', () => {
+  test('les capacités qui gagnent des cibles au niveau 5 en ont réellement plus', () => {
+    const widened = ABILITIES.filter((ability) => ability.level5Targeting);
+    expect(widened.length).toBeGreaterThanOrEqual(8);
+    for (const ability of widened) {
+      expect(ability.level5Targeting!.count!).toBeGreaterThan(ability.targeting.count ?? 1);
+    }
+  });
+});

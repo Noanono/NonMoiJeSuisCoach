@@ -227,6 +227,8 @@ export interface Ability {
   base: AbilityStats;
   /** Surcharge appliquée au niveau 5 (CAP-11). */
   level5: Partial<AbilityStats>;
+  /** Ciblage élargi au niveau 5 (« deux crampons, deux cibles »). */
+  level5Targeting?: Partial<Targeting>;
   /** Mots-clés de contexte (CAP-14, FRAS-01) : 'alcohol' = +50 % après une grosse soirée. */
   tags: ('alcohol' | 'vice' | 'family')[];
   /** Capacité cachée jusqu'à l'arrivée au club ou la première activation (CAP-13). */

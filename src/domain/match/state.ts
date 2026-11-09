@@ -5,7 +5,7 @@ import type { Ability, Combo, Player, Position } from '../types';
 import { createRng, type Rng } from '../core/rng';
 import { effectiveRating, FORMATION_SLOTS } from '../player/rating';
 import { getAbility, COMBOS } from '../abilities/catalog';
-import { contextMultiplier, scaleEffect, scaleRisk, statsAtLevel } from '../abilities/progression';
+import { contextMultiplier, MAX_LEVEL, scaleEffect, scaleRisk, statsAtLevel } from '../abilities/progression';
 import type { AbilityContext } from '../abilities/progression';
 import type {
   MatchEvent,
@@ -226,6 +226,10 @@ function findAbility(lookup: AbilityLookup, id: string): Ability | null {
   }
 }
 
+function targetingAtLevel(ability: Ability, level: number): Ability['targeting'] {
+  return level >= MAX_LEVEL && ability.level5Targeting ? { ...ability.targeting, ...ability.level5Targeting } : ability.targeting;
+}
+
 /** Niveau (CAP-11) puis contexte (CAP-14) : le bonus amplifie les effets favorables, le risque les revers. */
 export function prepareAbility(ability: Ability, level: number, context: AbilityContext): PreparedAbility {
   const stats = statsAtLevel(ability, level);
@@ -235,7 +239,7 @@ export function prepareAbility(ability: Ability, level: number, context: Ability
     name: ability.name,
     category: ability.category,
     position: ability.position,
-    targeting: ability.targeting,
+    targeting: targetingAtLevel(ability, level),
     trigger: ability.trigger,
     condition: ability.condition ?? null,
     description: ability.description,
