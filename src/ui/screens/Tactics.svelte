@@ -9,7 +9,7 @@
   import { getAbility } from '../../domain/abilities/catalog';
   import { autoPickLineup, humanClub, humanLineupErrors, humanSquad, setInstructions, setLineup } from '../../domain/game';
   import { EMPTY_SLOT, MAX_BENCH_SIZE, STARTERS_COUNT } from '../../domain/league/lineup';
-  import { effectiveRating, FORMATIONS, isAvailable, overall } from '../../domain/player/rating';
+  import { fatigueMalus, FORMATIONS, isAvailable, overall, ratingAtPosition } from '../../domain/player/rating';
   import type { Formation, Instructions, Mentality } from '../../domain/types';
   import { availabilityLabel, fullName, MENTALITY_LABEL, POSITION_ORDER } from './describe';
   import { emptyLineup, movePlayer, type LineupDrop } from './lineupEdit';
@@ -38,10 +38,16 @@
             abilityName: player.ability.revealed ? ability.name : UNKNOWN_ABILITY,
             rarity: player.ability.revealed ? ability.rarity : null,
             ratingAt: {
-              GK: Math.round(effectiveRating(player, 'GK')),
-              DEF: Math.round(effectiveRating(player, 'DEF')),
-              MID: Math.round(effectiveRating(player, 'MID')),
-              ATT: Math.round(effectiveRating(player, 'ATT')),
+              GK: Math.round(ratingAtPosition(player, 'GK')),
+              DEF: Math.round(ratingAtPosition(player, 'DEF')),
+              MID: Math.round(ratingAtPosition(player, 'MID')),
+              ATT: Math.round(ratingAtPosition(player, 'ATT')),
+            },
+            malusAt: {
+              GK: fatigueMalus(player, 'GK'),
+              DEF: fatigueMalus(player, 'DEF'),
+              MID: fatigueMalus(player, 'MID'),
+              ATT: fatigueMalus(player, 'ATT'),
             },
           };
         })

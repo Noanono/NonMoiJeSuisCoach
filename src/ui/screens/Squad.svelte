@@ -14,7 +14,7 @@
   import { wageBill } from '../../domain/club/finance';
   import { playerValue } from '../../domain/club/valuation';
   import { humanSquad } from '../../domain/game';
-  import { overall } from '../../domain/player/rating';
+  import { fatigueMalus, overall } from '../../domain/player/rating';
   import type { Rarity } from '../../domain/types';
   import { availabilityLabel, fullName, POSITION_LABEL, POSITION_ORDER, POSITION_SHORT } from './describe';
   import { sortRows, type SortDirection } from './views';
@@ -31,6 +31,7 @@
     positionOrder: number;
     age: number;
     overall: number;
+    malus: number;
     evolution: number;
     fatigue: number;
     availability: string | null;
@@ -79,6 +80,7 @@
           positionOrder: POSITION_ORDER[player.position],
           age: player.age,
           overall: overall(player),
+          malus: fatigueMalus(player, player.position),
           evolution: overall(player) - player.overallAtSeasonStart,
           fatigue: player.fatigue,
           availability: availabilityLabel(player),
@@ -149,7 +151,7 @@
               <td><span class="identite"><PlayerAvatar player={row.avatar} size={32} /><button class="lien" onclick={() => (openPlayerId = row.id)}>{row.name}</button></span></td>
               <td><abbr title={row.positionLabel}>{row.position}</abbr></td>
               <td class="num">{row.age}</td>
-              <td class="num"><RatingBadge value={row.overall} size="s" /></td>
+              <td class="num"><RatingBadge value={row.overall} malus={row.malus} size="s" /></td>
               <td class="num"><DeltaBadge value={row.evolution} /></td>
               <td class="num">{row.fatigue}</td>
               <td>

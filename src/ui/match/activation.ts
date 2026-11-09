@@ -4,7 +4,7 @@
  */
 import { RARITY_LABEL } from '../../domain/abilities/progression';
 import { canEnter, canLeave, MAX_SUBSTITUTIONS, previewActivation, substitutionsLeft, type ActivationPreview, type MatchPlayer, type MatchState, type Side } from '../../domain/match';
-import { effectiveRating } from '../../domain/player/rating';
+import { fatigueMalus, ratingAtPosition } from '../../domain/player/rating';
 import type { Position, Rarity } from '../../domain/types';
 import type { AvatarPlayer } from '../kit/avatar';
 import { describeEffect, POSITION_SHORT } from '../screens/describe';
@@ -45,8 +45,10 @@ export interface SubstitutionOption {
   name: string;
   avatar: AvatarPlayer;
   position: string;
-  /** Note de celui qui entrerait, au poste libéré. */
+  /** Note de celui qui entrerait, au poste libéré, sans la fatigue. */
   rating: number;
+  /** Ce que la fatigue lui retire à ce poste. */
+  malus: number;
   displaced: boolean;
   /** Énergie du joueur proposé. */
   energy: number;
@@ -82,7 +84,8 @@ export function substitutionPanel(state: MatchState, coachSide: Side, playerId: 
       name: entering.name,
       avatar: avatarOf(entering),
       position: POSITION_SHORT[entering.profile.position],
-      rating: Math.round(effectiveRating(entering.profile, line)),
+      rating: Math.round(ratingAtPosition(entering.profile, line)),
+      malus: fatigueMalus(entering.profile, line),
       displaced: entering.profile.position !== line,
       energy: energyOf(entering),
     }));
@@ -95,7 +98,8 @@ export function substitutionPanel(state: MatchState, coachSide: Side, playerId: 
       name: leaving.name,
       avatar: avatarOf(leaving),
       position: POSITION_SHORT[leaving.line!],
-      rating: Math.round(effectiveRating(player.profile, leaving.line!)),
+      rating: Math.round(ratingAtPosition(player.profile, leaving.line!)),
+      malus: fatigueMalus(player.profile, leaving.line!),
       displaced: player.profile.position !== leaving.line,
       energy: energyOf(leaving),
     }));

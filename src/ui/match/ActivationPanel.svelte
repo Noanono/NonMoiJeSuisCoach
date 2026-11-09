@@ -96,7 +96,7 @@
                 <PlayerAvatar player={option.avatar} size={26} />
                 <span class="option-nom texte-s texte-fort">{option.name}</span>
                 <span class="tampon" class:hors={option.displaced}>{option.position}</span>
-                <RatingBadge value={option.rating} size="s" />
+                <RatingBadge value={option.rating} malus={option.malus} size="s" />
                 <span class="option-energie"><EnergyBar energy={option.energy} /></span>
               </button>
             </li>

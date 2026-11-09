@@ -46,8 +46,18 @@ export function positionFactor(natural: Position, played: Position): number {
   return OUT_OF_POSITION[natural][played];
 }
 
+/** Note d'un joueur frais à un poste donné (EFF-02) : c'est celle qu'on affiche. */
+export function ratingAtPosition(player: Player, played: Position): number {
+  return clamp(overall(player) * positionFactor(player.position, played), 1, 99);
+}
+
+/** Points de note affichée que la fatigue lui fait perdre en ce moment (EFF-04). */
+export function fatigueMalus(player: Player, played: Position): number {
+  return Math.round(ratingAtPosition(player, played)) - Math.round(effectiveRating(player, played));
+}
+
 /**
- * Performance effective d'un joueur à un poste donné, en tenant compte
+ * Performance réelle d'un joueur à un poste donné, en tenant compte
  * du poste (EFF-02) et de la fatigue (EFF-04).
  */
 export function effectiveRating(player: Player, played: Position): number {

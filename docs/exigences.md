@@ -27,7 +27,7 @@ Le jeu mêle une vraie couche de gestion (effectif, tactique, mercato, budget) e
 | EFF-01 | Chaque joueur possède des attributs (vitesse, technique, physique, tir, défense, gardien…) et une note globale calculée à partir d'eux. |
 | EFF-02 | Chaque joueur a un poste principal (gardien, défenseur, milieu, attaquant) ; un joueur hors de son poste est moins performant. |
 | EFF-03 | Le coach choisit le onze de départ, les remplaçants et la formation (4-4-2, 4-3-3, 3-5-2, 5-3-2…) en déplaçant des cartes entre le terrain, le banc et la tribune. |
-| EFF-04 | Les joueurs accumulent de la fatigue uniquement en jouant et récupèrent au repos. Plus un joueur est fatigué, moins il est bon (jusqu'à −50 %) et plus il risque de se blesser. Son énergie restante est visible en match et dans Tactique. |
+| EFF-04 | Les joueurs accumulent de la fatigue uniquement en jouant et récupèrent au repos. Plus un joueur est fatigué, moins il est bon (jusqu'à −50 %) et plus il risque de se blesser. Son énergie restante est visible en match et dans Tactique. La note affichée reste celle du joueur frais, avec en petit le malus dû à la fatigue. |
 | EFF-05 | Les joueurs peuvent se blesser en match. La plupart des blessures se soignent en moins d'une semaine ; seules les grosses blessures, rares, font manquer plusieurs matchs. |
 | EFF-06 | Chaque joueur a un avatar dessiné, déduit de son identité : il garde le même toute sa carrière. |
 | EFF-08 | Chaque joueur possède une seule capacité personnelle, activable par le coach pendant le match. |

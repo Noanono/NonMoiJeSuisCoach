@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { effectiveRating, injuryRisk, overall, FORMATION_SLOTS } from './rating';
+import { effectiveRating, fatigueMalus, injuryRisk, overall, ratingAtPosition, FORMATION_SLOTS } from './rating';
 import { makePlayer } from '../testing/fixtures';
 
 describe('note des joueurs', () => {
@@ -15,6 +15,14 @@ describe('note des joueurs', () => {
   test('la fatigue réduit la performance (EFF-04)', () => {
     const fresh = makePlayer();
     expect(effectiveRating(makePlayer({ fatigue: 80 }), 'ATT')).toBeLessThan(effectiveRating(fresh, 'ATT'));
+  });
+
+  test('la note affichée ignore la fatigue, le malus dit ce qu’elle coûte (EFF-04)', () => {
+    const tired = makePlayer({ fatigue: 40 });
+    expect(ratingAtPosition(tired, 'ATT')).toBe(overall(tired));
+    expect(fatigueMalus(tired, 'ATT')).toBe(Math.round(overall(tired)) - Math.round(effectiveRating(tired, 'ATT')));
+    expect(fatigueMalus(tired, 'ATT')).toBeGreaterThan(0);
+    expect(fatigueMalus(makePlayer(), 'ATT')).toBe(0);
   });
 
   test('un joueur fatigué se blesse plus souvent (EFF-04)', () => {
