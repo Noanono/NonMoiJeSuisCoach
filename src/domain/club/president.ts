@@ -112,9 +112,9 @@ const HOME_REPUTATION_EDGE = 5;
 const EXPECTATION_REPUTATION_GAP = 10;
 /** Variation de confiance selon le résultat et ce que le président attendait. */
 const MATCH_CONFIDENCE_DELTA: Record<MatchExpectation, Record<MatchOutcome, number>> = {
-  favourite: { win: 2, draw: -4, loss: -8 },
-  even: { win: 4, draw: 0, loss: -4 },
-  underdog: { win: 8, draw: 3, loss: -1 },
+  favourite: { win: 3, draw: -2, loss: -5 },
+  even: { win: 4, draw: 0, loss: -3 },
+  underdog: { win: 6, draw: 2, loss: 0 },
 };
 const BIG_SCORE_MARGIN = 4;
 const HUMILIATION_CONFIDENCE_PENALTY = -5;
@@ -156,6 +156,16 @@ export function confidenceAfterMatch(confidence: number, review: MatchReview): C
   return { confidence: next, delta: next - confidence, message: MATCH_REACTION[review.outcome] };
 }
 
+/** Tendance hebdomadaire selon le classement : objectif en vue ou zone rouge (CLUB-04, CLUB-05). */
+export const ON_TRACK_WEEKLY_CONFIDENCE = 1;
+export const DANGER_ZONE_WEEKLY_CONFIDENCE = -1;
+
+export function confidenceTrend(position: number, objective: SeasonObjective, divisionSize: number, relegated: number): number {
+  if (position <= objective.targetPosition) return ON_TRACK_WEEKLY_CONFIDENCE;
+  if (relegated > 0 && position > divisionSize - relegated) return DANGER_ZONE_WEEKLY_CONFIDENCE;
+  return 0;
+}
+
 export type ConfidenceIncident = 'clubFine' | 'playerFined' | 'frasque';
 
 /** Amende payée par le club, amende infligée à un joueur (le président aime l'ordre et l'argent), frasque. */
@@ -175,9 +185,9 @@ export function isFired(confidence: number): boolean {
 // ---------------------------------------------------------------------------
 
 const LEAGUE_MET_BONUS = 15;
-const LEAGUE_MISSED_PENALTY = -20;
+const LEAGUE_MISSED_PENALTY = -10;
 const CUP_MET_BONUS = 5;
-const CUP_MISSED_PENALTY = -5;
+const CUP_MISSED_PENALTY = -3;
 
 export interface SeasonResult {
   finalPosition: number;

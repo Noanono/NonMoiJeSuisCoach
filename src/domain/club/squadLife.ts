@@ -11,11 +11,11 @@ import { clampGauge, playerName, type AbilityLookup, type FrasqueEvent, type Mat
 
 /** Fatigue effacée en une semaine (EFF-04). */
 const REST_RECOVERY = 35;
-const PLAYED_RECOVERY = 15;
+const PLAYED_RECOVERY = 27;
 
 /** Moral (EFF-06). */
 const PLAYED_MORALE = 3;
-const BENCHED_MORALE = -4;
+const BENCHED_MORALE = -2;
 const RESULT_MORALE: Record<MatchOutcome, number> = { win: 4, draw: 0, loss: -4 };
 const NEW_SUSPENSION_MORALE = -5;
 
