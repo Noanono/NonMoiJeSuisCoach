@@ -1,17 +1,21 @@
 <script lang="ts">
+  import type { Side } from '../../domain/match';
   import Button from '../kit/Button.svelte';
   import Card from '../kit/Card.svelte';
   import { store } from '../store.svelte';
+  import FinalReport from './FinalReport.svelte';
   import LiveMatch from './LiveMatch.svelte';
 
-  const coachSide = $derived.by(() => {
+  const coachSide = $derived.by((): Side => {
     const match = store.match;
     if (!match) return 'home';
     return store.select((game) => game.humanClubId) === match.home.clubId ? 'home' : 'away';
   });
 </script>
 
-{#if store.match}
+{#if store.match && store.lastSummary}
+  <FinalReport summary={store.lastSummary} {coachSide} />
+{:else if store.match}
   {#key store.match}
     <LiveMatch match={store.match} {coachSide} />
   {/key}

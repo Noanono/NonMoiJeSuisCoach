@@ -95,6 +95,9 @@
     align-items: flex-end;
     text-align: right;
   }
+  .exterieur {
+    align-items: flex-start;
+  }
   .nom {
     overflow: hidden;
     text-overflow: ellipsis;
