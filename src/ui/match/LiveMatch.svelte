@@ -5,6 +5,9 @@
   import { minuteIntervalMs } from './live';
   import ActivationPanel from './ActivationPanel.svelte';
   import CoachBand from './CoachBand.svelte';
+  import GaugePanel from './GaugePanel.svelte';
+  import InstructionsPanel from './InstructionsPanel.svelte';
+  import LiveFeed from './LiveFeed.svelte';
   import Pitch from './Pitch.svelte';
   import Scoreboard from './Scoreboard.svelte';
 
@@ -50,7 +53,11 @@
 
   <div class="disposition">
     <Pitch {controller} />
-    <aside class="cote"></aside>
+    <aside class="cote">
+      <GaugePanel {controller} />
+      <InstructionsPanel {controller} />
+      <LiveFeed {controller} />
+    </aside>
   </div>
 
   {#if controller.inspectedId}
