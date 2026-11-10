@@ -6,7 +6,7 @@ import { clamp } from '../core/rng';
 import { comment } from './commentary';
 import { creditActive, IMPACT } from './impact';
 import { pickAssister } from './assists';
-import { GAUGE_MAX, isOnPitch, opponentSide, pushEvent, teamOf, type Run } from './state';
+import { GAUGE_MAX, isActive, opponentSide, pushEvent, teamOf, type Run } from './state';
 import type { Consequence, MatchPlayer, MatchState, Side, TeamState } from './types';
 import { openTriggers } from './windows';
 
@@ -44,10 +44,10 @@ export function recordGoal(run: Run, side: Side, scorer: MatchPlayer, options: G
   const value = team.doubleGoalsUntil >= state.elapsed ? 2 : 1;
   team.goals += value;
   scorer.goals++;
-  // Pas de passeur sur penalty.
+  // Pas de passeur sur penalty, ni parmi les joueurs au sol.
   const assister = penalty
     ? undefined
-    : pickAssister(run.rng, team.players.filter((player) => player !== scorer && isOnPitch(player)), (player) => player.line ?? player.profile.position);
+    : pickAssister(run.rng, team.players.filter((player) => player !== scorer && isActive(player, state.elapsed)), (player) => player.line ?? player.profile.position);
   if (assister) assister.assists++;
   state.goals.push({
     side,
