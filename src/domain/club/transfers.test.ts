@@ -128,6 +128,14 @@ describe('offres des clubs IA (CLUB-03)', () => {
     expect(result.ok).toBe(false);
   });
 
+  test('les offres arrivent souvent, et pas toujours sur les mêmes joueurs', () => {
+    const world = makeWorld();
+    const rng = createRng(3);
+    const weeks = Array.from({ length: 40 }, () => generateIncomingOffers(world, { coachClubId: 'coach', week: 3, windowOpen: true, abilityOf, rng }));
+    expect(weeks.flat().length / weeks.length).toBeGreaterThan(1.5);
+    expect(new Set(weeks.flat().map((offer) => offer.playerId)).size).toBeGreaterThan(8);
+  });
+
   test('les clubs IA font des offres quand le mercato est ouvert', () => {
     const world = makeWorld();
     const rng = createRng(7);

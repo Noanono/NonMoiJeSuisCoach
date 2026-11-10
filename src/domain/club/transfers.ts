@@ -23,11 +23,12 @@ const FREE_AGENT_SIGNING_RATIO = 0.3;
 const PRICE_ROUNDING = 100;
 
 /** Offres IA (CLUB-03). */
-const OFFER_BASE_CHANCE = 0.05;
+/** Chance qu'un joueur du coach reçoive une offre, chaque semaine de mercato. */
+const OFFER_BASE_CHANCE = 0.15;
 const OFFER_MIN_RATIO = 0.8;
 const OFFER_MAX_RATIO = 1.3;
 const OFFER_VALIDITY_WEEKS = 2;
-const MAX_OFFERS_PER_WEEK = 3;
+const MAX_OFFERS_PER_WEEK = 4;
 
 export type TransferRefusal =
   | 'windowClosed'
@@ -206,12 +207,22 @@ function pickBidder(world: TransferWorld, coachClubId: string, amount: number, r
   return bidders.length > 0 ? rng.pick(bidders) : null;
 }
 
+function shuffled<T>(items: readonly T[], rng: Rng): T[] {
+  const copy = [...items];
+  for (let index = copy.length - 1; index > 0; index--) {
+    const other = rng.int(0, index);
+    [copy[index], copy[other]] = [copy[other]!, copy[index]!];
+  }
+  return copy;
+}
+
 /** Offres reçues cette semaine sur les joueurs du coach (CLUB-03). */
 export function generateIncomingOffers(world: TransferWorld, input: OfferGenerationInput): IncomingOffer[] {
   const coachClub = world.clubs[input.coachClubId];
   if (!input.windowOpen || !coachClub || coachClub.playerIds.length <= MIN_SQUAD_SIZE) return [];
   const offers: IncomingOffer[] = [];
-  for (const playerId of coachClub.playerIds) {
+  // Ordre tiré au hasard : sinon les premiers de la liste raflent toutes les offres.
+  for (const playerId of shuffled(coachClub.playerIds, input.rng)) {
     if (offers.length >= MAX_OFFERS_PER_WEEK) break;
     const player = world.players[playerId];
     if (!player) continue;

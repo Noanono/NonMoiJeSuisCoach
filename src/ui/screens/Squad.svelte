@@ -40,9 +40,13 @@
     rarityKey: Rarity | null;
     rarityOrder: number;
     value: number;
+    matches: number;
+    goals: number;
+    yellowCards: number;
+    redCards: number;
   }
 
-  type SortKey = 'name' | 'position' | 'age' | 'overall' | 'evolution' | 'fatigue' | 'availability' | 'ability' | 'value';
+  type SortKey = 'name' | 'position' | 'age' | 'overall' | 'evolution' | 'matches' | 'goals' | 'cards' | 'fatigue' | 'availability' | 'ability' | 'value';
 
   interface Column {
     key: SortKey;
@@ -59,6 +63,9 @@
     { key: 'age', label: 'Âge', numeric: true, sortValue: (row) => row.age, firstDirection: 'asc' },
     { key: 'overall', label: 'Note', numeric: true, sortValue: (row) => row.overall, firstDirection: 'desc' },
     { key: 'evolution', label: 'Évol.', numeric: true, sortValue: (row) => row.evolution, firstDirection: 'desc' },
+    { key: 'matches', label: 'MJ', numeric: true, sortValue: (row) => row.matches, firstDirection: 'desc' },
+    { key: 'goals', label: 'Buts', numeric: true, sortValue: (row) => row.goals, firstDirection: 'desc' },
+    { key: 'cards', label: 'Cartons', numeric: true, sortValue: (row) => row.redCards * 10 + row.yellowCards, firstDirection: 'desc' },
     { key: 'fatigue', label: 'Fatigue', numeric: true, sortValue: (row) => row.fatigue, firstDirection: 'desc' },
     { key: 'availability', label: 'Dispo', numeric: false, sortValue: (row) => row.availability ?? '', firstDirection: 'desc' },
     { key: 'ability', label: 'Capacité', numeric: false, sortValue: (row) => row.rarityOrder * 1000 - row.overall, firstDirection: 'desc' },
@@ -88,9 +95,10 @@
           rarityKey: known ? ability.rarity : null,
           rarityOrder: known ? RARITY_ORDER[ability.rarity] : 0,
           value: playerValue(player, ability.rarity),
+          ...player.seasonStats,
         };
       });
-      return { rows, wages: wageBill(players) };
+      return { rows, wages: wageBill(players), totalValue: rows.reduce((total, row) => total + row.value, 0) };
     }),
   );
 
@@ -118,7 +126,7 @@
 <div class="ecran">
   <Card title="Effectif">
     {#snippet actions()}
-      <span class="tampon">{squad.rows.length} joueurs · salaires {formatEuros(squad.wages)} / sem.</span>
+      <span class="tampon">{squad.rows.length} joueurs · valeur totale {formatEuros(squad.totalValue)} · salaires {formatEuros(squad.wages)} / sem.</span>
     {/snippet}
     <div class="tri-barre">
       <label class="champ">
@@ -131,7 +139,7 @@
     </div>
     <div class="defilant">
       <table class="tableau">
-        <caption class="texte-s discret">Clique sur un nom pour ouvrir sa fiche. Évol. : points gagnés ou perdus depuis le début de la saison.</caption>
+        <caption class="texte-s discret">Clique sur un nom pour ouvrir sa fiche. Évol. : points gagnés ou perdus depuis le début de la saison. MJ : matchs joués cette saison. Cartons : jaunes puis rouges.</caption>
         <thead>
           <tr>
             {#each COLUMNS as column (column.key)}
@@ -151,6 +159,9 @@
               <td class="num">{row.age}</td>
               <td class="num"><RatingBadge value={row.overall} size="s" /></td>
               <td class="num"><DeltaBadge value={row.evolution} /></td>
+              <td class="num">{row.matches}</td>
+              <td class="num">{row.goals}</td>
+              <td class="num"><span class="jaune">{row.yellowCards}</span> <span class="rouge">{row.redCards}</span></td>
               <td class="num">{row.fatigue}</td>
               <td>
                 {#if row.availability}<span class="malus">{row.availability}</span>{:else}<span class="discret">Apte</span>{/if}
@@ -187,6 +198,22 @@
     border: var(--trait-fin) solid var(--encre);
     padding: var(--space-1) var(--space-2);
     cursor: pointer;
+  }
+  .jaune,
+  .rouge {
+    display: inline-block;
+    min-width: 1.5em;
+    padding: 0 2px;
+    text-align: center;
+    border: 1px solid var(--encre-fixe);
+    color: var(--encre-fixe);
+  }
+  .jaune {
+    background: var(--scotch);
+  }
+  .rouge {
+    background: var(--carton);
+    color: var(--craie-fixe);
   }
   .identite {
     display: flex;
