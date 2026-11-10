@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { DIALOGUES } from '../club/dialogues';
-import { facilitiesOf, upgradeCost } from '../club/facilities';
+import { facilitiesOf, MAX_FACILITY_LEVEL, upgradeCost } from '../club/facilities';
 import { createRng } from '../core/rng';
 import { dismissEventWindow, tick } from '../match';
 import { overall } from '../player/rating';
@@ -86,16 +86,16 @@ describe('centre de formation (CLUB-07, CLUB-09)', () => {
 });
 
 describe('installations (CLUB-09)', () => {
-  test('une amélioration coûte du budget et monte le niveau, jusqu’au niveau 3', () => {
+  test('une amélioration coûte du budget et monte le niveau, jusqu’au niveau maximum', () => {
     const state = newGame({ seed: 34 });
     const club = humanClub(state);
     club.budget = 1_000_000;
-    for (let level = 0; level < 3; level++) {
+    for (let level = 0; level < MAX_FACILITY_LEVEL; level++) {
       const budget = club.budget;
       expect(upgradeFacility(state, 'buvette').ok).toBe(true);
       expect(club.budget).toBe(budget - upgradeCost(level)!);
     }
-    expect(facilitiesOf(club).buvette).toBe(3);
+    expect(facilitiesOf(club).buvette).toBe(MAX_FACILITY_LEVEL);
     expect(upgradeFacility(state, 'buvette').ok).toBe(false);
   });
 

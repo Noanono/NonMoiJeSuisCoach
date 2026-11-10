@@ -62,7 +62,7 @@ Le jeu mêle une vraie couche de gestion (effectif, tactique, mercato, budget) e
 | CLUB-06 | Des dialogues humoristiques interpellent régulièrement le coach (président, joueurs, journaliste local, supporters, femme du président…) avec des choix de réponse qui ont des conséquences. |
 | CLUB-07 | Chaque saison, le centre de formation promeut un jeune en équipe première, avec un potentiel et parfois une capacité spéciale déjà visible. Plus le centre est développé, plus sa note et son potentiel sont élevés. |
 | CLUB-08 | La valeur d'un joueur au mercato est calculée à partir de sa note globale et de la rareté de sa capacité : à note égale, un joueur avec une capacité légendaire vaut nettement plus qu'un joueur avec une capacité commune. La rareté et la valeur sont affichées sur la fiche du joueur. |
-| CLUB-09 | Le coach améliore cinq installations avec son budget (trois niveaux chacune) : buvette (recettes), tribunes (sponsors et avantage du terrain), vestiaires (récupération), centre d'entraînement (progression) et centre de formation (qualité du jeune promu). |
+| CLUB-09 | Le coach améliore cinq installations avec son budget (cinq niveaux chacune, de 10 000 € à 160 000 €) : buvette (recettes), tribunes (sponsors et avantage du terrain), vestiaires (récupération), centre d'entraînement (progression) et centre de formation (qualité du jeune promu). |
 
 ## Univers et compétitions
 

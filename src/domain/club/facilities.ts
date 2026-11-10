@@ -1,17 +1,17 @@
 import type { Club, Facilities, FacilityId } from '../types';
 
 /**
- * Installations du club (CLUB-09) : cinq bâtiments à améliorer avec le budget, trois niveaux chacun.
+ * Installations du club (CLUB-09) : cinq bâtiments à améliorer avec le budget, cinq niveaux chacun.
  * Chaque niveau rapporte un bonus chiffré ; aucun entretien à payer.
  */
 
-export const MAX_FACILITY_LEVEL = 3;
+export const MAX_FACILITY_LEVEL = 5;
 export const FACILITY_IDS: readonly FacilityId[] = ['buvette', 'tribunes', 'vestiaires', 'entrainement', 'formation'];
 export const NO_FACILITIES: Facilities = { buvette: 0, tribunes: 0, vestiaires: 0, entrainement: 0, formation: 0 };
 
-/** Prix du premier niveau ; chaque niveau suivant coûte 2,5 fois plus. */
+/** Prix du premier niveau ; chaque niveau suivant coûte deux fois plus. */
 const BASE_COST = 10_000;
-const COST_GROWTH = 2.5;
+const COST_GROWTH = 2;
 
 /** Bonus par niveau. */
 const BUVETTE_PER_LEVEL = 0.25;
@@ -20,7 +20,7 @@ const HOME_ADVANTAGE_BASE = 1.1;
 const HOME_ADVANTAGE_PER_LEVEL = 0.03;
 const RECOVERY_PER_LEVEL = 5;
 const TRAINING_PER_LEVEL = 0.2;
-const YOUTH_RATING_PER_LEVEL = 4;
+const YOUTH_RATING_PER_LEVEL = 3;
 const YOUTH_POTENTIAL_PER_LEVEL = 5;
 
 export interface FacilityInfo {
