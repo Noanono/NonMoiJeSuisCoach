@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { getAbility } from '../abilities/catalog';
+import type { Effect } from '../types';
 import { recordGoal } from './actions';
 import { confirmActivation, previewActivation, selectTarget, startActivation } from './activation';
 import { makeSheet } from './fixtures';
@@ -8,6 +10,13 @@ import { beginRun, createMatch, endRun, requirePlayer } from './state';
 import { summarize } from './summary';
 import type { MatchState } from './types';
 import { dismissEventWindow } from './windows';
+
+/** Effet d'un type donné d'une capacité du catalogue, au niveau 1 : les tests suivent l'équilibrage. */
+function effectOf<T extends Effect['type']>(id: string, type: T): Extract<Effect, { type: T }> {
+  const effect = getAbility(id).effects.find((candidate) => candidate.type === type);
+  if (!effect) throw new Error(`${id} n'a pas d'effet ${type}`);
+  return effect as Extract<Effect, { type: T }>;
+}
 
 /** Le vrai catalogue, deux coachs humains, jauge pleine. */
 function match(abilities: Record<number, string>, bench: string[] = []): MatchState {
@@ -42,10 +51,10 @@ function advanceTo(state: MatchState, elapsed: number): void {
 }
 
 describe('mécaniques des rares', () => {
-  test('Le Gardien kamikaze annule les deux prochaines actions et rend un point', () => {
+  test('Le Gardien kamikaze annule les prochaines actions et rend un point', () => {
     const state = match({ 0: 'le-gardien-kamikaze' });
     shout(state, 'h-0');
-    expect(state.home.pendingCancels).toBe(2);
+    expect(state.home.pendingCancels).toBe(effectOf('le-gardien-kamikaze', 'cancelAction').count ?? 1);
     expect(state.home.gauge).toBe(8);
   });
 
@@ -54,7 +63,8 @@ describe('mécaniques des rares', () => {
     goal(state, 'away');
     goal(state, 'away');
     shout(state, 'h-0');
-    expect(activeEffects(state, 'h-0')[0]!.value).toBeCloseTo(1.1);
+    const smoke = effectOf('le-gardien-fumeur', 'scaledModifier');
+    expect(activeEffects(state, 'h-0')[0]!.value).toBeCloseTo(smoke.base + 2 * smoke.perUnit);
   });
 
   test('Le Bus de l’amicale rend 2 points si la cage reste inviolée', () => {
@@ -95,14 +105,14 @@ describe('mécaniques des rares', () => {
     const state = match({ 9: 'le-revenant-de-la-feria' });
     state.minute = 70;
     shout(state, 'h-9');
-    expect(activeEffects(state, 'h-9')[0]!.value).toBeCloseTo(0.7);
+    expect(activeEffects(state, 'h-9')[0]!.value).toBeCloseTo(70 * effectOf('le-revenant-de-la-feria', 'scaledModifier').perUnit);
   });
 
   test('Le Chef de chant gagne 5 minutes à chaque but marqué', () => {
     const state = match({ 5: 'le-chef-de-chant' });
     shout(state, 'h-5');
     goal(state, 'home');
-    expect(activeEffects(state, 'h-3')[0]!.remaining).toBe(20);
+    expect(activeEffects(state, 'h-3')[0]!.remaining).toBe(effectOf('le-chef-de-chant', 'modifier').duration + 5);
   });
 
   test('Le Capitaine gueulard efface les malus et rend un point à partir de trois', () => {
@@ -110,16 +120,17 @@ describe('mécaniques des rares', () => {
     for (const id of ['h-1', 'h-2', 'h-3']) requirePlayer(state, id).effects.push({ label: 'x', stat: 'speed', value: -0.3, endsAt: 50 });
     const before = state.home.gauge;
     shout(state, 'h-5');
-    expect(activeEffects(state, 'h-1')).toEqual([]);
+    expect(activeEffects(state, 'h-1').every((effect) => effect.value > 0)).toBe(true);
     expect(state.home.gauge).toBe(before - 3 + 1);
   });
 
   test('Le Chien du président change de victime', () => {
     const state = match({}, ['le-chien-du-president']);
     shout(state, 'h-b0', ['a-9']);
-    expect(requirePlayer(state, 'a-9').knockedOutUntil).toBe(8);
-    advanceTo(state, 9);
-    const others = state.away.players.filter((player) => player.id !== 'a-9' && player.knockedOutUntil >= 9);
+    const bite = effectOf('le-chien-du-president', 'knockout').duration;
+    expect(requirePlayer(state, 'a-9').knockedOutUntil).toBe(bite);
+    advanceTo(state, bite + 1);
+    const others = state.away.players.filter((player) => player.id !== 'a-9' && player.knockedOutUntil >= bite + 1);
     expect(others).toHaveLength(1);
   });
 
@@ -161,7 +172,7 @@ describe('mécaniques des légendaires', () => {
   test('L’Échange de maillots inverse les niveaux et se voit sur tous les joueurs', () => {
     const state = match({ 5: 'l-echange-de-maillots' });
     shout(state, 'h-5');
-    expect(state.swappedUntil).toBe(15);
+    expect(state.swappedUntil).toBe(effectOf('l-echange-de-maillots', 'swapTeams').duration);
     expect(activeEffects(state, 'h-1')[0]).toMatchObject({ stat: 'swap', value: 1 });
     expect(activeEffects(state, 'a-1')[0]).toMatchObject({ stat: 'swap', value: -1 });
   });
@@ -169,7 +180,9 @@ describe('mécaniques des légendaires', () => {
   test('La Mêlée générale sort trois adversaires et le porteur', () => {
     const state = match({ 5: 'la-melee-generale' });
     shout(state, 'h-5', ['a-1', 'a-2', 'a-3']);
-    for (const id of ['a-1', 'a-2', 'a-3', 'h-5']) expect(requirePlayer(state, id).knockedOutUntil).toBe(15);
+    const [brawl, self] = getAbility('la-melee-generale').effects as Extract<Effect, { type: 'knockout' }>[];
+    for (const id of ['a-1', 'a-2', 'a-3']) expect(requirePlayer(state, id).knockedOutUntil).toBe(brawl!.duration);
+    expect(requirePlayer(state, 'h-5').knockedOutUntil).toBe(self!.duration);
   });
 
   test('La Coupure de courant n’est possible que juste après un but adverse', () => {
@@ -212,7 +225,7 @@ describe('mécaniques des mythiques', () => {
   test('Le But en or massif fait compter double et booste toute l’équipe', () => {
     const state = match({ 9: 'le-but-en-or-massif' });
     shout(state, 'h-9');
-    expect(activeEffects(state, 'h-2')[0]).toMatchObject({ stat: 'all', value: 0.3 });
+    expect(activeEffects(state, 'h-2')[0]).toMatchObject({ stat: 'all', value: effectOf('le-but-en-or-massif', 'modifier').value });
     goal(state, 'home');
     expect(state.home.goals).toBe(2);
     expect(state.goals[0]!.value).toBe(2);
@@ -262,8 +275,9 @@ describe('mécaniques des mythiques', () => {
     const state = match({ 3: 'le-miracle-du-kine' });
     requirePlayer(state, 'h-1').sentOff = true;
     shout(state, 'h-3');
-    expect(activeEffects(state, 'h-1')[0]).toMatchObject({ stat: 'all', value: 0.3, remaining: 15 });
-    expect(activeEffects(state, 'h-6')[0]).toMatchObject({ stat: 'all', value: 0.3 });
+    const boost = effectOf('le-miracle-du-kine', 'modifier');
+    expect(activeEffects(state, 'h-1')[0]).toMatchObject({ stat: 'all', value: boost.value, remaining: boost.duration });
+    expect(activeEffects(state, 'h-6')[0]).toMatchObject({ stat: 'all', value: boost.value });
   });
 
   test('l’IA économise sa jauge et déclenche sa mythique', () => {
@@ -285,8 +299,8 @@ describe('les capacités restent dans le match', () => {
   test('Le Porteur d’eau soulage pendant le match, pas après', () => {
     const state = match({}, ['le-porteur-d-eau']);
     requirePlayer(state, 'h-5').profile.fatigue = 40;
-    shout(state, 'h-b0', ['h-5']);
-    expect(requirePlayer(state, 'h-5').profile.fatigue).toBe(20);
+    shout(state, 'h-b0');
+    expect(requirePlayer(state, 'h-5').profile.fatigue).toBeCloseTo(40 * (1 - effectOf('le-porteur-d-eau', 'energy').value));
     expect(summarize(state).players.find((report) => report.playerId === 'h-5')!.fatigue).toBe(40);
   });
 

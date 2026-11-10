@@ -9,6 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+    "impact": "bun scripts/ability-impact.ts",
     "test": "bun test"
   },
   "devDependencies": {

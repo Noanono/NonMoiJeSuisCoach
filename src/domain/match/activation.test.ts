@@ -4,7 +4,7 @@ import { cancelActivation, confirmActivation, previewActivation, selectTarget, s
 import { announceSetPiece, awardPenalty } from './plays';
 import { activeEffects } from './queries';
 import { tick } from './simulation';
-import { beginRun, createMatch, endRun, requirePlayer } from './state';
+import { beginRun, createMatch, endRun, GAUGE_START, requirePlayer } from './state';
 import { dismissEventWindow } from './windows';
 import type { MatchState } from './types';
 
@@ -26,7 +26,7 @@ describe('activation des capacités', () => {
     expect(previewActivation(state, 'home', 'h-5')).toMatchObject({ available: true, cost: 2, rarity: 'common' });
     const events = activate(state, 'h-5');
     expect(events.some((event) => event.kind === 'activation')).toBe(true);
-    expect(state.home.gauge).toBe(1);
+    expect(state.home.gauge).toBe(GAUGE_START - 2);
     const preview = previewActivation(state, 'home', 'h-5');
     expect(preview.available).toBe(false);
     expect(preview.cooldownRemaining).toBe(15);
@@ -40,7 +40,7 @@ describe('activation des capacités', () => {
     expect(tick(state)).toEqual([]);
     cancelActivation(state);
     expect(state.pending).toBeNull();
-    expect(state.home.gauge).toBe(3);
+    expect(state.home.gauge).toBe(GAUGE_START);
     expect(previewActivation(state, 'home', 'h-1').available).toBe(true);
   });
 
@@ -143,7 +143,7 @@ describe('fenêtres d’événement (CAP-19)', () => {
     setPieceAgainstHome(state);
     dismissEventWindow(state);
     expect(state.awaiting).toBeNull();
-    expect(state.home.gauge).toBe(3);
+    expect(state.home.gauge).toBe(GAUGE_START);
     tick(state);
     expect(state.pendingPlay).toBeNull();
   });

@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { getAbility } from './catalog';
-import { level5Bonus, levelForXp, statsAtLevel } from './progression';
+import type { Effect } from '../types';
+import { ABILITIES, getAbility } from './catalog';
+import { growsWithLevel, LEVEL_BONUS_PER_LEVEL, level5Bonus, levelForXp, MAX_LEVEL, statsAtLevel } from './progression';
 
 const valueOf = (id: string, level: number) => (statsAtLevel(getAbility(id), level).effects[0] as { value: number }).value;
+const durationOf = (id: string, level: number) => (statsAtLevel(getAbility(id), level).effects[0] as { duration: number }).duration;
 
 describe('progression des capacités', () => {
   test('les seuils d’XP font monter jusqu’au niveau 5 (CAP-10)', () => {
@@ -12,9 +14,32 @@ describe('progression des capacités', () => {
   });
 
   test('chaque niveau renforce l’effet de 10 % (CAP-11)', () => {
-    expect(valueOf('le-buteur-de-comptoir', 1)).toBeCloseTo(0.4);
-    expect(valueOf('le-buteur-de-comptoir', 3)).toBeCloseTo(0.48);
-    expect(valueOf('le-buteur-de-comptoir', 4)).toBeCloseTo(0.52);
+    const base = valueOf('le-buteur-de-comptoir', 1);
+    expect(valueOf('le-buteur-de-comptoir', 3)).toBeCloseTo(base * 1.2);
+    expect(valueOf('le-buteur-de-comptoir', 4)).toBeCloseTo(base * 1.3);
+  });
+
+  test('chaque niveau allonge les effets d’au moins une minute (CAP-11)', () => {
+    for (let level = 2; level <= MAX_LEVEL - 1; level++) {
+      expect(durationOf('le-buteur-de-comptoir', level)).toBeGreaterThan(durationOf('le-buteur-de-comptoir', level - 1));
+    }
+  });
+
+  test('toutes les capacités progressent à chaque niveau (CAP-11)', () => {
+    for (const ability of ABILITIES) {
+      for (let level = 2; level <= MAX_LEVEL; level++) {
+        expect(JSON.stringify(statsAtLevel(ability, level))).not.toBe(JSON.stringify(statsAtLevel(ability, level - 1)));
+      }
+    }
+  });
+
+  test('une capacité sans chiffre à faire grandir gagne un petit bonus d’équipe par niveau', () => {
+    const kamikaze = getAbility('le-gardien-kamikaze');
+    expect(kamikaze.effects.some(growsWithLevel)).toBe(false);
+    expect(statsAtLevel(kamikaze, 1).effects).toHaveLength(kamikaze.effects.length);
+    const bonus = statsAtLevel(kamikaze, 3).effects.at(-1) as Extract<Effect, { type: 'modifier' }>;
+    expect(bonus).toMatchObject({ type: 'modifier', scope: 'team', stat: 'all' });
+    expect(bonus.value).toBeCloseTo(LEVEL_BONUS_PER_LEVEL * 2);
   });
 
   test('le niveau 5 donne une cible de plus aux capacités ciblées', () => {
@@ -24,10 +49,12 @@ describe('progression des capacités', () => {
     expect(statsAtLevel(bulldozer, 5).targeting.count).toBe(3);
   });
 
-  test('sinon +50 % de durée', () => {
+  test('sinon +50 % de durée en plus', () => {
     const mobylette = getAbility('la-mobylette');
     expect(level5Bonus(mobylette)).toBe('longerDuration');
-    expect((statsAtLevel(mobylette, 5).effects[0] as { duration: number }).duration).toBe(12);
+    const base = durationOf('la-mobylette', 1);
+    const step = Math.max(1, Math.round(base * 0.1));
+    expect(durationOf('la-mobylette', 5)).toBe(Math.round((base + 4 * step) * 1.5));
   });
 
   test('sinon une recharge plus courte', () => {
@@ -37,7 +64,7 @@ describe('progression des capacités', () => {
   });
 
   test('la contrepartie de La Mêlée générale ne grandit pas avec le niveau', () => {
-    const [, self] = statsAtLevel(getAbility('la-melee-generale'), 4).effects;
+    const [, self] = statsAtLevel(getAbility('la-melee-generale'), 5).effects;
     expect(self).toMatchObject({ scope: 'self', duration: 15 });
   });
 });

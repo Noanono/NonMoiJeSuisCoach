@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { createMatch } from '../../domain/match';
+import { createMatch, GAUGE_START } from '../../domain/match';
 import { makeSheet, testMatchOptions } from '../../domain/match/fixtures';
 import { substitutePlayer } from '../../domain/match';
 import { abilitySheet, substitutionFromDrag } from './activation';
@@ -16,7 +16,7 @@ function match() {
 describe("fiche d'activation", () => {
   test('affiche la rareté, le coût, la jauge, la cible et ce que fait la capacité', () => {
     const sheet = abilitySheet(match(), 'home', 'h-1');
-    expect(sheet).toMatchObject({ abilityName: 'boucher', cost: 3, gauge: 3, available: true, rarity: { key: 'rare', label: 'Rare' } });
+    expect(sheet).toMatchObject({ abilityName: 'boucher', cost: 3, gauge: GAUGE_START, available: true, rarity: { key: 'rare', label: 'Rare' } });
     expect(sheet.abilityEffects).toEqual(['Hors jeu 15 min : la cible']);
     expect(sheet.targeting).toBe('1 attaquant, à choisir sur le terrain');
   });

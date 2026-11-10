@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { recordGoal } from './actions';
 import { aiMatch, makeSheet, playToEnd, testMatchOptions } from './fixtures';
-import { isPaused, setInstructions, tick } from './simulation';
+import { GAUGE_RECHARGE_INTERVAL, isPaused, setInstructions, tick } from './simulation';
 import { beginRun, createMatch, endRun, GAUGE_START } from './state';
 import { toMatchResult } from './summary';
 import type { MatchState } from './types';
@@ -40,7 +40,7 @@ describe('simulation minute par minute', () => {
       testMatchOptions(makeSheet({ clubId: 'h', isHuman: true }), makeSheet({ clubId: 'a', isHuman: true })),
     );
     expect(state.home.gauge).toBe(GAUGE_START);
-    while (state.elapsed < 10) {
+    while (state.elapsed < GAUGE_RECHARGE_INTERVAL) {
       if (state.awaiting) dismissEventWindow(state);
       tick(state);
     }

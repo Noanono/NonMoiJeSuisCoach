@@ -11,8 +11,8 @@ export const MYTHIC_ABILITIES: readonly Ability[] = [
     name: 'Le Transfert du parking',
     position: 'MID',
     targeting: { kind: 'opponentTeam' },
-    description: 'Une enveloppe, une poignée de main sur le parking, et leur star enfile ton maillot.',
-    effects: [{ type: 'poachBest' }],
+    description: 'Une enveloppe, une poignée de main sur le parking, et leur star enfile ton maillot. Ton vestiaire exulte.',
+    effects: [{ type: 'poachBest' }, { type: 'modifier', scope: 'team', stat: 'all', value: 0.9, duration: 30 }],
   }),
   mythic({
     id: 'le-but-en-or-massif',
@@ -21,8 +21,8 @@ export const MYTHIC_ABILITIES: readonly Ability[] = [
     targeting: { kind: 'team' },
     description: 'Le président promet une prime en lingots : toute l’équipe se met à courir.',
     effects: [
-      { type: 'doubleGoals', duration: 15 },
-      { type: 'modifier', scope: 'team', stat: 'all', value: 0.3, duration: 15 },
+      { type: 'doubleGoals', duration: 25 },
+      { type: 'modifier', scope: 'team', stat: 'all', value: 1.0, duration: 25 },
     ],
   }),
   mythic({
@@ -31,7 +31,7 @@ export const MYTHIC_ABILITIES: readonly Ability[] = [
     position: 'BENCH',
     targeting: { kind: 'randomOpponent', count: 6 },
     description: 'Offert au vestiaire adverse, sauce maison. La file d’attente aux toilettes est historique.',
-    effects: [{ type: 'knockout', scope: 'targets', duration: 15 }],
+    effects: [{ type: 'knockout', scope: 'targets', duration: 35 }],
   }),
   mythic({
     id: 'le-miracle-du-kine',
@@ -41,7 +41,7 @@ export const MYTHIC_ABILITIES: readonly Ability[] = [
     description: 'Une pommade inconnue de la science. Même l’arbitre revient sur sa décision.',
     effects: [
       { type: 'miracle' },
-      { type: 'modifier', scope: 'team', stat: 'all', value: 0.3, duration: 15 },
+      { type: 'modifier', scope: 'team', stat: 'all', value: 0.8, duration: 25 },
     ],
   }),
 ];

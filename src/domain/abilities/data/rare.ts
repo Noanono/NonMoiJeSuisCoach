@@ -4,8 +4,6 @@ import { defineAbility } from './define';
 /** Rares (CAT-01) : plus fortes que les communes, avec une petite mécanique en plus. */
 const rare = (spec: Parameters<typeof defineAbility>[1]): Ability => defineAbility('rare', spec);
 
-const UNTIL_END_OF_EFFECT = 15;
-
 export const RARE_ABILITIES: readonly Ability[] = [
   rare({
     id: 'le-gardien-kamikaze',
@@ -13,15 +11,18 @@ export const RARE_ABILITIES: readonly Ability[] = [
     category: 'defense',
     position: 'GK',
     description: 'Sort de sa surface sans regarder, en hurlant.',
-    effects: [{ type: 'cancelAction', count: 2 }, { type: 'gauge', value: 1 }],
+    effects: [{ type: 'cancelAction', count: 3 }, { type: 'gauge', value: 1 }],
   }),
   rare({
     id: 'le-gardien-fumeur',
     name: 'Le Gardien fumeur',
     category: 'defense',
     position: 'GK',
-    description: 'Pause clope au poteau. Plus il encaisse, plus il se concentre.',
-    effects: [{ type: 'scaledModifier', scope: 'self', stat: 'goalkeeping', base: 0.5, perUnit: 0.3, per: 'concededGoal', duration: 23 }],
+    description: 'Pause clope au poteau, la fumée dans les yeux des tireurs. Plus il encaisse, plus il se concentre.',
+    effects: [
+      { type: 'scaledModifier', scope: 'self', stat: 'goalkeeping', base: 2.0, perUnit: 0.5, per: 'concededGoal', duration: 25 },
+      { type: 'opponentChanceMalus', value: 0.7, shots: 4 },
+    ],
   }),
   rare({
     id: 'le-bus-de-l-amicale',
@@ -31,8 +32,8 @@ export const RARE_ABILITIES: readonly Ability[] = [
     targeting: { kind: 'team' },
     description: 'Toute l’équipe recule et se gare devant la cage.',
     effects: [
-      { type: 'modifier', scope: 'team', stat: 'defense', value: 0.7, duration: UNTIL_END_OF_EFFECT },
-      { type: 'cleanSheetGauge', value: 2, duration: UNTIL_END_OF_EFFECT },
+      { type: 'modifier', scope: 'team', stat: 'defense', value: 2.5, duration: 35 },
+      { type: 'cleanSheetGauge', value: 2, duration: 35 },
     ],
   }),
   rare({
@@ -42,7 +43,7 @@ export const RARE_ABILITIES: readonly Ability[] = [
     position: 'DEF',
     targeting: { kind: 'opponent', count: 1 },
     description: 'Tacle par derrière, comme au marché : au poids.',
-    effects: [{ type: 'knockout', scope: 'targets', duration: 23 }],
+    effects: [{ type: 'knockout', scope: 'targets', duration: 35 }],
   }),
   rare({
     id: 'le-vomisseur',
@@ -51,7 +52,7 @@ export const RARE_ABILITIES: readonly Ability[] = [
     position: 'MID',
     targeting: { kind: 'zone' },
     description: 'Le déjeuner remonte. Tout le monde glisse autour de lui.',
-    effects: [{ type: 'knockout', scope: 'zoneOpponents', duration: 5 }],
+    effects: [{ type: 'knockout', scope: 'zoneOpponents', duration: 14 }],
   }),
   rare({
     id: 'le-retraite-de-42-ans',
@@ -61,8 +62,8 @@ export const RARE_ABILITIES: readonly Ability[] = [
     targeting: { kind: 'team' },
     description: 'Il ne court plus, mais il voit tout : deux passes de génie.',
     effects: [
-      { type: 'chanceBoost', value: 0.4 },
-      { type: 'chanceBoost', value: 0.4 },
+      { type: 'chanceBoost', value: 0.22 },
+      { type: 'chanceBoost', value: 0.22 },
     ],
   }),
   rare({
@@ -70,8 +71,8 @@ export const RARE_ABILITIES: readonly Ability[] = [
     name: 'Le Pique-assiette',
     category: 'sabotage',
     position: 'MID',
-    description: 'Il pique la voix du coach adverse, en plus de ses chips.',
-    effects: [{ type: 'stealGauge', value: 2 }],
+    description: 'Il pique la voix du coach adverse et ses chips : en face, plus personne n’a la tête au match.',
+    effects: [{ type: 'stealGauge', value: 2 }, { type: 'modifier', scope: 'opponents', stat: 'concentration', value: -0.35, duration: 18 }],
   }),
   rare({
     id: 'le-sombrero-bourre',
@@ -87,7 +88,7 @@ export const RARE_ABILITIES: readonly Ability[] = [
     category: 'attack',
     position: 'ATT',
     description: 'La gueule de bois se dissipe : plus il est tard, plus il est fort.',
-    effects: [{ type: 'scaledModifier', scope: 'self', stat: 'shooting', base: 0, perUnit: 0.01, per: 'minute', duration: 23 }],
+    effects: [{ type: 'scaledModifier', scope: 'self', stat: 'shooting', base: 0, perUnit: 0.05, per: 'minute', duration: 30 }],
   }),
   rare({
     id: 'le-chef-de-chant',
@@ -96,7 +97,7 @@ export const RARE_ABILITIES: readonly Ability[] = [
     position: 'ANY',
     targeting: { kind: 'team' },
     description: 'Chant de buvette repris par toute l’équipe, tant que ça marque.',
-    effects: [{ type: 'modifier', scope: 'team', stat: 'all', value: 0.2, duration: UNTIL_END_OF_EFFECT, extendOnGoal: 5 }],
+    effects: [{ type: 'modifier', scope: 'team', stat: 'all', value: 0.35, duration: 20, extendOnGoal: 5 }],
   }),
   rare({
     id: 'le-capitaine-gueulard',
@@ -104,8 +105,8 @@ export const RARE_ABILITIES: readonly Ability[] = [
     category: 'support',
     position: 'ANY',
     targeting: { kind: 'team' },
-    description: 'Il hurle si fort que tout le monde oublie ses malheurs.',
-    effects: [{ type: 'clearMaluses', bonusGauge: 1, threshold: 3 }],
+    description: 'Il hurle si fort que tout le monde oublie ses malheurs et repart au charbon.',
+    effects: [{ type: 'clearMaluses', bonusGauge: 1, threshold: 3 }, { type: 'modifier', scope: 'team', stat: 'all', value: 0.45, duration: 20 }],
   }),
   rare({
     id: 'le-chien-du-president',
@@ -114,6 +115,6 @@ export const RARE_ABILITIES: readonly Ability[] = [
     position: 'BENCH',
     targeting: { kind: 'opponent', count: 1 },
     description: 'Lâché sur la pelouse, il change de victime quand il s’ennuie.',
-    effects: [{ type: 'knockout', scope: 'targets', duration: 8, chaseDuration: 8 }],
+    effects: [{ type: 'knockout', scope: 'targets', duration: 30, chaseDuration: 30 }],
   }),
 ];

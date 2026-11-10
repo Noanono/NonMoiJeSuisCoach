@@ -1,5 +1,6 @@
 <script lang="ts">
   import { GAUGE_MAX } from '../../domain/match';
+  import { GAUGE_RECHARGE_INTERVAL } from '../../domain/match/simulation';
   import Gauge from '../kit/Gauge.svelte';
   import type { MatchController } from './controller.svelte';
   import { opposite } from './pitch';
@@ -28,7 +29,7 @@
   <div class="barre">
     <Gauge value={gauges.own} max={GAUGE_MAX} segments={GAUGE_MAX} label="Jauge de Gueulante" />
   </div>
-  <p class="texte-s aide">+1 toutes les 10 min, +1 quand tu encaisses. En face : <span class="tampon">{gauges.other}/{GAUGE_MAX}</span></p>
+  <p class="texte-s aide">+1 toutes les {GAUGE_RECHARGE_INTERVAL} min, +1 quand tu encaisses. En face : <span class="tampon">{gauges.other}/{GAUGE_MAX}</span></p>
 </section>
 
 <style>

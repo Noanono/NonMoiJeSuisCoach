@@ -93,7 +93,7 @@ Le gameplay repose sur les capacités : chaque joueur en a une, personnelle, que
 | CAP-08 | La fiche du joueur détaille l'effet, la durée, la recharge et le coût au niveau actuel et au niveau suivant. |
 | CAP-09 | Pendant le match, chaque effet actif apparaît sur les joueurs concernés (halo et picto, vert pour un bonus, rouge pour un malus) avec un compte à rebours. |
 | CAP-10 | Chaque capacité progresse sur 5 niveaux au fil de la carrière, grâce à l'expérience gagnée par activation et selon son impact sur le match. |
-| CAP-11 | Chaque niveau augmente l'effet de 10 %. Le niveau 5 ajoute une cible, sinon 50 % de durée, sinon réduit la recharge de 5 minutes. |
+| CAP-11 | Chaque capacité progresse à chaque niveau : effet +10 %, durée +10 % (au moins une minute) ; une capacité sans chiffre à faire grandir gagne un petit bonus d'équipe. Le niveau 5 ajoute en plus une cible, sinon 50 % de durée, sinon réduit la recharge de 5 minutes. Détail dans [equilibrage-capacites.md](equilibrage-capacites.md). |
 | CAP-12 | Chaque capacité a une rareté. Commune : un effet simple, sûr et sans contrepartie. Rare : plus forte, avec une petite mécanique en plus. Légendaire : peut renverser un match, sans recharge, utilisable autant de fois que la jauge le permet. Mythique : change les règles du match, une seule fois par rencontre, et l'IA y a droit aussi. Plus une capacité est forte, plus elle est rare à la génération des joueurs. |
 | CAP-13 | Les capacités de Banc sont cachées jusqu'à l'arrivée du joueur au club ou à leur première activation. |
 | CAP-16 | Quand une capacité cible un coéquipier ou un adversaire, le coach choisit lui-même la cible sur le terrain : les cibles valides sont mises en évidence, les autres grisées. Le choix se fait match en pause. |
@@ -106,7 +106,7 @@ Le gameplay repose sur les capacités : chaque joueur en a une, personnelle, que
 
 ## Catalogue des capacités
 
-CAT-01 : le jeu contient les 46 capacités ci-dessous. Valeurs données au niveau 1, à équilibrer en test.
+CAT-01 : le jeu contient les 46 capacités ci-dessous. Les valeurs réelles, équilibrées par mesure, sont dans `src/domain/abilities/data/` et leurs cibles dans [equilibrage-capacites.md](equilibrage-capacites.md).
 
 | Rareté | Part des joueurs générés | Coût | Recharge | Multiplicateur de valeur |
 | --- | --- | --- | --- | --- |

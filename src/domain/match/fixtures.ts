@@ -93,15 +93,17 @@ interface SheetOptions {
   abilities?: Record<number, string>;
   /** Capacités des remplaçants, un remplaçant par capacité. */
   benchAbilities?: string[];
+  /** Niveau des capacités (1 à 5). */
+  abilityLevel?: number;
 }
 
 export function makeSheet(options: SheetOptions): TeamSheet {
-  const { clubId, level = 60, isHuman = false, formation = '4-4-2', abilities = {}, benchAbilities = [] } = options;
+  const { clubId, level = 60, isHuman = false, formation = '4-4-2', abilities = {}, benchAbilities = [], abilityLevel = 1 } = options;
   const starters = FORMATION_SLOTS[formation].map((position, index) =>
-    squadPlayer({ id: `${clubId}-${index}`, clubId, position, level, abilityId: abilities[index] ?? NO_ABILITY }),
+    squadPlayer({ id: `${clubId}-${index}`, clubId, position, level, abilityId: abilities[index] ?? NO_ABILITY, abilityLevel }),
   );
   const bench = benchAbilities.map((abilityId, index) =>
-    squadPlayer({ id: `${clubId}-b${index}`, clubId, position: 'MID', level, abilityId }),
+    squadPlayer({ id: `${clubId}-b${index}`, clubId, position: 'MID', level, abilityId, abilityLevel }),
   );
   return {
     clubId,
@@ -121,16 +123,17 @@ interface SquadPlayer {
   position: Player['position'];
   level: number;
   abilityId: string;
+  abilityLevel: number;
 }
 
-function squadPlayer({ id, clubId, position, level, abilityId }: SquadPlayer): Player {
+function squadPlayer({ id, clubId, position, level, abilityId, abilityLevel }: SquadPlayer): Player {
   return makePlayer({
     id,
     clubId,
     position,
     lastName: id,
     attributes: { speed: level, technique: level, physical: level, shooting: level, defense: level, goalkeeping: level },
-    ability: { abilityId, level: 1, xp: 0, revealed: true },
+    ability: { abilityId, level: abilityLevel, xp: 0, revealed: true },
   });
 }
 
