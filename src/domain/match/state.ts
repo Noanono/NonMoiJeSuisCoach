@@ -20,6 +20,8 @@ import type {
 } from './types';
 import { comment } from './commentary';
 
+/** Multiplicateur d'occasions à domicile par défaut. */
+export const HOME_ADVANTAGE = 1.1;
 /** Jauge de Gueulante au coup d'envoi (CAP-05). */
 export const GAUGE_START = 3;
 export const GAUGE_MAX = 10;
@@ -95,7 +97,7 @@ export function pushEvent(
   kind: MatchEventKind,
   side: Side | null,
   text: string,
-  extra: Pick<MatchEvent, 'playerId' | 'abilityId' | 'score' | 'label'> = {},
+  extra: Pick<MatchEvent, 'playerId' | 'abilityId' | 'score' | 'label' | 'assistId' | 'assistName'> = {},
 ): void {
   const { state } = run;
   const event: MatchEvent = { minute: state.minute, addedMinute: state.addedMinute, kind, side, text, ...extra };
@@ -115,8 +117,8 @@ type AbilityLookup = (id: string) => Ability;
 
 export function createMatch(options: MatchOptions): MatchState {
   const lookup = options.lookupAbility ?? getAbility;
-  const home = createTeam(options.home, 'home', lookup);
-  const away = createTeam(options.away, 'away', lookup);
+  const home = createTeam(options.home, 'home', lookup, options.boosts?.home ?? 0);
+  const away = createTeam(options.away, 'away', lookup, options.boosts?.away ?? 0);
   const state: MatchState = {
     seed: options.seed,
     rngState: options.seed >>> 0,
@@ -128,6 +130,8 @@ export function createMatch(options: MatchOptions): MatchState {
     stoppage: 0,
     stoppageAnnounced: false,
     swappedUntil: NEVER,
+    homeAdvantage: options.homeAdvantage ?? HOME_ADVANTAGE,
+    derby: options.derby ?? false,
     home,
     away,
     goals: [],
@@ -149,13 +153,17 @@ export function createMatch(options: MatchOptions): MatchState {
   return state;
 }
 
-function createTeam(sheet: TeamSheet, side: Side, lookup: AbilityLookup): TeamState {
+function createTeam(sheet: TeamSheet, side: Side, lookup: AbilityLookup, boost: number): TeamState {
   const slots = FORMATION_SLOTS[sheet.formation];
   const players: MatchPlayer[] = [];
   sheet.starters.forEach((player, index) => {
     players.push(createMatchPlayer({ player, side, line: slots[index] ?? player.position, lookup, trained: sheet.isHuman }));
   });
   for (const player of sheet.bench) players.push(createMatchPlayer({ player, side, line: null, lookup, trained: sheet.isHuman }));
+  if (boost !== 0) {
+    // Difficulté : effet discret sur toute l'équipe, pendant tout le match.
+    for (const player of players) player.effects.push({ label: 'Difficulté', stat: 'all', value: boost, endsAt: UNTIL_FINAL_WHISTLE, quiet: true });
+  }
   return {
     side,
     clubId: sheet.clubId,
@@ -207,6 +215,7 @@ function createMatchPlayer({ player, side, line, lookup, trained }: PlayerSetup)
     cooldownUntil: 0,
     fatigueRestored: 0,
     goals: 0,
+    assists: 0,
     hasPlayed: line !== null,
     subbedOff: false,
     usedAbility: false,

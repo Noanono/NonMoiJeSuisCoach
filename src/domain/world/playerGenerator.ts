@@ -89,7 +89,7 @@ export function generatePlayer(options: GeneratePlayerOptions): Player {
     ability: { abilityId: ability.id, level: 1, xp: 0, revealed: !ability.hidden },
     salary: salaryForRating(rating),
     clubId,
-    seasonStats: { matches: 0, goals: 0, yellowCards: 0, redCards: 0 },
+    seasonStats: { matches: 0, goals: 0, assists: 0, yellowCards: 0, redCards: 0 },
   };
 }
 

@@ -1,5 +1,6 @@
 import { getAbility } from '../abilities/catalog';
 import { pickWeeklyDialogue } from '../club/dialogues';
+import { facilitiesOf, facilityBonus } from '../club/facilities';
 import { applyBalance, wageBill, weeklyBalance } from '../club/finance';
 import { clampGauge, type MatchOutcome } from '../club/model';
 import { confidenceAfterMatch, confidenceTrend, isFired, matchExpectation, sponsorMoodAfterMatch } from '../club/president';
@@ -10,16 +11,20 @@ import { createRng, type Rng } from '../core/rng';
 import { isTransferWindowOpen, SEASON_WEEKS } from '../league/calendar';
 import { drawNextCupRound, isCupRoundComplete } from '../league/cup';
 import type { Fixture, Player } from '../types';
+import { scaleConfidenceDelta } from './difficulty';
+import { pickJobOffers } from './jobs';
 import { playAiFixture } from './matches';
 import { callUpStandIns } from './standIns';
 import { divisionStandings, endSeason, refreshAiLineups } from './season';
-import { clubPlayers, humanClub, humanDivision, humanFixture, humanSquad, replacePlayers, weekFixtures } from './selectors';
+import { clubPlayers, humanClub, humanDivision, humanFixture, humanFixtureAt, humanSquad, isDerby, replacePlayers, weekFixtures } from './selectors';
 import type { GameState } from './state';
 
 /** Récupération hebdomadaire des joueurs des clubs IA, version allégée de la vie d'effectif. */
 const AI_WEEKLY_RECOVERY = 35;
 const DIALOGUE_CHANCE = 0.6;
 const RECENT_DIALOGUES_KEPT = 6;
+/** Un derby compte double pour le président et les sponsors (UNIV-09). */
+const DERBY_FACTOR = 2;
 
 /** Exécute une commande avec le générateur de la partie, puis sauvegarde son état (reprise identique). */
 export function withRng<T>(state: GameState, command: (rng: Rng) => T): T {
@@ -30,7 +35,7 @@ export function withRng<T>(state: GameState, command: (rng: Rng) => T): T {
 }
 
 export function canAdvanceWeek(state: GameState): { ok: true } | { ok: false; reason: string } {
-  if (state.status === 'fired') return { ok: false, reason: 'Tu as été licencié. Le président a gardé tes clés.' };
+  if (state.status === 'fired') return { ok: false, reason: 'Tu as été licencié. Choisis un nouveau club pour continuer.' };
   const fixture = humanFixture(state);
   if (fixture && !fixture.result) return { ok: false, reason: 'Ton match t’attend. Les gars sont déjà en crampons.' };
   if (state.dialogue) return { ok: false, reason: 'Quelqu’un attend ta réponse dans le bureau.' };
@@ -52,13 +57,22 @@ export function advanceWeek(state: GameState): void {
     updatePresident(state, fixture, outcome);
     updateOffers(state, rng);
     advanceCup(state, rng);
+    if (state.status === 'fired') {
+      // La semaine reprendra une fois un nouveau club choisi (CLUB-05).
+      state.jobOffers = pickJobOffers(state, rng);
+      return;
+    }
     maybeOpenDialogue(state, rng);
-    if (state.status === 'fired') return;
-    state.week += 1;
-    if (state.week > SEASON_WEEKS) endSeason(state, rng);
-    callUpAllStandIns(state, rng);
-    refreshAiLineups(state);
+    finishWeek(state, rng);
   });
+}
+
+/** Fin de semaine : calendrier, fin de saison éventuelle, dépanneurs et compositions de l'IA. */
+export function finishWeek(state: GameState, rng: Rng): void {
+  state.week += 1;
+  if (state.week > SEASON_WEEKS) endSeason(state, rng);
+  callUpAllStandIns(state, rng);
+  refreshAiLineups(state);
 }
 
 function callUpAllStandIns(state: GameState, rng: Rng): void {
@@ -91,9 +105,15 @@ function goalsFor(fixture: Fixture, clubId: string): { scored: number; conceded:
 
 /** Récupération, blessures, suspensions (EFF-04, EFF-05) et entraînement de la semaine (TRAIN-01). */
 function updateHumanSquad(state: GameState, fixture: Fixture | null): void {
-  const recovered = weeklySquadUpdate({ squad: humanSquad(state), appearances: state.lastAppearances, matchPlayed: fixture !== null });
+  const facilities = facilitiesOf(humanClub(state));
+  const recovered = weeklySquadUpdate({
+    squad: humanSquad(state),
+    appearances: state.lastAppearances,
+    matchPlayed: fixture !== null,
+    extraRecovery: facilityBonus.extraRecovery(facilities),
+  });
   state.lastAppearances = [];
-  const trained = recovered.map(trainPlayer);
+  const trained = recovered.map((player) => trainPlayer(player, facilityBonus.trainingRate(facilities)));
   replacePlayers(state, trained);
   const improved = trained.filter((player, index) => JSON.stringify(player.attributes) !== JSON.stringify(recovered[index]!.attributes) || player.ability.level > recovered[index]!.ability.level);
   if (improved.length > 0) state.news.push(`Entraînement : ${improved.length} joueur(s) ont progressé cette semaine.`);
@@ -112,15 +132,18 @@ function recoverAiPlayer(player: Player): void {
   if (player.suspendedMatches > 0) player.suspendedMatches -= 1;
 }
 
-/** Bilan financier hebdomadaire (CLUB-01). */
+/** Bilan financier hebdomadaire (CLUB-01), installations comprises (CLUB-09). */
 function settleFinances(state: GameState, fixture: Fixture | null, outcome: MatchOutcome | null): void {
   const club = humanClub(state);
+  const facilities = facilitiesOf(club);
   const lines = weeklyBalance({
     divisionTier: humanDivision(state).tier,
     sponsorMood: state.outlook.sponsorMood,
     matchOutcome: outcome,
     homeMatch: fixture?.homeId === club.id,
     wageBill: wageBill(humanSquad(state)),
+    buvetteFactor: facilityBonus.buvetteIncome(facilities),
+    sponsorFactor: facilityBonus.sponsorIncome(facilities),
   });
   state.clubs[club.id] = applyBalance(club, lines);
   state.lastFinance = lines;
@@ -132,14 +155,18 @@ function updatePresident(state: GameState, fixture: Fixture | null, outcome: Mat
     const isHome = fixture.homeId === state.humanClubId;
     const opponent = state.clubs[isHome ? fixture.awayId : fixture.homeId]!;
     const { scored, conceded } = goalsFor(fixture, state.humanClubId);
-    const change = confidenceAfterMatch(state.outlook.presidentConfidence, {
+    const before = state.outlook.presidentConfidence;
+    const change = confidenceAfterMatch(before, {
       outcome,
       expectation: matchExpectation(humanClub(state).reputation, opponent.reputation, isHome),
       goalDifference: scored - conceded,
     });
-    state.outlook.presidentConfidence = change.confidence;
-    state.outlook.sponsorMood = sponsorMoodAfterMatch(state.outlook.sponsorMood, outcome);
+    const derby = isDerby(state, fixture);
+    const factor = derby ? DERBY_FACTOR : 1;
+    state.outlook.presidentConfidence = clampGauge(before + scaleConfidenceDelta(change.delta * factor, state.difficulty));
+    for (let i = 0; i < factor; i++) state.outlook.sponsorMood = sponsorMoodAfterMatch(state.outlook.sponsorMood, outcome);
     state.news.push(`Le président : « ${change.message} »`);
+    if (derby) state.news.push(outcome === 'win' ? 'Derby gagné ! Toute la ville en parle, les sponsors adorent.' : outcome === 'loss' ? 'Derby perdu. Le président ne sort plus faire ses courses.' : 'Derby nul. Tout le monde rentre frustré.');
     state.streak = {
       wins: outcome === 'win' ? state.streak.wins + 1 : 0,
       losses: outcome === 'loss' ? state.streak.losses + 1 : 0,
@@ -156,7 +183,7 @@ function applyStandingTrend(state: GameState): void {
   const division = humanDivision(state);
   const position = divisionStandings(state, division.id).findIndex((row) => row.clubId === state.humanClubId) + 1;
   const trend = confidenceTrend(position, state.objective, division.clubIds.length, division.relegated);
-  state.outlook.presidentConfidence = clampGauge(state.outlook.presidentConfidence + trend);
+  state.outlook.presidentConfidence = clampGauge(state.outlook.presidentConfidence + scaleConfidenceDelta(trend, state.difficulty));
 }
 
 /** Offres des clubs IA sur les joueurs du coach (CLUB-03). */
@@ -179,15 +206,17 @@ function advanceCup(state: GameState, rng: Rng): void {
   }
 }
 
-/** Dialogue de la semaine (CLUB-06). */
+/** Dialogue de la semaine (CLUB-06), avec des scènes dédiées avant un derby (UNIV-09). */
 function maybeOpenDialogue(state: GameState, rng: Rng): void {
   if (state.dialogue || !rng.chance(DIALOGUE_CHANCE)) return;
+  const next = humanFixtureAt(state, state.week + 1);
   const dialogue = pickWeeklyDialogue(
     {
       losingStreak: state.streak.losses,
       winningStreak: state.streak.wins,
       budget: humanClub(state).budget,
       presidentConfidence: state.outlook.presidentConfidence,
+      upcomingDerby: next !== null && isDerby(state, next),
       recentDialogueIds: state.recentDialogueIds,
     },
     rng,

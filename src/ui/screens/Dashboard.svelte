@@ -11,7 +11,9 @@
   import { formatEuros } from '../format';
   import { balanceTotal } from '../../domain/club/finance';
   import { DIALOGUES } from '../../domain/club/dialogues';
-  import { autoPickLineup, canAdvanceWeek, currentWeek, humanDivision, humanFixture, humanLineupErrors, outcomeFor } from '../../domain/game';
+  import Sticker from '../kit/Sticker.svelte';
+  import { acceptJob, autoPickLineup, canAdvanceWeek, clubPlayers, currentWeek, divisionOf, humanDivision, humanFixture, humanLineupErrors, isDerby, outcomeFor } from '../../domain/game';
+  import { overall } from '../../domain/player/rating';
   import { recentForm, weekLabel, type FormLetter } from './views';
 
   /** Bureau du coach : semaine, prochain match, actualité, dialogue, offres, finances et président. */
@@ -35,6 +37,7 @@
           outcome: outcome ? (FORM_LETTER[outcome] as FormLetter) : null,
           ownForm: recentForm(allFixtures, game.humanClubId),
           opponentForm: recentForm(allFixtures, opponentId),
+          derby: isDerby(game, fixture),
         };
       }
       return {
@@ -51,6 +54,17 @@
         finance: game.lastFinance.map((line) => ({ ...line })),
         financeTotal: balanceTotal(game.lastFinance),
         history: game.history.map((record) => ({ ...record })),
+        jobOffers: game.jobOffers.map((clubId) => {
+          const club = game.clubs[clubId]!;
+          const best = clubPlayers(game, clubId).map(overall).sort((a, b) => b - a).slice(0, 11);
+          return {
+            clubId,
+            name: club.name,
+            division: divisionOf(game, clubId).name,
+            budget: club.budget,
+            level: best.length > 0 ? Math.round(best.reduce((sum, value) => sum + value, 0) / best.length) : 0,
+          };
+        }),
       };
     }),
   );
@@ -65,6 +79,10 @@
   function assistantPick(): void {
     const errors = store.run(autoPickLineup);
     store.notify(errors.length === 0 ? 'L’adjoint a fait la compo.' : errors[0]!.message);
+  }
+
+  function signFor(clubId: string, name: string): void {
+    if (store.run((game) => acceptJob(game, clubId))) store.notify(`Bienvenue à ${name}, coach.`);
   }
 
   function kickOff(): void {
@@ -91,8 +109,21 @@
             {/each}
           </ul>
         {/if}
+        {#if desk.jobOffers.length > 0}
+          <h3 class="banderole-m">Le téléphone sonne encore</h3>
+          <p class="texte-s">Trois clubs te veulent. Tu reprends leur effectif, leur budget et leur place au classement.</p>
+          <ul class="liste-nue offres-emploi">
+            {#each desk.jobOffers as offer (offer.clubId)}
+              <li>
+                <p class="texte-fort">{offer.name}</p>
+                <p class="texte-s discret">{offer.division} · niveau <span class="mono">{offer.level}</span> · budget <span class="mono">{formatEuros(offer.budget)}</span></p>
+                <Button variant="primary" onclick={() => signFor(offer.clubId, offer.name)}>Signer</Button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
         <div>
-          <Button variant="primary" onclick={() => store.quitToTitle()}>Retour au titre</Button>
+          <Button variant={desk.jobOffers.length > 0 ? 'ghost' : 'primary'} onclick={() => store.quitToTitle()}>Retour au titre</Button>
         </div>
       </div>
     </Card>
@@ -108,6 +139,7 @@
           {#if desk.match}
             <div class="affiche">
               <p class="tampon discret">{desk.match.competition} · {desk.match.isHome ? 'à domicile' : 'à l’extérieur'}</p>
+              {#if desk.match.derby}<Sticker tilted>Derby ! Ça compte double</Sticker>{/if}
               <p class="banderole-m">
                 {desk.match.isHome ? 'Contre' : 'Chez'} {desk.match.opponent}
               </p>
@@ -285,5 +317,20 @@
   tfoot th,
   tfoot td {
     border-top: var(--trait-epais) solid var(--encre);
+  }
+  .offres-emploi {
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+    gap: var(--space-4);
+  }
+  .offres-emploi li {
+    display: grid;
+    gap: var(--space-2);
+    align-content: start;
+    padding: var(--space-4);
+    border: var(--trait-fin) solid var(--encre);
+    background: var(--craie);
+  }
+  .offres-emploi p {
+    margin: 0;
   }
 </style>

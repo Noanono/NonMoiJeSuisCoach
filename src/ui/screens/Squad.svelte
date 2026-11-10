@@ -42,11 +42,12 @@
     value: number;
     matches: number;
     goals: number;
+    assists: number;
     yellowCards: number;
     redCards: number;
   }
 
-  type SortKey = 'name' | 'position' | 'age' | 'overall' | 'evolution' | 'matches' | 'goals' | 'cards' | 'fatigue' | 'availability' | 'ability' | 'value';
+  type SortKey = 'name' | 'position' | 'age' | 'overall' | 'evolution' | 'matches' | 'goals' | 'assists' | 'cards' | 'fatigue' | 'availability' | 'ability' | 'value';
 
   interface Column {
     key: SortKey;
@@ -65,6 +66,7 @@
     { key: 'evolution', label: 'Évol.', numeric: true, sortValue: (row) => row.evolution, firstDirection: 'desc' },
     { key: 'matches', label: 'MJ', numeric: true, sortValue: (row) => row.matches, firstDirection: 'desc' },
     { key: 'goals', label: 'Buts', numeric: true, sortValue: (row) => row.goals, firstDirection: 'desc' },
+    { key: 'assists', label: 'PD', numeric: true, sortValue: (row) => row.assists, firstDirection: 'desc' },
     { key: 'cards', label: 'Cartons', numeric: true, sortValue: (row) => row.redCards * 10 + row.yellowCards, firstDirection: 'desc' },
     { key: 'fatigue', label: 'Fatigue', numeric: true, sortValue: (row) => row.fatigue, firstDirection: 'desc' },
     { key: 'availability', label: 'Dispo', numeric: false, sortValue: (row) => row.availability ?? '', firstDirection: 'desc' },
@@ -161,6 +163,7 @@
               <td class="num"><DeltaBadge value={row.evolution} /></td>
               <td class="num">{row.matches}</td>
               <td class="num">{row.goals}</td>
+              <td class="num">{row.assists}</td>
               <td class="num"><span class="jaune">{row.yellowCards}</span> <span class="rouge">{row.redCards}</span></td>
               <td class="num">{row.fatigue}</td>
               <td>

@@ -23,6 +23,7 @@
       <p>
         <span class="nom">{goal.scorer}</span>
         <span class="detail tampon">{goal.minute} · {goal.team}{goal.penalty ? ' · sur penalty' : ''}{goal.double ? ' · compte double' : ''}</span>
+        {#if goal.assist}<span class="detail tampon">Passe de {goal.assist}</span>{/if}
       </p>
     </div>
     <p class="score"><span class="equipe">{goal.ownName}</span> {goal.ownGoals} - {goal.otherGoals} <span class="equipe">{goal.otherName}</span></p>

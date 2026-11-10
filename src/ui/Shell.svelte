@@ -11,6 +11,7 @@
   import Training from './screens/Training.svelte';
   import ClubScreen from './screens/ClubScreen.svelte';
   import Competitions from './screens/Competitions.svelte';
+  import Stats from './screens/Stats.svelte';
 
   const TABS: { screen: Screen; label: string }[] = [
     { screen: 'dashboard', label: 'Bureau' },
@@ -20,6 +21,7 @@
     { screen: 'market', label: 'Mercato' },
     { screen: 'club', label: 'Club' },
     { screen: 'competitions', label: 'Compétitions' },
+    { screen: 'stats', label: 'Statistiques' },
   ];
 
   /** Licencié : plus d'accès aux écrans du club, seul le Bureau (et son écran de fin) reste. */
@@ -83,6 +85,7 @@
     {:else if store.screen === 'market'}<Market />
     {:else if store.screen === 'club'}<ClubScreen />
     {:else if store.screen === 'competitions'}<Competitions />
+    {:else if store.screen === 'stats'}<Stats />
     {/if}
   </main>
 </div>

@@ -22,6 +22,9 @@ export interface WeeklyFinanceInput {
   homeMatch: boolean;
   /** Masse salariale hebdomadaire (voir `wageBill`). */
   wageBill: number;
+  /** Multiplicateurs des installations (CLUB-09), 1 par défaut. */
+  buvetteFactor?: number;
+  sponsorFactor?: number;
 }
 
 /** Chaque division plus bas divise les montants par 1 / TIER_DECAY. */
@@ -41,15 +44,15 @@ export function wageBill(players: readonly Player[]): number {
   return players.reduce((total, player) => total + player.salary, 0);
 }
 
-function sponsorIncome({ divisionTier, sponsorMood }: WeeklyFinanceInput): number {
+function sponsorIncome({ divisionTier, sponsorMood, sponsorFactor = 1 }: WeeklyFinanceInput): number {
   const moodFactor = 1 + ((sponsorMood - NEUTRAL_SPONSOR_MOOD) / 100) * SPONSOR_MOOD_SPAN;
-  return Math.round(ELITE_SPONSOR_WEEKLY * tierFactor(divisionTier) * moodFactor);
+  return Math.round(ELITE_SPONSOR_WEEKLY * tierFactor(divisionTier) * moodFactor * sponsorFactor);
 }
 
-function buvetteIncome({ divisionTier, homeMatch, matchOutcome }: WeeklyFinanceInput): number {
+function buvetteIncome({ divisionTier, homeMatch, matchOutcome, buvetteFactor = 1 }: WeeklyFinanceInput): number {
   if (!homeMatch || matchOutcome === null) return 0;
   const winFactor = matchOutcome === 'win' ? BUVETTE_HOME_WIN_FACTOR : 1;
-  return Math.round(ELITE_BUVETTE_PER_HOME_MATCH * tierFactor(divisionTier) * winFactor);
+  return Math.round(ELITE_BUVETTE_PER_HOME_MATCH * tierFactor(divisionTier) * winFactor * buvetteFactor);
 }
 
 function resultBonus({ divisionTier, matchOutcome }: WeeklyFinanceInput): number {

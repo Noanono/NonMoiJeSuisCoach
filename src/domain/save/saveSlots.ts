@@ -54,6 +54,11 @@ export interface SaveStoreOptions<T> {
   now?: () => Date;
   /** Vérifie la forme des données chargées ; une donnée refusée est traitée comme corrompue. */
   validate?: (data: unknown) => data is T;
+  /**
+   * Met à niveau une sauvegarde d'une ancienne version ; renvoie null si elle n'est pas récupérable.
+   * Sans cette option, seule la version courante est acceptée.
+   */
+  migrate?: (data: unknown, fromVersion: number) => unknown;
 }
 
 export interface SaveStore<T> {
@@ -120,6 +125,10 @@ export function createSaveStore<T>(storage: SaveStorage, options: SaveStoreOptio
       throw new SaveError('corrupted', `La sauvegarde ${slot} n'est pas une partie de Non, moi je suis coach.`);
     }
     if (parsed.meta.version !== version) {
+      const upgraded = options.migrate?.(parsed.data, parsed.meta.version) ?? null;
+      if (upgraded !== null && (!options.validate || options.validate(upgraded))) {
+        return { format: SAVE_FORMAT, meta: { ...parsed.meta, version }, data: upgraded as T };
+      }
       throw new SaveError(
         'unknownVersion',
         `La sauvegarde ${slot} vient d'une autre version du jeu (format ${parsed.meta.version}, attendu ${version}).`,

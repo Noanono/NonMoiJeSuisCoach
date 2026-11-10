@@ -7,3 +7,7 @@ export * from './matches';
 export * from './actions';
 export * from './save';
 export * from './standIns';
+export * from './difficulty';
+export * from './jobs';
+export * from './career';
+export * from './stats';

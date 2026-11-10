@@ -91,6 +91,8 @@ export interface GoalAlert {
   penalty: boolean;
   /** Le but compte double. */
   double: boolean;
+  /** Passeur décisif. */
+  assist: string | null;
   ownName: string;
   otherName: string;
   ownGoals: number;
@@ -113,6 +115,7 @@ export function goalAlert(state: MatchState, goal: GoalRecord, coachSide: Side):
     minute: minuteLabel(goal.minute, goal.addedMinute),
     penalty: goal.penalty,
     double: goal.value > 1,
+    assist: goal.assistId ? (scoringTeam.players.find((player) => player.id === goal.assistId)?.name ?? null) : null,
     ownName: coach.name,
     otherName: other.name,
     ownGoals: coach.goals,

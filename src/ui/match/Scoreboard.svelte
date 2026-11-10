@@ -20,6 +20,7 @@
       otherGoals: other.goals,
       minute: minuteLabel(match.minute, match.addedMinute),
       period: periodLabel(match),
+      derby: match.derby,
       shootout: match.shootout && (coachIsHome ? `${match.shootout.home}-${match.shootout.away}` : `${match.shootout.away}-${match.shootout.home}`),
     };
   });
@@ -50,6 +51,7 @@
       <span>{board.period}</span>
       {#if board.shootout}<span>TAB {board.shootout}</span>{/if}
     </p>
+    {#if board.derby}<p class="tampon derby">Derby</p>{/if}
   </div>
 
   <div class="equipe exterieur">
@@ -188,5 +190,13 @@
     .score {
       font-size: 40px;
     }
+  }
+  .derby {
+    margin: 0;
+    justify-self: center;
+    padding: 0 var(--space-1);
+    background: var(--carton);
+    color: var(--craie-fixe);
+    border: var(--trait-fin) solid var(--encre-fixe);
   }
 </style>

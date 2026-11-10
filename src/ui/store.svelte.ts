@@ -3,11 +3,11 @@
  * en `$state.raw` : les commandes du domaine la modifient en place et `version` signale
  * le changement. Les composants lisent la partie via `select`, qui s'abonne à `version`.
  */
-import { advanceWeek, createGameSaves, finishHumanMatch, newGame, saveMeta, startHumanMatch, withRng, type GameState } from '../domain/game';
+import { advanceWeek, createGameSaves, finishHumanMatch, newGame, saveMeta, startHumanMatch, withRng, type Difficulty, type GameState } from '../domain/game';
 import type { MatchState, MatchSummary } from '../domain/match/types';
 import type { SaveSlot, SlotSummary } from '../domain/save/saveSlots';
 
-export type Screen = 'title' | 'dashboard' | 'squad' | 'tactics' | 'training' | 'market' | 'club' | 'competitions' | 'match';
+export type Screen = 'title' | 'dashboard' | 'squad' | 'tactics' | 'training' | 'market' | 'club' | 'competitions' | 'stats' | 'match';
 
 /** Délai d'écriture après une action de gestion : on regroupe les clics (green code). */
 const AUTOSAVE_DELAY_MS = 1500;
@@ -57,8 +57,8 @@ class AppStore {
     return saves.list();
   }
 
-  startNewGame(slot: SaveSlot, clubName: string): void {
-    this.game = newGame({ seed: Date.now() % 2_147_483_647, clubName });
+  startNewGame(slot: SaveSlot, clubName: string, difficulty: Difficulty = 'normal'): void {
+    this.game = newGame({ seed: Date.now() % 2_147_483_647, clubName, difficulty });
     this.slot = slot;
     this.version += 1;
     this.saveNow();

@@ -50,6 +50,7 @@ describe('live texte (MATCH-04, MATCH-07)', () => {
     expect(liveHeadline(events[2]!, 'away', nameOf)).toBe('Michel marque · 0-1');
     expect(liveHeadline(events[1]!, 'home', nameOf)).toBe('Michel : Le Lacet fou');
     expect(liveHeadline(events[4]!, 'home', nameOf)).toBeNull();
+    expect(liveHeadline({ ...events[2]!, assistName: 'Gégé' }, 'home', nameOf)).toBe('Michel marque (passe de Gégé) · 1-0');
   });
 
   test('annonce seulement le dernier but', () => {

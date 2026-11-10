@@ -69,10 +69,10 @@ function trainAttribute(player: Player, focus: AttributeName, rate: number): Pla
   return { ...player, attributes: { ...player.attributes, [focus]: value }, training: { focus, progress } };
 }
 
-/** Une semaine d'entraînement. Un blessé ne s'entraîne pas. */
-export function trainPlayer(player: Player): Player {
+/** Une semaine d'entraînement. Un blessé ne s'entraîne pas. `facilityFactor` : centre d'entraînement (CLUB-09). */
+export function trainPlayer(player: Player, facilityFactor = 1): Player {
   if (player.injuryWeeks > 0) return player;
   const { focus } = player.training;
-  const rate = trainingRate(player);
+  const rate = trainingRate(player) * facilityFactor;
   return focus === 'ability' ? trainAbility(player, rate) : trainAttribute(player, focus, rate);
 }

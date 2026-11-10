@@ -25,7 +25,7 @@ const MIDFIELD_EXPONENT = 0.5;
 /** Le jeu long saute le milieu : la bataille du milieu pèse deux fois moins. */
 const LONG_BALL_MIDFIELD_SHARE = 0.5;
 const HIGH_PRESS_MIDFIELD = 1.12;
-export const HOME_ADVANTAGE = 1.1;
+export { HOME_ADVANTAGE } from './state';
 const MAX_CHANCE_RATE = 0.45;
 export const REGULATION_MINUTES = 90;
 
@@ -106,9 +106,9 @@ export function baseChanceRate(attacking: TacticalSide, defending: TacticalSide)
 }
 
 /** Taux d'occasions de la minute, avantage du terrain compris. */
-function chanceRate(attacking: TacticalSide, defending: TacticalSide, side: Side): number {
+function chanceRate(attacking: TacticalSide, defending: TacticalSide, side: Side, homeAdvantage: number): number {
   let rate = baseChanceRate(attacking, defending);
-  if (side === 'home') rate *= HOME_ADVANTAGE;
+  if (side === 'home') rate *= homeAdvantage;
   return clamp(rate, 0, MAX_CHANCE_RATE);
 }
 
@@ -122,8 +122,8 @@ export function playChances(run: Run, home: TeamStrength, away: TeamStrength): v
   homeSide.strength = home;
   awaySide.instructions = state.away.instructions;
   awaySide.strength = away;
-  const homeRate = chanceRate(homeSide, awaySide, 'home');
-  const awayRate = chanceRate(awaySide, homeSide, 'away');
+  const homeRate = chanceRate(homeSide, awaySide, 'home', state.homeAdvantage);
+  const awayRate = chanceRate(awaySide, homeSide, 'away', state.homeAdvantage);
   const roll = rng.next();
   if (roll < homeRate) playOpenChance(run, state.home, away);
   else if (roll < homeRate + awayRate) playOpenChance(run, state.away, home);

@@ -40,6 +40,12 @@ export interface MatchOptions {
   home: TeamSheet;
   away: TeamSheet;
   seed: number;
+  /** Multiplicateur d'occasions à domicile (tribunes, CLUB-09) ; 1,1 par défaut. */
+  homeAdvantage?: number;
+  /** Bonus ou malus de toutes les stats d'un camp (difficulté, UNIV-07). */
+  boosts?: Partial<Record<Side, number>>;
+  /** Match contre le rival de la saison (UNIV-09). */
+  derby?: boolean;
   /** Match de coupe : tirs au but en cas d'égalité (UNIV-06). */
   knockout?: boolean;
   /** Source des capacités, `getAbility` par défaut. */
@@ -108,6 +114,7 @@ export interface MatchPlayer {
   /** Fatigue effacée par les capacités : elle revient après le match, qui n'a pas de suite. */
   fatigueRestored: number;
   goals: number;
+  assists: number;
   /** A joué ne serait-ce qu'une minute. */
   hasPlayed: boolean;
   /** Remplacé : il ne reviendra pas. */
@@ -177,6 +184,8 @@ export interface GoalRecord {
   value: number;
   /** Annulé par une capacité (coupure de courant…). */
   cancelled: boolean;
+  /** Passeur décisif, s'il y en a un. */
+  assistId?: string;
 }
 
 export interface CardRecord {
@@ -269,6 +278,8 @@ export interface MatchState {
   stoppageAnnounced: boolean;
   /** Niveaux des équipes inversés jusqu'à cette minute écoulée incluse. */
   swappedUntil: number;
+  homeAdvantage: number;
+  derby: boolean;
   home: TeamState;
   away: TeamState;
   goals: GoalRecord[];
@@ -324,6 +335,9 @@ export interface MatchEvent {
   text: string;
   playerId?: string;
   abilityId?: string;
+  /** Passeur d'un but. */
+  assistId?: string;
+  assistName?: string;
   /** Score après l'événement, domicile puis extérieur. */
   score?: [number, number];
   /** Précision pour le live concis : nom de la capacité, minutes ajoutées. */
@@ -370,6 +384,7 @@ export interface PlayerReport {
   name: string;
   played: boolean;
   goals: number;
+  assists: number;
   yellowCards: number;
   sentOff: boolean;
   injured: boolean;
@@ -384,7 +399,7 @@ export interface MatchSummary {
   homeGoals: number;
   awayGoals: number;
   shootout: ShootoutResult | null;
-  goals: (GoalRecord & { playerName: string })[];
+  goals: (GoalRecord & { playerName: string; assistName: string | null })[];
   cards: (CardRecord & { playerName: string })[];
   injuries: (InjuryRecord & { playerName: string })[];
   abilities: AbilityReport[];

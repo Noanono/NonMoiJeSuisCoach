@@ -25,7 +25,9 @@ export type DialogueTrigger =
   | 'losingStreak'
   | 'winningStreak'
   | 'lowBudget'
-  | 'lowConfidence';
+  | 'lowConfidence'
+  /** Le prochain match est le derby contre le rival de la saison (UNIV-09). */
+  | 'derby';
 
 export interface DialogueChoice {
   id: string;
@@ -437,6 +439,60 @@ export const DIALOGUES: readonly Dialogue[] = [
       },
     ],
   },
+  {
+    id: 'president-derby',
+    speaker: 'president',
+    speakerName: 'Le président',
+    trigger: 'derby',
+    text: "Semaine de derby. Le président a ressorti son écharpe de 1987 et ne parle plus que de ça. « Coach, eux, je veux les voir pleurer. Leur président m'a piqué ma place de parking à la messe. »",
+    choices: [
+      {
+        id: 'promise',
+        label: 'Promettre de les écraser',
+        outcome: "Le président est ravi. Il a déjà commandé les fumigènes. Maintenant, il faut gagner.",
+        consequences: [{ kind: 'presidentConfidence', value: 4 }, { kind: 'sponsorMood', value: 2 }],
+      },
+      {
+        id: 'calm',
+        label: "Rappeler que ce n'est qu'un match",
+        outcome: "Il te regarde comme si tu avais insulté sa mère. Le reste de la semaine sera glacial.",
+        consequences: [{ kind: 'presidentConfidence', value: -3 }],
+      },
+      {
+        id: 'party',
+        label: "Organiser une soirée d'avant-derby à la buvette",
+        outcome: "Toute la ville est venue. La caisse s'est bien remplie, mais le président a trouvé la soirée « un peu trop festive pour un match aussi sérieux ».",
+        consequences: [{ kind: 'budget', value: 400 }, { kind: 'sponsorMood', value: 3 }, { kind: 'presidentConfidence', value: -1 }],
+      },
+    ],
+  },
+  {
+    id: 'supporters-derby',
+    speaker: 'supporters',
+    speakerName: 'Les supporters',
+    trigger: 'derby',
+    text: "Les ultras (quatre personnes et un tambour) débarquent à l'entraînement : ils veulent repeindre les vestiaires du rival en rose la veille du derby. Ils attendent ta bénédiction.",
+    choices: [
+      {
+        id: 'bless',
+        label: 'Leur donner ta bénédiction',
+        outcome: "Les vestiaires sont roses. Le rival est furieux, la presse locale adore, le président fait semblant de ne rien savoir.",
+        consequences: [{ kind: 'sponsorMood', value: 4 }, { kind: 'presidentConfidence', value: -2 }],
+      },
+      {
+        id: 'refuse',
+        label: 'Refuser poliment',
+        outcome: "Ils repartent déçus mais promettent de chanter deux fois plus fort.",
+        consequences: [{ kind: 'presidentConfidence', value: 2 }],
+      },
+      {
+        id: 'tifo',
+        label: 'Proposer de financer un tifo à la place',
+        outcome: "Le tifo représente ton visage. Il est raté, mais il est énorme.",
+        consequences: [{ kind: 'budget', value: -300 }, { kind: 'sponsorMood', value: 3 }],
+      },
+    ],
+  },
 ];
 
 export interface DialogueContext {
@@ -444,6 +500,8 @@ export interface DialogueContext {
   winningStreak: number;
   budget: number;
   presidentConfidence: number;
+  /** Le match de la semaine prochaine est un derby. */
+  upcomingDerby?: boolean;
   /** Dialogues récents, à ne pas resservir tout de suite. */
   recentDialogueIds: readonly string[];
 }
@@ -454,6 +512,7 @@ function activeTriggers(context: DialogueContext): Set<DialogueTrigger> {
   if (context.winningStreak >= WINNING_STREAK_TRIGGER) triggers.add('winningStreak');
   if (context.budget < LOW_BUDGET_TRIGGER) triggers.add('lowBudget');
   if (context.presidentConfidence <= LOW_CONFIDENCE_TRIGGER) triggers.add('lowConfidence');
+  if (context.upcomingDerby) triggers.add('derby');
   return triggers;
 }
 

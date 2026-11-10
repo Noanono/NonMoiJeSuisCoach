@@ -1,19 +1,30 @@
 import { ABILITIES } from '../abilities/catalog';
+import { facilitiesOf, facilityBonus } from '../club/facilities';
 import { reviewSeason, seasonObjective } from '../club/president';
 import { createCup, fixtureWinnerId } from '../league/cup';
-import { autoLineup } from '../league/lineup';
+import { autoLineup, EMPTY_SLOT } from '../league/lineup';
 import { applyDivisionMoves, computeDivisionMoves } from '../league/promotion';
 import { generateLeagueFixtures } from '../league/schedule';
 import { computeStandings } from '../league/standings';
 import type { Rng } from '../core/rng';
-import type { StandingRow } from '../types';
+import type { Club, StandingRow } from '../types';
 import { developPlayers } from '../world/development';
+import { salaryForRating } from '../world/playerGenerator';
 import { generateYouthIntake } from '../world/youthAcademy';
 import { overall } from '../player/rating';
 import { clubPlayers, humanClub, humanDivision } from './selectors';
 import type { GameState } from './state';
+import { seasonAwards } from './stats';
 
-/** Prépare une saison : calendrier, coupe, objectifs du président (UNIV-05, UNIV-06, CLUB-04). */
+/** Âge à partir duquel un joueur peut prendre sa retraite (EFF-09). */
+export const RETIREMENT_AGE = 32;
+const RETIREMENT_BASE_CHANCE = 0.1;
+const RETIREMENT_CHANCE_PER_YEAR = 0.15;
+/** Jeunes promus chaque été : un chez le coach (son centre de formation), deux dans chaque club IA. */
+export const HUMAN_YOUTH_PER_SEASON = 1;
+const AI_YOUTH_PER_SEASON = 2;
+
+/** Prépare une saison : calendrier, coupe, objectifs du président, rival (UNIV-05, UNIV-06, CLUB-04, UNIV-09). */
 export function startSeason(state: GameState, rng: Rng): void {
   state.week = 1;
   state.fixtures = state.divisions.flatMap((division) =>
@@ -21,14 +32,23 @@ export function startSeason(state: GameState, rng: Rng): void {
   );
   state.cup = createCup({ clubIds: Object.keys(state.clubs), rng, season: state.season });
   state.objective = seasonObjective({ club: humanClub(state), division: humanDivision(state), clubs: state.clubs, rng });
+  state.rivalId = chooseRival(state, rng);
   resetSeasonCounters(state);
   refreshAiLineups(state);
   state.news.push(`Le président : « ${state.objective.speech} »`);
+  const rival = state.rivalId ? state.clubs[state.rivalId] : undefined;
+  if (rival) state.news.push(`Le rival de la saison : ${rival.name}. Les supporters ont déjà préparé les banderoles.`);
+}
+
+/** Rival de la saison (UNIV-09) : un club de la division du coach, tiré au sort. */
+export function chooseRival(state: GameState, rng: Rng): string | null {
+  const candidates = humanDivision(state).clubIds.filter((id) => id !== state.humanClubId);
+  return candidates.length > 0 ? rng.pick(candidates) : null;
 }
 
 function resetSeasonCounters(state: GameState): void {
   for (const player of Object.values(state.players)) {
-    player.seasonStats = { matches: 0, goals: 0, yellowCards: 0, redCards: 0 };
+    player.seasonStats = { matches: 0, goals: 0, assists: 0, yellowCards: 0, redCards: 0 };
   }
 }
 
@@ -54,8 +74,8 @@ export function cupRoundsWon(state: GameState, clubId: string): number {
 }
 
 /**
- * Fin de saison : bilan du président, montées et descentes (UNIV-04), progression des joueurs,
- * jeunes du centre de formation (CLUB-07), puis nouvelle saison.
+ * Fin de saison : bilan du président, récompenses, montées et descentes (UNIV-04), progression,
+ * salaires et retraites des joueurs, jeunes des centres de formation (CLUB-07), puis nouvelle saison.
  */
 export function endSeason(state: GameState, rng: Rng): void {
   const human = humanClub(state);
@@ -64,9 +84,10 @@ export function endSeason(state: GameState, rng: Rng): void {
   const position = standings[division.id]!.findIndex((row) => row.clubId === human.id) + 1;
   const roundsWon = cupRoundsWon(state, human.id);
   const review = reviewSeason(state.objective, { finalPosition: position, cupRoundsWon: roundsWon });
+  const awards = seasonAwards(state, division.id);
   state.outlook.presidentConfidence = Math.max(0, Math.min(100, state.outlook.presidentConfidence + review.confidenceDelta));
-  state.history.push({ season: state.season, divisionName: division.name, position, cupRoundsWon: roundsWon, verdict: review.verdict });
-  state.news.push(`Fin de saison : ${position}e de ${division.name}. ${review.verdict}`);
+  state.history.push({ season: state.season, clubName: human.name, divisionName: division.name, position, cupRoundsWon: roundsWon, verdict: review.verdict, awards });
+  state.news.push(`Fin de saison : ${position}e de ${division.name}. ${review.verdict}`, ...awards);
 
   const moves = computeDivisionMoves(state.divisions, standings);
   const applied = applyDivisionMoves(state.divisions, state.clubs, moves);
@@ -78,20 +99,67 @@ export function endSeason(state: GameState, rng: Rng): void {
   // La référence est prise avant la progression d'intersaison : elle apparaît dans l'évolution de la saison suivante.
   for (const player of Object.values(state.players)) player.overallAtSeasonStart = overall(player);
   for (const player of developPlayers(Object.values(state.players), rng)) state.players[player.id] = player;
+  // Le salaire suit la note : il monte quand le joueur progresse, baisse quand il décline (EFF-10).
+  for (const player of Object.values(state.players)) player.salary = salaryForRating(overall(player));
+  retirePlayers(state, rng);
   welcomeYouth(state, rng);
   state.season += 1;
   startSeason(state, rng);
 }
 
-function welcomeYouth(state: GameState, rng: Rng): void {
-  const club = humanClub(state);
-  const excluded = clubPlayers(state, club.id).map((player) => player.ability.abilityId);
-  const youngsters = generateYouthIntake({ rng, club, abilityPool: ABILITIES, excludedAbilityIds: excluded });
-  for (const youngster of youngsters) {
-    state.players[youngster.id] = youngster;
-    club.playerIds.push(youngster.id);
+/** Chance de prendre sa retraite à cet âge (après l'anniversaire de l'intersaison). */
+export function retirementChance(age: number): number {
+  if (age < RETIREMENT_AGE) return 0;
+  return Math.min(1, RETIREMENT_BASE_CHANCE + (age - RETIREMENT_AGE) * RETIREMENT_CHANCE_PER_YEAR);
+}
+
+/** Les vétérans raccrochent (EFF-09) : ils quittent leur club, les compositions sont recousues. */
+function retirePlayers(state: GameState, rng: Rng): void {
+  const retiredFromHuman: string[] = [];
+  for (const player of Object.values(state.players)) {
+    if (!rng.chance(retirementChance(player.age))) continue;
+    const club = player.clubId ? state.clubs[player.clubId] : undefined;
+    if (club) removeFromClub(club, player.id);
+    if (club?.isHuman) retiredFromHuman.push(`${player.firstName} ${player.lastName} (${player.age} ans)`);
+    delete state.players[player.id];
   }
-  if (youngsters.length > 0) {
-    state.news.push(`Le centre de formation sort ${youngsters.length} gamins. Ils ont l'air de savoir où est le ballon.`);
+  state.offers = state.offers.filter((offer) => state.players[offer.playerId]);
+  const human = humanClub(state);
+  if (human.lineup && human.lineup.starters.some((id) => id === EMPTY_SLOT)) {
+    human.lineup = autoLineup(clubPlayers(state, human.id), human.lineup.formation, human.lineup.instructions);
+  }
+  if (retiredFromHuman.length > 0) state.news.push(`Retraite : ${retiredFromHuman.join(', ')} raccroche(nt) les crampons. Pot de départ à la buvette.`);
+}
+
+function removeFromClub(club: Club, playerId: string): void {
+  club.playerIds = club.playerIds.filter((id) => id !== playerId);
+  if (!club.lineup) return;
+  club.lineup = {
+    ...club.lineup,
+    starters: club.lineup.starters.map((id) => (id === playerId ? EMPTY_SLOT : id)),
+    bench: club.lineup.bench.filter((id) => id !== playerId),
+  };
+}
+
+/** Centres de formation (CLUB-07) : un jeune chez le coach, meilleur si le centre est développé. */
+function welcomeYouth(state: GameState, rng: Rng): void {
+  for (const club of Object.values(state.clubs)) {
+    const excluded = clubPlayers(state, club.id).map((player) => player.ability.abilityId);
+    const youngsters = generateYouthIntake({
+      rng,
+      club,
+      abilityPool: ABILITIES,
+      excludedAbilityIds: excluded,
+      count: club.isHuman ? HUMAN_YOUTH_PER_SEASON : AI_YOUTH_PER_SEASON,
+      boost: facilityBonus.youth(facilitiesOf(club)),
+    });
+    for (const youngster of youngsters) {
+      state.players[youngster.id] = youngster;
+      club.playerIds.push(youngster.id);
+    }
+    const promoted = youngsters[0];
+    if (club.isHuman && promoted) {
+      state.news.push(`Le centre de formation promeut ${promoted.firstName} ${promoted.lastName}, ${promoted.age} ans, en équipe première. Il a l'air de savoir où est le ballon.`);
+    }
   }
 }

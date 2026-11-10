@@ -15,6 +15,7 @@ import {
   SHOOTER_WEIGHTS,
   type TacticalSide,
 } from './plays';
+import { pickAssister } from './assists';
 import { runShootout, shootoutConversion } from './shootout';
 import { addContribution, createStrength } from './strength';
 import type { TeamSheet } from './types';
@@ -96,7 +97,15 @@ function drawScorers(rng: Rng, team: QuickTeam, goals: number): MatchResult['sco
   const scorers: MatchResult['scorers'] = [];
   for (let goal = 0; goal < goals; goal++) {
     const scorer = pickScorer(rng, team.sheet.starters, slots);
-    if (scorer) scorers.push({ playerId: scorer.id, clubId: team.sheet.clubId, minute: rng.int(1, REGULATION_MINUTES) });
+    if (!scorer) continue;
+    const teammates = team.sheet.starters.flatMap((player, index) => (player === scorer ? [] : [{ player, line: slots[index] ?? player.position }]));
+    const assister = pickAssister(rng, teammates, (entry) => entry.line);
+    scorers.push({
+      playerId: scorer.id,
+      clubId: team.sheet.clubId,
+      minute: rng.int(1, REGULATION_MINUTES),
+      ...(assister ? { assistId: assister.player.id } : {}),
+    });
   }
   return scorers;
 }

@@ -53,7 +53,7 @@ export interface Player {
   /** Salaire hebdomadaire en euros. */
   salary: number;
   clubId: string | null;
-  seasonStats: { matches: number; goals: number; yellowCards: number; redCards: number };
+  seasonStats: { matches: number; goals: number; assists: number; yellowCards: number; redCards: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -208,7 +208,12 @@ export interface Club {
   isHuman: boolean;
   /** Ambiance du stade : avantage du terrain. */
   stadium: string;
+  /** Niveau des installations (CLUB-09), 0 si absent. */
+  facilities?: Facilities;
 }
+
+export type FacilityId = 'buvette' | 'tribunes' | 'vestiaires' | 'entrainement' | 'formation';
+export type Facilities = Record<FacilityId, number>;
 
 export interface Division {
   id: string;
@@ -238,7 +243,7 @@ export interface MatchResult {
   awayGoals: number;
   /** Vainqueur aux tirs au but en coupe si égalité. */
   penaltyWinnerId?: string;
-  scorers: { playerId: string; clubId: string; minute: number }[];
+  scorers: { playerId: string; clubId: string; minute: number; assistId?: string }[];
 }
 
 export interface StandingRow {

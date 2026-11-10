@@ -13,6 +13,8 @@ export interface WeeklySquadInput {
   appearances: readonly string[];
   /** Le coach avait un match cette semaine. */
   matchPlayed: boolean;
+  /** Récupération supplémentaire des vestiaires rénovés (CLUB-09). */
+  extraRecovery?: number;
 }
 
 /**
@@ -24,13 +26,13 @@ function serveSuspension(player: Player, played: boolean, matchPlayed: boolean):
 }
 
 /** Semaine de l'effectif, appelée après le match de la semaine. */
-export function weeklySquadUpdate({ squad, appearances, matchPlayed }: WeeklySquadInput): Player[] {
+export function weeklySquadUpdate({ squad, appearances, matchPlayed, extraRecovery = 0 }: WeeklySquadInput): Player[] {
   const appeared = new Set(appearances);
   return squad.map((player) => {
     const played = appeared.has(player.id);
     return {
       ...player,
-      fatigue: clampGauge(player.fatigue - (played ? PLAYED_RECOVERY : REST_RECOVERY)),
+      fatigue: clampGauge(player.fatigue - (played ? PLAYED_RECOVERY : REST_RECOVERY) - extraRecovery),
       injuryWeeks: Math.max(0, player.injuryWeeks - 1),
       suspendedMatches: serveSuspension(player, played, matchPlayed),
     };

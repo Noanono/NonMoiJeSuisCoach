@@ -90,7 +90,7 @@ export function liveHeadline(event: MatchEvent, coachSide: Side, nameOf: (player
     case 'stoppage':
       return `+${event.label} min de temps additionnel`;
     case 'goal':
-      return `${name} marque${event.label ? ' (compte double)' : ''} · ${scoreText(event.score!, coachSide)}`;
+      return `${name} marque${event.label ? ' (compte double)' : ''}${event.assistName ? ` (passe de ${event.assistName})` : ''} · ${scoreText(event.score!, coachSide)}`;
     case 'goalCancelled':
       return `But annulé · ${scoreText(event.score!, coachSide)}`;
     case 'save':

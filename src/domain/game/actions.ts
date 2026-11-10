@@ -9,7 +9,8 @@ import { askingSalary } from '../club/valuation';
 import { isTransferWindowOpen } from '../league/calendar';
 import { autoLineup, validateLineup, type LineupError } from '../league/lineup';
 import { defaultTrainingFocus } from '../club/training';
-import type { Instructions, Lineup, TrainingFocus } from '../types';
+import { FACILITIES, facilitiesOf, upgradeCost } from '../club/facilities';
+import type { FacilityId, Instructions, Lineup, TrainingFocus } from '../types';
 import { humanClub, humanSquad, outlookOf, replacePlayers, writeOutlook } from './selectors';
 import type { GameState } from './state';
 import { withRng } from './week';
@@ -131,4 +132,18 @@ export function answerDialogue(state: GameState, choiceId: string): ActionResult
   replacePlayers(state, result.squad);
   state.dialogue = null;
   return done(result.outcome);
+}
+
+/** Améliore une installation du club (CLUB-09), payée sur le budget. */
+export function upgradeFacility(state: GameState, facilityId: FacilityId): ActionResult {
+  const club = humanClub(state);
+  const facilities = facilitiesOf(club);
+  const level = facilities[facilityId];
+  const cost = upgradeCost(level);
+  const label = FACILITIES[facilityId].label;
+  if (cost === null) return refused(`${label} : déjà au niveau maximum.`);
+  if (club.budget < cost) return refused(`Pas assez d'argent : il manque ${(cost - club.budget).toLocaleString('fr-FR')} €.`);
+  club.budget -= cost;
+  club.facilities = { ...facilities, [facilityId]: level + 1 };
+  return done(`${label} passe au niveau ${level + 1}. Le président coupe le ruban avec des ciseaux à bouts ronds.`);
 }

@@ -4,15 +4,19 @@
   import Sticker from './kit/Sticker.svelte';
   import { store } from './store.svelte';
   import type { SaveSlot } from '../domain/save/saveSlots';
+  import { DIFFICULTIES, type Difficulty } from '../domain/game/difficulty';
+
+  const DIFFICULTY_IDS = Object.keys(DIFFICULTIES) as Difficulty[];
 
   let slots = $state(store.listSlots());
   let creatingSlot = $state<SaveSlot | null>(null);
   let confirmDelete = $state<SaveSlot | null>(null);
   let clubName = $state('');
+  let difficulty = $state<Difficulty>('normal');
 
   function create(event: SubmitEvent): void {
     event.preventDefault();
-    if (creatingSlot) store.startNewGame(creatingSlot, clubName);
+    if (creatingSlot) store.startNewGame(creatingSlot, clubName, difficulty);
   }
 
   function remove(slot: SaveSlot): void {
@@ -54,6 +58,16 @@
           <form onsubmit={create}>
             <label class="tampon" for="club-{entry.slot}">Nom de ton club</label>
             <input id="club-{entry.slot}" bind:value={clubName} maxlength="40" placeholder="Laisse vide, on t'en trouve un" />
+            <fieldset class="difficulte">
+              <legend class="tampon">Difficulté</legend>
+              {#each DIFFICULTY_IDS as id (id)}
+                <label class="choix" class:actif={difficulty === id}>
+                  <input type="radio" name="difficulte-{entry.slot}" value={id} bind:group={difficulty} />
+                  <span class="texte-fort">{DIFFICULTIES[id].label}</span>
+                  <span class="texte-s meta">{DIFFICULTIES[id].description}</span>
+                </label>
+              {/each}
+            </fieldset>
             <div class="row">
               <Button variant="primary" type="submit">Signer</Button>
               <Button variant="ghost" onclick={() => (creatingSlot = null)}>Annuler</Button>
@@ -107,7 +121,32 @@
     display: grid;
     gap: var(--space-2);
   }
-  input {
+  .difficulte {
+    display: grid;
+    gap: var(--space-1);
+    border: none;
+    padding: 0;
+    margin: var(--space-2) 0 0;
+  }
+  .choix {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: var(--space-2);
+    align-items: center;
+    padding: var(--space-1) var(--space-2);
+    border: var(--trait-fin) solid var(--encre-pale);
+    border-radius: var(--radius-xs);
+    cursor: pointer;
+  }
+  .choix.actif {
+    border-color: var(--encre);
+    background: var(--craie);
+  }
+  .choix .meta {
+    grid-column: 2;
+    margin: 0;
+  }
+  input:not([type='radio']) {
     font: inherit;
     padding: var(--space-2);
     border: var(--trait-fin) solid var(--encre);

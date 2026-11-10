@@ -4,9 +4,10 @@ import type { SeasonObjective } from '../club/president';
 import type { IncomingOffer } from '../club/transfers';
 import type { CupState } from '../league/cup';
 import type { Club, Division, Fixture, Player } from '../types';
+import type { Difficulty } from './difficulty';
 
 /** Version du format de partie, à incrémenter à chaque changement incompatible de la sauvegarde. */
-export const GAME_VERSION = 3;
+export const GAME_VERSION = 4;
 
 export type GameStatus = 'playing' | 'fired';
 
@@ -16,10 +17,14 @@ export interface PendingDialogue {
 
 export interface SeasonRecord {
   season: number;
+  /** Club entraîné cette saison-là (le coach peut en changer après un licenciement). */
+  clubName?: string;
   divisionName: string;
   position: number;
   cupRoundsWon: number;
   verdict: string;
+  /** Récompenses individuelles de la division. */
+  awards?: string[];
 }
 
 /**
@@ -54,4 +59,9 @@ export interface GameState {
   news: string[];
   history: SeasonRecord[];
   status: GameStatus;
+  difficulty: Difficulty;
+  /** Clubs qui proposent un poste après un licenciement (CLUB-05). */
+  jobOffers: string[];
+  /** Rival de la saison (UNIV-09). */
+  rivalId: string | null;
 }

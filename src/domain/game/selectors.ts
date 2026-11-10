@@ -1,6 +1,6 @@
 import type { ClubOutlook } from '../club/model';
 import { EMPTY_SLOT } from '../league/lineup';
-import { seasonWeek, type SeasonWeek } from '../league/calendar';
+import { SEASON_WEEKS, seasonWeek, type SeasonWeek } from '../league/calendar';
 import { FORMATION_SLOTS, ratingAtPosition } from '../player/rating';
 import type { Club, Division, Fixture, Player } from '../types';
 import type { GameState } from './state';
@@ -48,19 +48,32 @@ export function currentWeek(state: GameState): SeasonWeek {
 }
 
 /** Tous les matchs (championnat et coupe) programmés cette semaine. */
-export function weekFixtures(state: GameState): Fixture[] {
-  const week = currentWeek(state);
-  if (week.kind === 'league') return state.fixtures.filter((fixture) => fixture.week === state.week);
+export function weekFixtures(state: GameState, weekNumber = state.week): Fixture[] {
+  const week = seasonWeek(weekNumber);
+  if (week.kind === 'league') return state.fixtures.filter((fixture) => fixture.week === weekNumber);
   if (week.kind === 'cup') return state.cup.fixtures.filter((fixture) => fixture.round === week.round);
   return [];
 }
 
 /** Match du coach cette semaine, s'il en a un. */
 export function humanFixture(state: GameState): Fixture | null {
+  return humanFixtureAt(state, state.week);
+}
+
+/** Match du coach une semaine donnée (null hors calendrier ou s'il est éliminé de la coupe). */
+export function humanFixtureAt(state: GameState, weekNumber: number): Fixture | null {
+  if (weekNumber < 1 || weekNumber > SEASON_WEEKS) return null;
   return (
-    weekFixtures(state).find((fixture) => fixture.homeId === state.humanClubId || fixture.awayId === state.humanClubId) ??
+    weekFixtures(state, weekNumber).find((fixture) => fixture.homeId === state.humanClubId || fixture.awayId === state.humanClubId) ??
     null
   );
+}
+
+/** Un match contre le rival de la saison (UNIV-09). */
+export function isDerby(state: GameState, fixture: Fixture): boolean {
+  if (!state.rivalId) return false;
+  const involvesHuman = fixture.homeId === state.humanClubId || fixture.awayId === state.humanClubId;
+  return involvesHuman && (fixture.homeId === state.rivalId || fixture.awayId === state.rivalId);
 }
 
 export function outlookOf(state: GameState): ClubOutlook {

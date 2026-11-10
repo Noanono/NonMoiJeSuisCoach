@@ -18,7 +18,9 @@ export function summarize(state: MatchState): MatchSummary {
     homeGoals: state.home.goals,
     awayGoals: state.away.goals,
     shootout: state.shootout,
-    goals: state.goals.filter((goal) => !goal.cancelled).map((goal) => ({ ...goal, playerName: nameOf(goal.playerId) })),
+    goals: state.goals
+      .filter((goal) => !goal.cancelled)
+      .map((goal) => ({ ...goal, playerName: nameOf(goal.playerId), assistName: goal.assistId ? nameOf(goal.assistId) : null })),
     cards: state.cards.map((card) => ({ ...card, playerName: nameOf(card.playerId) })),
     injuries: state.injuries.map((injury) => ({ ...injury, playerName: nameOf(injury.playerId) })),
     abilities: state.activations.map((record) => abilityReport(state, record)),
@@ -56,6 +58,7 @@ function playerReports(team: TeamState): PlayerReport[] {
     name: player.name,
     played: player.hasPlayed,
     goals: player.goals,
+    assists: player.assists,
     yellowCards: player.yellowCards,
     sentOff: player.sentOff,
     injured: player.injured,
@@ -71,7 +74,12 @@ export function toMatchResult(state: MatchState): MatchResult {
     awayGoals: state.away.goals,
     scorers: state.goals
       .filter((goal) => !goal.cancelled)
-      .map((goal) => ({ playerId: goal.playerId, clubId: teamOf(state, goal.side).clubId, minute: goal.minute })),
+      .map((goal) => ({
+        playerId: goal.playerId,
+        clubId: teamOf(state, goal.side).clubId,
+        minute: goal.minute,
+        ...(goal.assistId ? { assistId: goal.assistId } : {}),
+      })),
   };
   if (state.shootout) result.penaltyWinnerId = teamOf(state, state.shootout.winner).clubId;
   return result;

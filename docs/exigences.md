@@ -31,6 +31,8 @@ Le jeu mêle une vraie couche de gestion (effectif, tactique, mercato, budget) e
 | EFF-05 | Les joueurs peuvent se blesser en match. La plupart des blessures se soignent en moins d'une semaine ; seules les grosses blessures, rares, font manquer plusieurs matchs. |
 | EFF-06 | Chaque joueur a un avatar dessiné, déduit de son identité : il garde le même toute sa carrière. |
 | EFF-08 | Chaque joueur possède une seule capacité personnelle, activable par le coach pendant le match. |
+| EFF-09 | À partir de 32 ans, un joueur peut prendre sa retraite à chaque intersaison ; la probabilité augmente chaque année (10 % à 32 ans, puis +15 points par an). |
+| EFF-10 | Pas de contrats : le salaire d'un joueur suit sa note générale et est recalculé à chaque intersaison, en restant raisonnable. |
 
 ## Matchs
 
@@ -41,7 +43,7 @@ Le jeu mêle une vraie couche de gestion (effectif, tactique, mercato, budget) e
 | MATCH-03 | L'activation des capacités pendant le match est la mécanique centrale du jeu. |
 | MATCH-04 | Le match s'affiche en fil concis : seules les actions importantes (buts, tirs, cartons, capacités, changements), en quelques mots. Le commentaire humoristique reste en infobulle. |
 | MATCH-05 | Avant le match et pendant les pauses, le coach donne des consignes tactiques (défensif, équilibré, offensif, pressing haut, jeu long…) qui modifient la simulation. |
-| MATCH-06 | À la fin du match, un résumé affiche le score, les buteurs, les cartons, les blessures et l'impact de chaque capacité utilisée. |
+| MATCH-06 | À la fin du match, un résumé affiche le score, les buteurs et leurs passeurs, les cartons, les blessures et l'impact de chaque capacité utilisée. |
 | MATCH-07 | L'équipe adverse, pilotée par l'IA, active elle aussi ses capacités ; le coach les voit annoncées et peut riposter. |
 | MATCH-08 | Le coach peut faire 5 remplacements par match, à tout moment, en glissant un remplaçant sur un joueur du terrain (ou l'inverse) ou depuis le panneau du joueur. Un joueur sorti ne revient pas. Un blessé peut être remplacé, pas un exclu. L'IA remplace ses blessés. |
 | MATCH-09 | Une mini-carte animée montre les joueurs et le ballon. Le coach attaque toujours vers la droite et son équipe est à gauche du tableau de score. |
@@ -56,10 +58,11 @@ Le jeu mêle une vraie couche de gestion (effectif, tactique, mercato, budget) e
 | CLUB-02 | Le mercato permet d'acheter et de vendre des joueurs, dans la limite du budget, pendant des fenêtres définies dans la saison. |
 | CLUB-03 | Les clubs adverses font aussi des offres sur les joueurs du coach, qu'il peut accepter ou refuser. |
 | CLUB-04 | Le président fixe des objectifs en début de saison (maintien, montée, parcours en coupe…). |
-| CLUB-05 | La confiance du président évolue selon les résultats et les dialogues ; l'humeur des sponsors aussi. À zéro de confiance, le coach est licencié et la partie se termine (ou il rebondit dans un autre club). |
+| CLUB-05 | La confiance du président évolue selon les résultats et les dialogues ; l'humeur des sponsors aussi. À zéro de confiance, le coach est licencié : trois clubs moins cotés lui proposent un poste, il peut signer dans l'un d'eux (effectif, budget et classement repris) ou abandonner la partie. |
 | CLUB-06 | Des dialogues humoristiques interpellent régulièrement le coach (président, joueurs, journaliste local, supporters, femme du président…) avec des choix de réponse qui ont des conséquences. |
-| CLUB-07 | Le centre de formation produit chaque saison quelques jeunes joueurs, avec un potentiel et parfois une capacité spéciale déjà visible. |
+| CLUB-07 | Chaque saison, le centre de formation promeut un jeune en équipe première, avec un potentiel et parfois une capacité spéciale déjà visible. Plus le centre est développé, plus sa note et son potentiel sont élevés. |
 | CLUB-08 | La valeur d'un joueur au mercato est calculée à partir de sa note globale et de la rareté de sa capacité : à note égale, un joueur avec une capacité légendaire vaut nettement plus qu'un joueur avec une capacité commune. La rareté et la valeur sont affichées sur la fiche du joueur. |
+| CLUB-09 | Le coach améliore cinq installations avec son budget (trois niveaux chacune) : buvette (recettes), tribunes (sponsors et avantage du terrain), vestiaires (récupération), centre d'entraînement (progression) et centre de formation (qualité du jeune promu). |
 
 ## Univers et compétitions
 
@@ -71,6 +74,9 @@ Le jeu mêle une vraie couche de gestion (effectif, tactique, mercato, budget) e
 | UNIV-04 | En fin de saison, les premiers montent et les derniers descendent. |
 | UNIV-05 | Chaque saison suit un calendrier de championnat complet avec classement mis à jour (points, différence de buts). |
 | UNIV-06 | Une coupe à élimination directe se joue en parallèle du championnat, ouverte aux clubs de toutes les divisions. |
+| UNIV-07 | Trois niveaux de difficulté au choix en début de partie (facile, normal, difficile) : budget de départ, patience du président et niveau des adversaires. |
+| UNIV-08 | Un écran de statistiques classe les buteurs, passeurs et joueurs les plus sanctionnés de chaque division, avec une équipe type ; les meilleurs sont récompensés en fin de saison. |
+| UNIV-09 | Chaque saison, un rival est tiré au sort dans la division du coach : les derbys comptent double pour le président et les sponsors, et amènent leurs propres dialogues. |
 
 ## Capacités spéciales : règles générales
 

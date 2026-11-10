@@ -5,7 +5,9 @@ import { createMatch, simulateQuick, summarize } from '../match';
 import type { Consequence, MatchState, MatchSummary, PlayerReport, Side, TeamSheet } from '../match/types';
 import { overall } from '../player/rating';
 import type { Fixture, MatchResult, Player } from '../types';
-import { clubPlayers, humanFixture, humanSquad } from './selectors';
+import { facilitiesOf, facilityBonus } from '../club/facilities';
+import { DIFFICULTIES } from './difficulty';
+import { clubPlayers, humanFixture, humanSquad, isDerby } from './selectors';
 import type { GameState } from './state';
 
 /** Fatigue d'un match simulé rapidement (matchs IA contre IA). */
@@ -43,6 +45,8 @@ export function playAiFixture(state: GameState, fixture: Fixture, rng: Rng): voi
   for (const scorer of fixture.result.scorers) {
     const player = state.players[scorer.playerId];
     if (player) player.seasonStats.goals += 1;
+    const assister = scorer.assistId ? state.players[scorer.assistId] : undefined;
+    if (assister) assister.seasonStats.assists += 1;
   }
 }
 
@@ -59,11 +63,17 @@ export function startHumanMatch(state: GameState, rng: Rng): MatchState {
   if (!fixture || fixture.result) throw new Error('Pas de match à jouer cette semaine');
   const errors = humanLineupErrors(state);
   if (errors.length > 0) throw new Error(errors[0]!.message);
+  const humanSide: Side = fixture.homeId === state.humanClubId ? 'home' : 'away';
+  const aiSide: Side = humanSide === 'home' ? 'away' : 'home';
+  const boost = DIFFICULTIES[state.difficulty].opponentBoost;
   return createMatch({
     home: teamSheet(state, fixture.homeId),
     away: teamSheet(state, fixture.awayId),
     seed: rng.int(1, 2 ** 31 - 2),
     knockout: fixture.competition === 'cup',
+    homeAdvantage: facilityBonus.homeAdvantage(facilitiesOf(state.clubs[fixture.homeId]!)),
+    ...(boost !== 0 ? { boosts: { [aiSide]: boost } } : {}),
+    derby: isDerby(state, fixture),
   });
 }
 
@@ -88,7 +98,7 @@ function toResult(summary: MatchSummary, fixture: Fixture): MatchResult {
     ...(summary.shootout ? { penaltyWinnerId: clubOf(summary.shootout.winner) } : {}),
     scorers: summary.goals
       .filter((goal) => !goal.cancelled)
-      .map((goal) => ({ playerId: goal.playerId, clubId: clubOf(goal.side), minute: goal.minute })),
+      .map((goal) => ({ playerId: goal.playerId, clubId: clubOf(goal.side), minute: goal.minute, ...(goal.assistId ? { assistId: goal.assistId } : {}) })),
   };
 }
 
@@ -105,6 +115,7 @@ function applyPlayerReport(state: GameState, report: PlayerReport, summary: Matc
   player.fatigue = report.fatigue;
   player.seasonStats.matches += 1;
   player.seasonStats.goals += report.goals;
+  player.seasonStats.assists += report.assists;
   player.seasonStats.yellowCards += report.yellowCards;
   // Les suspensions pour carton rouge arrivent par les conséquences du match.
   if (report.sentOff) player.seasonStats.redCards += 1;

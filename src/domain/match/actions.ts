@@ -5,7 +5,8 @@
 import { clamp } from '../core/rng';
 import { comment } from './commentary';
 import { creditActive, IMPACT } from './impact';
-import { GAUGE_MAX, opponentSide, pushEvent, teamOf, type Run } from './state';
+import { pickAssister } from './assists';
+import { GAUGE_MAX, isOnPitch, opponentSide, pushEvent, teamOf, type Run } from './state';
 import type { Consequence, MatchPlayer, MatchState, Side, TeamState } from './types';
 import { openTriggers } from './windows';
 
@@ -43,6 +44,11 @@ export function recordGoal(run: Run, side: Side, scorer: MatchPlayer, options: G
   const value = team.doubleGoalsUntil >= state.elapsed ? 2 : 1;
   team.goals += value;
   scorer.goals++;
+  // Pas de passeur sur penalty.
+  const assister = penalty
+    ? undefined
+    : pickAssister(run.rng, team.players.filter((player) => player !== scorer && isOnPitch(player)), (player) => player.line ?? player.profile.position);
+  if (assister) assister.assists++;
   state.goals.push({
     side,
     playerId: scorer.id,
@@ -52,10 +58,11 @@ export function recordGoal(run: Run, side: Side, scorer: MatchPlayer, options: G
     penalty,
     value,
     cancelled: false,
+    ...(assister ? { assistId: assister.id } : {}),
   });
   addGauge(teamOf(state, opponentSide(side)), GAUGE_ON_CONCEDED);
   const text = comment(run.rng, penalty ? 'penaltyGoal' : 'goal', { player: scorer.name, team: team.name, score: scoreLine(state) });
-  pushEvent(run, 'goal', side, text, { playerId: scorer.id, score: [state.home.goals, state.away.goals], ...(value > 1 ? { label: 'double' } : {}) });
+  pushEvent(run, 'goal', side, text, { playerId: scorer.id, ...(assister ? { assistId: assister.id, assistName: assister.name } : {}), score: [state.home.goals, state.away.goals], ...(value > 1 ? { label: 'double' } : {}) });
   extendGoalEffects(team);
   creditActive(state, side, IMPACT.goalScored, 'but marqué pendant l’effet');
   openTriggers(run, side, 'afterOwnGoal', null);

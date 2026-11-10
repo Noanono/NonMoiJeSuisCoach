@@ -3,7 +3,7 @@
   import Card from '../kit/Card.svelte';
   import FormBadge from '../kit/FormBadge.svelte';
   import { store } from '../store.svelte';
-  import { divisionStandings, humanDivision, outcomeFor } from '../../domain/game';
+  import { divisionStandings, humanDivision, isDerby, outcomeFor } from '../../domain/game';
   import { cupRoundFixtures, cupRoundName, cupWinnerId, fixtureWinnerId } from '../../domain/league/cup';
   import { goalDifference } from '../../domain/league/standings';
   import type { Fixture } from '../../domain/types';
@@ -71,6 +71,7 @@
             opponent: game.clubs[isHome ? fixture.awayId : fixture.homeId]?.name ?? '?',
             score: scoreOf(fixture),
             result: outcome ? (FORM_LETTER[outcome] as FormLetter) : null,
+            derby: isDerby(game, fixture),
           };
         }),
     ),
@@ -214,6 +215,7 @@
                   <td>
                     {match.opponent}
                     <span class="discret texte-s">{match.isHome ? 'dom.' : 'ext.'}</span>
+                    {#if match.derby}<span class="tampon pastille-derby">Derby</span>{/if}
                   </td>
                   <td class="num">{match.score ?? (match.current ? 'Cette sem.' : '')}</td>
                   <td>{#if match.result}<FormBadge result={match.result} />{/if}</td>
@@ -277,6 +279,12 @@
     padding: 0 var(--space-1);
     background: var(--scotch);
     color: var(--encre-fixe);
+    border: var(--trait-fin) solid var(--encre-fixe);
+  }
+  .pastille-derby {
+    padding: 0 var(--space-1);
+    background: var(--carton);
+    color: var(--craie-fixe);
     border: var(--trait-fin) solid var(--encre-fixe);
   }
   .tableau tbody tr.mercato {
