@@ -2,6 +2,8 @@
 
 Jeu de management de football sur navigateur, absurde et loufoque. Tu prends les rênes d'un club, tu recrutes, tu composes ton équipe et tu essaies de survivre à la saison, le tout avec un sens de l'humour un peu tordu.
 
+**Jouer en ligne : [non-moi-je-suis-coach.netlify.app](https://non-moi-je-suis-coach.netlify.app)**
+
 Le projet est open source et distribué sous licence [MIT](./LICENSE).
 
 ## Statut
