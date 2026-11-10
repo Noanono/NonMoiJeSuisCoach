@@ -62,6 +62,12 @@ describe('valeur marchande (CLUB-08)', () => {
     expect(playerValue(player, 'mythic')).toBeGreaterThanOrEqual(playerValue(player, 'common') * 9);
   });
 
+  test('à note égale, une capacité de haut niveau vaut plus cher', () => {
+    const level = (value: number) => makePlayer({ ability: { abilityId: 'x', level: value, xp: 0, revealed: true } });
+    expect(playerValue(level(3), 'rare')).toBeGreaterThan(playerValue(level(1), 'rare'));
+    expect(playerValue(level(5), 'rare')).toBeGreaterThanOrEqual(playerValue(level(1), 'rare') * 1.7);
+  });
+
   test('la note, la jeunesse et le potentiel augmentent la valeur', () => {
     const player = makePlayer();
     const better = makePlayer({ attributes: { ...player.attributes, shooting: 95 } });

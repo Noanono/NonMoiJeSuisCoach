@@ -1,4 +1,4 @@
-import { levelForXp } from '../abilities/progression';
+import { gainXp } from '../abilities/progression';
 import type { Rng } from '../core/rng';
 import { autoLineup, validateLineup, type LineupError } from '../league/lineup';
 import { createMatch, simulateQuick, summarize } from '../match';
@@ -108,8 +108,7 @@ function applyPlayerReport(state: GameState, report: PlayerReport, summary: Matc
   player.ability.revealed ||= report.abilityRevealed;
   const xp = summary.xpGains[player.id] ?? 0;
   if (xp > 0) {
-    player.ability.xp += xp;
-    player.ability.level = levelForXp(player.ability.xp);
+    player.ability = gainXp(player.ability, xp);
   }
   if (!report.played) return;
   player.fatigue = report.fatigue;

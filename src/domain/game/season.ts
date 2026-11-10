@@ -1,4 +1,5 @@
 import { ABILITIES } from '../abilities/catalog';
+import { CAREER_XP_PER_SEASON, gainXp } from '../abilities/progression';
 import { facilitiesOf, facilityBonus } from '../club/facilities';
 import { reviewSeason, seasonObjective } from '../club/president';
 import { createCup, fixtureWinnerId } from '../league/cup';
@@ -99,12 +100,21 @@ export function endSeason(state: GameState, rng: Rng): void {
   // La référence est prise avant la progression d'intersaison : elle apparaît dans l'évolution de la saison suivante.
   for (const player of Object.values(state.players)) player.overallAtSeasonStart = overall(player);
   for (const player of developPlayers(Object.values(state.players), rng)) state.players[player.id] = player;
+  growAiAbilities(state, rng);
   // Le salaire suit la note : il monte quand le joueur progresse, baisse quand il décline (EFF-10).
   for (const player of Object.values(state.players)) player.salary = salaryForRating(overall(player));
   retirePlayers(state, rng);
   welcomeYouth(state, rng);
   state.season += 1;
   startSeason(state, rng);
+}
+
+/** Les capacités des joueurs hors du club du coach gagnent une saison d'XP (CAP-10). */
+function growAiAbilities(state: GameState, rng: Rng): void {
+  for (const player of Object.values(state.players)) {
+    if (player.clubId === state.humanClubId) continue;
+    player.ability = gainXp(player.ability, rng.int(CAREER_XP_PER_SEASON.min, CAREER_XP_PER_SEASON.max));
+  }
 }
 
 /** Chance de prendre sa retraite à cet âge (après l'anniversaire de l'intersaison). */

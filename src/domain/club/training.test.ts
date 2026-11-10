@@ -30,7 +30,7 @@ describe('entraînement (TRAIN-01 à TRAIN-05)', () => {
   });
 
   test('un programme de capacité donne de l’expérience et fait monter de niveau', () => {
-    const after = weeks(makePlayer({ age: 20, potential: 85, training: { focus: 'ability', progress: 0 } }), 6);
+    const after = weeks(makePlayer({ age: 20, potential: 85, training: { focus: 'ability', progress: 0 } }), 55);
     expect(after.ability.xp).toBeGreaterThan(0);
     expect(after.ability.level).toBe(2);
   });

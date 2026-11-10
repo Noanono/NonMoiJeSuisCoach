@@ -7,7 +7,7 @@ import type { Club, Division, Fixture, Player } from '../types';
 import type { Difficulty } from './difficulty';
 
 /** Version du format de partie, à incrémenter à chaque changement incompatible de la sauvegarde. */
-export const GAME_VERSION = 4;
+export const GAME_VERSION = 5;
 
 export type GameStatus = 'playing' | 'fired';
 

@@ -1,5 +1,5 @@
 import type { AttributeName, MatchStat, Player, Position, TrainingFocus } from '../types';
-import { levelForXp, MAX_LEVEL } from '../abilities/progression';
+import { gainXp, MAX_LEVEL } from '../abilities/progression';
 import { focusRaisesOverall, overall } from '../player/rating';
 
 /**
@@ -55,8 +55,7 @@ export function trainingMatchBonus(focus: TrainingFocus): { stat: MatchStat; val
 
 function trainAbility(player: Player, rate: number): Player {
   if (player.ability.level >= MAX_LEVEL || rate === 0) return player;
-  const xp = player.ability.xp + Math.max(1, Math.round(rate * XP_PER_RATE_POINT));
-  return { ...player, ability: { ...player.ability, xp, level: levelForXp(xp) } };
+  return { ...player, ability: gainXp(player.ability, Math.max(1, Math.round(rate * XP_PER_RATE_POINT))) };
 }
 
 function trainAttribute(player: Player, focus: AttributeName, rate: number): Player {

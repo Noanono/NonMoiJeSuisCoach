@@ -51,7 +51,8 @@
           overall: listing.overall,
           club: listing.clubId ? (game.clubs[listing.clubId]?.shortName ?? '?') : 'Libre',
           clubName: listing.clubId ? (game.clubs[listing.clubId]?.name ?? 'Club inconnu') : 'Sans club',
-          ability: listing.ability ? `${getAbility(listing.ability.abilityId).name} · ${RARITY_LABEL[listing.ability.rarity]}` : null,
+          ability: listing.ability ? `${getAbility(listing.ability.abilityId).name} · ${RARITY_LABEL[listing.ability.rarity]} · niv. ${player.ability.level}` : null,
+          abilityLevel: listing.ability ? player.ability.level : 0,
           rarity: listing.ability?.rarity ?? null,
           price: listing.price,
           salary: listing.askingSalary,
@@ -77,7 +78,7 @@
     { key: 'age', label: 'Âge', numeric: true, sortValue: (row) => row.age, firstDirection: 'asc' },
     { key: 'overall', label: 'Note', numeric: true, sortValue: (row) => row.overall, firstDirection: 'desc' },
     { key: 'club', label: 'Club', numeric: false, sortValue: (row) => row.club, firstDirection: 'asc' },
-    { key: 'ability', label: 'Capacité', numeric: false, sortValue: (row) => (row.rarity ? RARITY_ORDER[row.rarity] : 0), firstDirection: 'desc' },
+    { key: 'ability', label: 'Capacité', numeric: false, sortValue: (row) => (row.rarity ? RARITY_ORDER[row.rarity] * 10 + row.abilityLevel : 0), firstDirection: 'desc' },
     { key: 'price', label: 'Prix', numeric: true, sortValue: (row) => row.price, firstDirection: 'asc' },
     { key: 'salary', label: 'Salaire / sem.', numeric: true, sortValue: (row) => row.salary, firstDirection: 'asc' },
   ];

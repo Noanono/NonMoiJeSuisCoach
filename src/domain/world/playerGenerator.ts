@@ -1,7 +1,7 @@
 import type { Ability, AttributeName, Attributes, Player, Position, Rarity } from '../types';
 import { clamp, type Rng } from '../core/rng';
 import { ratingFor } from '../player/rating';
-import { RARITY_GENERATION_WEIGHTS } from '../abilities/progression';
+import { careerXpAtAge, levelForXp, RARITY_GENERATION_WEIGHTS } from '../abilities/progression';
 import { defaultTrainingFocus } from '../club/training';
 import { FIRST_NAMES, LAST_NAMES } from './names';
 import { pickWeighted, randomId } from './random';
@@ -72,6 +72,8 @@ export function generatePlayer(options: GeneratePlayerOptions): Player {
     abilityPool: options.abilityPool,
     excludedAbilityIds: new Set(options.excludedAbilityIds),
   });
+  // Un vétéran a déjà fait progresser sa capacité : plus il est âgé, plus elle est haute.
+  const xp = careerXpAtAge(rng, age);
 
   return {
     id,
@@ -86,7 +88,7 @@ export function generatePlayer(options: GeneratePlayerOptions): Player {
     fatigue: 0,
     injuryWeeks: 0,
     suspendedMatches: 0,
-    ability: { abilityId: ability.id, level: 1, xp: 0, revealed: !ability.hidden },
+    ability: { abilityId: ability.id, level: levelForXp(xp), xp, revealed: !ability.hidden },
     salary: salaryForRating(rating),
     clubId,
     seasonStats: { matches: 0, goals: 0, assists: 0, yellowCards: 0, redCards: 0 },

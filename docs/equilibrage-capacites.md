@@ -36,6 +36,41 @@ Toutes les capacités progressent à chaque niveau, du niveau 1 au niveau 5 (`st
 
 Le niveau 5 garde en plus son bonus : une cible de plus pour les capacités ciblées, sinon +50 % de durée, sinon une recharge plus courte. La contrepartie d'une capacité (le porteur au sol après La Mêlée générale) ne grandit jamais.
 
+## Rythme de progression (CAP-10)
+
+Monter une capacité au niveau 5 doit prendre presque une carrière. Chaque niveau coûte plus d'XP que le précédent (`XP_THRESHOLDS` dans `src/domain/abilities/progression.ts`) :
+
+| Niveau | 1 | 2 | 3 | 4 | 5 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| XP cumulée | 0 | 250 | 900 | 2 400 | 5 000 |
+| XP pour ce niveau | | 250 | 650 | 1 500 | 2 600 |
+
+Sources d'XP au club du coach :
+
+- une activation rapporte de 10 à 30 XP selon son impact, environ 20 en moyenne (mesuré) ;
+- le programme d'entraînement « capacité » rapporte de 1 à 5 XP par semaine selon l'âge (28 semaines par saison), davantage avec le centre d'entraînement.
+
+Rythme attendu, en saisons pour atteindre chaque niveau :
+
+| Joueur | XP par saison | Niv. 2 | Niv. 3 | Niv. 4 | Niv. 5 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Très utilisé (une activation par match, entraînement capacité, moins de 24 ans) | ~540 | 0,5 | 1,7 | 4,4 | ~9 |
+| Utilisé un match sur deux, entraînement capacité, 24 à 27 ans | ~285 | 0,9 | 3,2 | 8,4 | ~17 |
+
+Hors du club du coach, on ne simule pas l'XP match par match : chaque joueur gagne de 120 à 320 XP par saison (`CAREER_XP_PER_SEASON`), et un joueur généré reçoit l'XP d'une carrière commencée à 18 ans. Résultat dans un monde neuf (mesuré) :
+
+| Âge | Niv. 1 | Niv. 2 | Niv. 3 | Niv. 4 | Niv. 5 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 18 à 20 ans | 51 % | 49 % | | | |
+| 21 à 23 ans | | 52 % | 48 % | | |
+| 24 à 27 ans | | 6 % | 84 % | 10 % | |
+| 28 à 30 ans | | | 46 % | 54 % | |
+| 31 à 34 ans | | | 18 % | 81 % | 1 % |
+
+Le niveau 5 reste exceptionnel ; les clubs IA y amènent quelques vétérans au fil des saisons.
+
+Le niveau de capacité compte dans la valeur marchande : +20 % par niveau au-delà du premier (×1,8 au niveau 5).
+
 ## Jauge de gueulante (CAP-05)
 
 La jauge reste rare exprès : jouer une capacité doit être un choix réfléchi, pas un réflexe. Chaque activation pèse lourd, mais on n'en déclenche que quelques-unes par match.
@@ -57,4 +92,4 @@ Le script `scripts/ability-impact.ts` mesure chaque capacité sur 1 000 matchs (
 
 ## Historique
 
-- **Novembre 2026** : premier équilibrage. Avant, l'impact moyen allait de +0,10 point (commune) à +0,51 point (mythique), et la mythique rapportait moins par point de gueulante que la légendaire. Les valeurs ont été recalées sur les cibles ci-dessus et toutes les capacités progressent désormais à chaque niveau. La jauge garde son rythme d'origine.
+- **Novembre 2026** : premier équilibrage. Avant, l'impact moyen allait de +0,10 point (commune) à +0,51 point (mythique), et la mythique rapportait moins par point de gueulante que la légendaire. Les valeurs ont été recalées sur les cibles ci-dessus et toutes les capacités progressent désormais à chaque niveau. La jauge garde son rythme d'origine. Les paliers d'XP ont été relevés (niveau 5 à 5 000 XP au lieu de 300) pour que le niveau 5 demande presque une carrière.

@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import type { Effect } from '../types';
 import { ABILITIES, getAbility } from './catalog';
-import { growsWithLevel, LEVEL_BONUS_PER_LEVEL, level5Bonus, levelForXp, MAX_LEVEL, statsAtLevel } from './progression';
+import { createRng } from '../core/rng';
+import { careerXpAtAge, gainXp, growsWithLevel, LEVEL_BONUS_PER_LEVEL, level5Bonus, levelForXp, MAX_LEVEL, statsAtLevel, XP_THRESHOLDS } from './progression';
 
 const valueOf = (id: string, level: number) => (statsAtLevel(getAbility(id), level).effects[0] as { value: number }).value;
 const durationOf = (id: string, level: number) => (statsAtLevel(getAbility(id), level).effects[0] as { duration: number }).duration;
@@ -9,8 +10,34 @@ const durationOf = (id: string, level: number) => (statsAtLevel(getAbility(id), 
 describe('progression des capacités', () => {
   test('les seuils d’XP font monter jusqu’au niveau 5 (CAP-10)', () => {
     expect(levelForXp(0)).toBe(1);
-    expect(levelForXp(80)).toBe(3);
+    expect(levelForXp(XP_THRESHOLDS[2])).toBe(3);
+    expect(levelForXp(XP_THRESHOLDS[2] - 1)).toBe(2);
     expect(levelForXp(10_000)).toBe(5);
+  });
+
+  test('chaque niveau coûte plus d’XP que le précédent (CAP-10)', () => {
+    for (let i = 2; i < XP_THRESHOLDS.length; i++) {
+      expect(XP_THRESHOLDS[i]! - XP_THRESHOLDS[i - 1]!).toBeGreaterThan(XP_THRESHOLDS[i - 1]! - XP_THRESHOLDS[i - 2]!);
+    }
+  });
+
+  test('gagner de l’XP ne fait jamais redescendre de niveau', () => {
+    expect(gainXp({ abilityId: 'x', level: 3, xp: 10, revealed: true }, 5)).toMatchObject({ level: 3, xp: 15 });
+    expect(gainXp({ abilityId: 'x', level: 1, xp: 0, revealed: true }, XP_THRESHOLDS[1])).toMatchObject({ level: 2 });
+  });
+
+  test('plus un joueur est âgé, plus sa carrière lui a donné d’XP', () => {
+    const average = (age: number) => {
+      const rng = createRng(3);
+      let total = 0;
+      for (let i = 0; i < 200; i++) total += careerXpAtAge(rng, age);
+      return total / 200;
+    };
+    expect(average(18)).toBe(0);
+    expect(average(25)).toBeGreaterThan(average(21));
+    expect(average(33)).toBeGreaterThan(average(25));
+    expect(levelForXp(average(33))).toBeGreaterThanOrEqual(3);
+    expect(levelForXp(average(21))).toBeLessThanOrEqual(2);
   });
 
   test('chaque niveau renforce l’effet de 10 % (CAP-11)', () => {

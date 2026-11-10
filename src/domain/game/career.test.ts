@@ -7,6 +7,7 @@ import { overall } from '../player/rating';
 import { salaryForRating } from '../world/playerGenerator';
 import { generateYouthIntake } from '../world/youthAcademy';
 import { ABILITIES } from '../abilities/catalog';
+import { XP_THRESHOLDS } from '../abilities/progression';
 import { answerDialogue, autoPickLineup, upgradeFacility } from './actions';
 import { acceptJob } from './career';
 import { DIFFICULTIES, scaleConfidenceDelta } from './difficulty';
@@ -201,5 +202,39 @@ describe('sauvegardes (TECH-03)', () => {
     expect(loaded.rivalId).not.toBeNull();
     expect(Object.values(loaded.players).every((player) => player.seasonStats.assists === 0)).toBe(true);
     expect(migrateGame(old, 2)).toBeNull();
+  });
+
+  test('une sauvegarde de la version 4 passe aux nouveaux paliers d’XP sans perdre de niveau', () => {
+    const state = newGame({ seed: 42 });
+    const mine = humanSquad(state)[0]!;
+    mine.ability = { ...mine.ability, level: 3, xp: 90 };
+    const veteran = Object.values(state.players).find((player) => player.clubId !== state.humanClubId && player.age >= 32)!;
+    veteran.ability = { ...veteran.ability, level: 1, xp: 0 };
+    const migrated = migrateGame(JSON.parse(JSON.stringify(state)), 4)!;
+    expect(migrated.players[mine.id]!.ability).toMatchObject({ level: 3, xp: XP_THRESHOLDS[2] });
+    expect(migrated.players[veteran.id]!.ability.level).toBeGreaterThan(1);
+  });
+});
+
+describe('niveau des capacités dans le monde (CAP-10)', () => {
+  test('les joueurs générés ont une capacité d’autant plus haute qu’ils sont âgés', () => {
+    const players = Object.values(newGame({ seed: 43 }).players);
+    const averageLevel = (min: number, max: number) => {
+      const group = players.filter((player) => player.age >= min && player.age <= max);
+      return group.reduce((sum, player) => sum + player.ability.level, 0) / group.length;
+    };
+    expect(averageLevel(18, 20)).toBeLessThan(averageLevel(24, 27));
+    expect(averageLevel(24, 27)).toBeLessThan(averageLevel(31, 34));
+    expect(averageLevel(31, 34)).toBeGreaterThanOrEqual(3);
+  });
+
+  test('en fin de saison, les capacités des autres clubs progressent, pas celles du coach', () => {
+    const state = newGame({ seed: 44 });
+    const mine = humanSquad(state)[0]!;
+    const other = Object.values(state.players).find((player) => player.clubId !== state.humanClubId && player.age < 30)!;
+    const [mineXp, otherXp] = [mine.ability.xp, other.ability.xp];
+    withRng(state, (rng) => endSeason(state, rng));
+    expect(state.players[mine.id]!.ability.xp).toBe(mineXp);
+    expect(state.players[other.id]!.ability.xp).toBeGreaterThan(otherXp);
   });
 });

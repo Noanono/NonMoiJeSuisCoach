@@ -1,10 +1,20 @@
-import type { Ability, AbilityStats, Effect, Rarity, Targeting } from '../types';
-import { clamp } from '../core/rng';
+import type { Ability, AbilityStats, Effect, AbilityProgress, Rarity, Targeting } from '../types';
+import { clamp, type Rng } from '../core/rng';
 
 export const MAX_LEVEL = 5;
 
-/** XP cumulée nécessaire pour atteindre chaque niveau (index 0 = niveau 1). */
-export const XP_THRESHOLDS = [0, 30, 80, 160, 300] as const;
+/**
+ * XP cumulée nécessaire pour atteindre chaque niveau (index 0 = niveau 1). Chaque niveau coûte
+ * nettement plus que le précédent : le niveau 5 demande presque une carrière (CAP-10).
+ */
+export const XP_THRESHOLDS = [0, 250, 900, 2400, 5000] as const;
+
+/**
+ * Hors du club du coach, on ne simule pas l'XP match par match : chaque saison de carrière rapporte
+ * cette XP, selon le temps de jeu du joueur. Les joueurs générés ont l'XP de leur âge.
+ */
+export const CAREER_XP_PER_SEASON = { min: 120, max: 320 } as const;
+export const CAREER_START_AGE = 18;
 
 /** Coût en Jauge de Gueulante et recharge en minutes (0 = aucune) selon la rareté. */
 export const RARITY_COST: Record<Rarity, number> = { common: 2, rare: 3, legendary: 5, mythic: 7 };
@@ -41,6 +51,18 @@ export function levelForXp(xp: number): number {
     if (xp >= XP_THRESHOLDS[i]!) level = i + 1;
   }
   return level;
+}
+
+/** Ajoute de l'XP : le niveau monte avec les paliers et ne redescend jamais. */
+export function gainXp(ability: AbilityProgress, xp: number): AbilityProgress {
+  const total = ability.xp + xp;
+  return { ...ability, xp: total, level: Math.max(ability.level, levelForXp(total)) };
+}
+
+/** XP d'une carrière déjà jouée à cet âge : une saison par an depuis 18 ans, temps de jeu tiré une fois. */
+export function careerXpAtAge(rng: Rng, age: number): number {
+  const seasons = Math.max(0, age - CAREER_START_AGE);
+  return seasons * rng.int(CAREER_XP_PER_SEASON.min, CAREER_XP_PER_SEASON.max);
 }
 
 /** XP gagnée par activation, selon l'impact sur le match (CAP-10). `impact` de 0 à 1. */
