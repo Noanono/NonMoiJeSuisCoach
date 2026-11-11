@@ -7,7 +7,8 @@ import { applyDialogueChoice, DIALOGUES } from '../club/dialogues';
 import { acceptOffer, askingPrice, buyPlayer, marketListings, sellPlayer, type MarketListing, type TransferResult } from '../club/transfers';
 import { askingSalary } from '../club/valuation';
 import { isTransferWindowOpen } from '../league/calendar';
-import { autoLineup, validateLineup, type LineupError } from '../league/lineup';
+import { autoLineup, MAX_BENCH_SIZE, validateLineup, type LineupError } from '../league/lineup';
+import { FORMATION_SLOTS, isAvailable, overall, ratingAtPosition } from '../player/rating';
 import { defaultTrainingFocus } from '../club/training';
 import { FACILITIES, facilitiesOf, upgradeCost } from '../club/facilities';
 import type { FacilityId, Instructions, Lineup, TrainingFocus } from '../types';
@@ -101,7 +102,7 @@ export function sellNow(state: GameState, playerId: string): ActionResult {
     state,
     sellPlayer({ clubs: state.clubs, players: state.players }, { playerId, toClubId: buyer.id, price, windowOpen: transferWindowOpen(state) }),
   );
-  if (result.ok) refillLineup(state, lineup);
+  if (result.ok) refillLineup(state, lineup, playerId);
   return result;
 }
 
@@ -113,13 +114,37 @@ export function answerOffer(state: GameState, offerId: string, accept: boolean):
   if (!accept) return done('Offre refusée.');
   const lineup = humanClub(state).lineup;
   const result = applyTransfer(state, acceptOffer({ clubs: state.clubs, players: state.players }, offer, { week: state.week, windowOpen: transferWindowOpen(state) }));
-  if (result.ok) refillLineup(state, lineup);
+  if (result.ok) refillLineup(state, lineup, offer.playerId);
   return result;
 }
 
-/** Après un départ, l'adjoint recompose le onze en gardant la formation et les consignes du coach. */
-function refillLineup(state: GameState, previous: Lineup | null): void {
-  setLineup(state, autoLineup(humanSquad(state), previous?.formation ?? '4-4-2', previous?.instructions));
+/**
+ * Après un départ, on ne touche qu'à la place laissée vide : un titulaire parti est remplacé poste
+ * pour poste par le meilleur joueur disponible hors du onze, un remplaçant parti par le meilleur de
+ * la tribune. Le reste de la composition du coach ne bouge pas.
+ */
+function refillLineup(state: GameState, previous: Lineup | null, departedId: string): void {
+  const squad = humanSquad(state);
+  if (!previous) {
+    setLineup(state, autoLineup(squad, '4-4-2'));
+    return;
+  }
+  const byId = new Map(squad.map((player) => [player.id, player]));
+  const starters = [...previous.starters];
+  let bench = previous.bench.filter((id) => id !== departedId && byId.has(id));
+  const slot = starters.indexOf(departedId);
+  if (slot >= 0) {
+    const position = FORMATION_SLOTS[previous.formation][slot]!;
+    const replacement = squad
+      .filter((player) => !starters.includes(player.id) && isAvailable(player))
+      .sort((a, b) => ratingAtPosition(b, position) - ratingAtPosition(a, position))[0];
+    starters[slot] = replacement?.id ?? '';
+    bench = bench.filter((id) => id !== replacement?.id);
+  }
+  const used = new Set([...starters, ...bench]);
+  const stands = squad.filter((player) => !used.has(player.id) && isAvailable(player)).sort((a, b) => overall(b) - overall(a));
+  while (bench.length < Math.min(previous.bench.length, MAX_BENCH_SIZE) && stands.length > 0) bench.push(stands.shift()!.id);
+  setLineup(state, { ...previous, starters, bench });
 }
 
 /** Réponse au dialogue de la semaine (CLUB-06). */

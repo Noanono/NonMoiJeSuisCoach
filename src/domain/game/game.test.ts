@@ -97,6 +97,34 @@ describe('boucle de saison', () => {
     expect(humanLineupErrors(state)).toEqual([]);
   });
 
+  test('vendre un titulaire ne change que sa place, le reste de la compo ne bouge pas (CLUB-02)', () => {
+    const state = newGame({ seed: 22 });
+    const before = humanClub(state).lineup!;
+    // Compo « du coach » : le onze de l'adjoint, avec deux remplaçants inversés.
+    setLineup(state, { ...before, bench: [before.bench[1]!, before.bench[0]!, ...before.bench.slice(2)] });
+    const mine = humanClub(state).lineup!;
+    const sold = mine.starters[9]!;
+    expect(sellNow(state, sold).ok).toBe(true);
+    const after = humanClub(state).lineup!;
+    after.starters.forEach((id, index) => {
+      if (index !== 9) expect(id).toBe(mine.starters[index]!);
+    });
+    expect(after.starters[9]).not.toBe(sold);
+    expect(after.starters[9]).not.toBe('');
+    expect(after.bench.filter((id) => mine.bench.includes(id))).toEqual(mine.bench.filter((id) => after.bench.includes(id)));
+    expect(humanLineupErrors(state)).toEqual([]);
+  });
+
+  test('vendre un joueur de la tribune ne touche pas à la compo (CLUB-02)', () => {
+    const state = newGame({ seed: 23 });
+    const lineup = humanClub(state).lineup!;
+    const benched = lineup.bench.at(-1)!;
+    setLineup(state, { ...lineup, bench: lineup.bench.slice(0, -1) });
+    const mine = JSON.stringify(humanClub(state).lineup);
+    expect(sellNow(state, benched).ok).toBe(true);
+    expect(JSON.stringify(humanClub(state).lineup)).toBe(mine);
+  });
+
   test('les offres tombent quand le mercato ferme (CLUB-02, CLUB-03)', () => {
     const state = newGame({ seed: 4 });
     state.offers = [{ id: 'o1', playerId: humanClub(state).playerIds[0]!, fromClubId: 'club-01', amount: 1000, expiresWeek: 10 }];
