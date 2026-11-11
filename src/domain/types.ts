@@ -202,6 +202,8 @@ export interface Ability {
   effects: Effect[];
   /** Capacité cachée jusqu'à l'arrivée au club ou la première activation (CAP-13). */
   hidden: boolean;
+  /** Les niveaux renforcent l'effet sans allonger sa durée (Le Bus de l'amicale). */
+  fixedDuration?: boolean;
 }
 
 // ---------------------------------------------------------------------------

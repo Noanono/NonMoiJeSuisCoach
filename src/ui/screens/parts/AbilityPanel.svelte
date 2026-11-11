@@ -3,7 +3,7 @@
   import Sticker from '../../kit/Sticker.svelte';
   import { level5Bonus, MAX_LEVEL, RARITY_LABEL, statsAtLevel, XP_THRESHOLDS } from '../../../domain/abilities/progression';
   import type { Ability, AbilityProgress, AbilityStats, Rarity } from '../../../domain/types';
-  import { ABILITY_POSITION_LABEL, describeCooldown, describeEffect, describeLevel5, describeTargeting, describeTrigger } from '../describe';
+  import { ABILITY_POSITION_LABEL, describeEffect, describeLevel5, describeTargeting, describeTrigger } from '../describe';
 
   /** Capacité d'un joueur (CAP-04, CAP-08, CAP-10 à CAP-12) : stats au niveau actuel et au suivant. */
   interface Props {
@@ -77,8 +77,8 @@
           {/each}
         </tr>
         <tr>
-          <th scope="row">Recharge</th>
-          {#each columns as column (column.level)}<td class="mono">{ability.rarity === 'mythic' ? 'Une fois par match' : describeCooldown(column.stats.cooldown)}</td>{/each}
+          <th scope="row">Utilisation</th>
+          {#each columns as column (column.level)}<td class="mono">Une fois par match</td>{/each}
         </tr>
         <tr>
           <th scope="row">Coût</th>

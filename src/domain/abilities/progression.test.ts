@@ -84,10 +84,23 @@ describe('progression des capacités', () => {
     expect(durationOf('la-mobylette', 5)).toBe(Math.round((base + 4 * step) * 1.5));
   });
 
-  test('sinon une recharge plus courte', () => {
+  test('sinon un effet 25 % plus fort', () => {
     const frappe = getAbility('la-frappe-de-mule');
-    expect(level5Bonus(frappe)).toBe('shorterCooldown');
-    expect(statsAtLevel(frappe, 5).cooldown).toBe(10);
+    expect(level5Bonus(frappe)).toBe('strongerEffect');
+    expect(valueOf('la-frappe-de-mule', 5)).toBeCloseTo(valueOf('la-frappe-de-mule', 1) * 1.4 * 1.25);
+  });
+
+  test('plus de recharge : chaque capacité ne sert qu’une fois par match (CAP-04)', () => {
+    for (const ability of ABILITIES) expect(statsAtLevel(ability, 1).cooldown).toBe(0);
+  });
+
+  test('Le Bus de l’amicale garde sa durée : le niveau ne renforce que sa défense', () => {
+    const bus = getAbility('le-bus-de-l-amicale');
+    expect(level5Bonus(bus)).toBe('strongerEffect');
+    for (let level = 2; level <= MAX_LEVEL; level++) {
+      expect(durationOf('le-bus-de-l-amicale', level)).toBe(durationOf('le-bus-de-l-amicale', 1));
+      expect(valueOf('le-bus-de-l-amicale', level)).toBeGreaterThan(valueOf('le-bus-de-l-amicale', level - 1));
+    }
   });
 
   test('la contrepartie de La Mêlée générale ne grandit pas avec le niveau', () => {

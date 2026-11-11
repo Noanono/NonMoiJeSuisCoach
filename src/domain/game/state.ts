@@ -25,6 +25,8 @@ export interface SeasonRecord {
   verdict: string;
   /** Récompenses individuelles de la division. */
   awards?: string[];
+  /** Primes touchées en fin de saison : classement, plus la coupe si elle est gagnée. */
+  prizeMoney?: number;
 }
 
 /**

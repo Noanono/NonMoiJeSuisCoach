@@ -33,9 +33,9 @@ describe('catalogue des capacités (CAT-01)', () => {
     for (const ability of abilitiesByRarity('rare')) expect(ability.effects.length).toBeLessThanOrEqual(2);
   });
 
-  test('coût et recharge suivent la rareté ; une légendaire n’a pas de recharge', () => {
+  test('le coût suit la rareté ; aucune recharge, chaque capacité sert une fois par match', () => {
     expect(RARITY_COST).toEqual({ common: 2, rare: 3, legendary: 5, mythic: 7 });
-    expect(RARITY_COOLDOWN).toEqual({ common: 15, rare: 15, legendary: 0, mythic: 0 });
+    expect(RARITY_COOLDOWN).toEqual({ common: 0, rare: 0, legendary: 0, mythic: 0 });
     for (const ability of ABILITIES) expect(statsAtLevel(ability, 1).cost).toBe(RARITY_COST[ability.rarity]);
   });
 

@@ -36,6 +36,20 @@ const ELITE_RESULT_BONUS: Record<MatchOutcome, number> = { win: 30_000, draw: 10
 const SPONSOR_MOOD_SPAN = 1;
 const BUVETTE_HOME_WIN_FACTOR = 1.2;
 
+/** Prime de fin de saison du champion de l'élite ; chaque division plus bas paie comme les sponsors. */
+export const ELITE_CHAMPION_PRIZE = 600_000;
+/** Le dernier du classement touche cette part de la prime du champion, linéaire entre les deux. */
+const LAST_PLACE_PRIZE_SHARE = 0.1;
+/** Prime du vainqueur de la coupe, ouverte à toutes les divisions : la même pour tous. */
+export const CUP_WINNER_PRIZE = 100_000;
+const PRIZE_ROUNDING = 100;
+
+/** Prime de classement en fin de saison (CLUB-01) : selon la place et le niveau de la division. */
+export function leaguePrize(divisionTier: number, position: number, clubCount: number): number {
+  const share = clubCount <= 1 ? 1 : 1 - ((1 - LAST_PLACE_PRIZE_SHARE) * (position - 1)) / (clubCount - 1);
+  return Math.round((ELITE_CHAMPION_PRIZE * tierFactor(divisionTier) * share) / PRIZE_ROUNDING) * PRIZE_ROUNDING;
+}
+
 function tierFactor(divisionTier: number): number {
   return TIER_DECAY ** Math.max(0, divisionTier - 1);
 }

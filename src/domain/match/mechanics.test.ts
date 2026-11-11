@@ -134,11 +134,14 @@ describe('mécaniques des rares', () => {
     expect(others).toHaveLength(1);
   });
 
-  test('Le Sombrero bourré tire lui-même : s’il marque, sa recharge repart à zéro', () => {
+  test('Le Sombrero bourré tire lui-même : s’il marque, il pourra rejouer sa capacité', () => {
     const state = match({ 9: 'le-sombrero-bourre' });
     shout(state, 'h-9');
     expect(state.home.chanceBoosts[0]).toMatchObject({ shooterId: 'h-9' });
-    expect(requirePlayer(state, 'h-9').cooldownUntil).toBe(15);
+    expect(requirePlayer(state, 'h-9').usedAbility).toBe(true);
+    goal(state, 'home', 9);
+    // Un but marqué hors de son occasion ne compte pas : seule sa propre occasion le relance.
+    expect(requirePlayer(state, 'h-9').usedAbility).toBe(true);
   });
 });
 

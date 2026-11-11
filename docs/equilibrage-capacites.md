@@ -36,7 +36,7 @@ Toutes les capacités progressent à chaque niveau, du niveau 1 au niveau 5 (`st
 | Durées (effets, mises au sol, poursuite, inversion des niveaux, buts doubles, délai d'annulation) | +10 %, au moins une minute de plus à chaque niveau |
 | Capacités sans chiffre à faire grandir (annulation d'action, vol de jauge, transfert, relève, annulation de but) | petit bonus d'équipe : +3 % à toutes les stats pendant 10 minutes par niveau |
 
-Le niveau 5 garde en plus son bonus : une cible de plus pour les capacités ciblées, sinon +50 % de durée, sinon une recharge plus courte. La contrepartie d'une capacité (le porteur au sol après La Mêlée générale) ne grandit jamais.
+Le niveau 5 garde en plus son bonus : une cible de plus pour les capacités ciblées, sinon +50 % de durée, sinon un effet 25 % plus fort. Une capacité à durée fixe (`fixedDuration`, aujourd'hui Le Bus de l'amicale) ne gagne jamais de minutes : ses niveaux et son bonus de niveau 5 ne renforcent que l'effet. La contrepartie d'une capacité (le porteur au sol après La Mêlée générale) ne grandit jamais.
 
 ## Rythme de progression (CAP-10)
 
@@ -115,3 +115,4 @@ Le script `scripts/ability-impact.ts` mesure chaque capacité sur 1 000 matchs (
 
 - **Novembre 2026** : premier équilibrage. Avant, l'impact moyen allait de +0,10 point (commune) à +0,51 point (mythique), et la mythique rapportait moins par point de gueulante que la légendaire. Les valeurs ont été recalées sur les cibles ci-dessus et toutes les capacités progressent désormais à chaque niveau. La jauge garde son rythme d'origine. Les paliers d'XP ont été relevés (niveau 5 à 5 000 XP au lieu de 300) pour que le niveau 5 demande presque une carrière.
 - **Novembre 2026** : coups francs avec distance, choix de l'option (frappe directe, centre, combinaison) et du mur. Neuf capacités de penalty et de coup franc ajoutées (55 en tout), mesurées sur l'événement qu'elles visent et recalées dans leur fourchette. Quelques capacités existantes ont été réajustées après ce changement.
+- **Novembre 2026** : chaque capacité ne sert plus qu'une fois par match, quelle que soit sa rareté (il n'y a plus de recharge). Le bonus de niveau 5 « recharge plus courte » devient « effet 25 % plus fort ». Les mesures par activation ne changent pas : le banc n'active qu'une fois.

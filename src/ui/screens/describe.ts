@@ -114,7 +114,7 @@ export function describeEffect(effect: Effect): string {
     case 'cancelAction':
       return effect.count ? `Annule les ${effect.count} prochaines actions adverses` : 'Annule la prochaine action adverse';
     case 'chanceBoost': {
-      const carrier = effect.carrier ? " : il la tente lui-même, et s'il marque, sa recharge repart à zéro" : '';
+      const carrier = effect.carrier ? " : il la tente lui-même, et s'il marque, il pourra la rejouer" : '';
       return `${signedPercent(effect.value)} de chances de but sur la prochaine occasion${carrier}`;
     }
     case 'instantChance':
@@ -158,10 +158,6 @@ export function describeEffect(effect: Effect): string {
   }
 }
 
-export function describeCooldown(cooldown: number): string {
-  return cooldown > 0 ? `Recharge ${cooldown}${NBSP}min` : 'Aucune recharge';
-}
-
 /** Ce que débloque le niveau 5 (CAP-11). */
 export function describeLevel5(bonus: Level5Bonus): string {
   switch (bonus) {
@@ -169,8 +165,8 @@ export function describeLevel5(bonus: Level5Bonus): string {
       return 'Une cible de plus.';
     case 'longerDuration':
       return 'Durée augmentée de 50 %.';
-    case 'shorterCooldown':
-      return 'Recharge réduite de 5 min.';
+    case 'strongerEffect':
+      return 'Effet renforcé de 25 %.';
     case null:
       return "Rien de plus : l'effet est déjà au maximum.";
   }

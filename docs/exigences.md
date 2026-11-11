@@ -55,7 +55,7 @@ Le jeu mêle une vraie couche de gestion (effectif, tactique, mercato, budget) e
 
 | ID | Exigence |
 | --- | --- |
-| CLUB-01 | Le club dispose d'un budget, alimenté par les résultats, les sponsors et la buvette, et dépensé en salaires et transferts. |
+| CLUB-01 | Le club dispose d'un budget, alimenté par les résultats, les sponsors, la buvette et les primes de fin de saison, et dépensé en salaires et transferts. Prime de classement : 600 000 € pour le champion de l'élite, divisée par 2,5 à chaque division plus bas (environ 38 000 € en district), le dernier touchant 10 % de la prime du champion. Le vainqueur de la coupe touche 100 000 €, quelle que soit sa division. |
 | CLUB-02 | Le mercato permet d'acheter et de vendre des joueurs, dans la limite du budget, pendant des fenêtres définies dans la saison. |
 | CLUB-03 | Les clubs adverses font aussi des offres sur les joueurs du coach, qu'il peut accepter ou refuser. |
 | CLUB-04 | Le président fixe des objectifs en début de saison (maintien, montée, parcours en coupe…). |
@@ -88,32 +88,32 @@ Le gameplay repose sur les capacités : chaque joueur en a une, personnelle, que
 | CAP-01 | Chaque joueur possède exactement une capacité personnelle, liée à lui pour toute sa carrière (elle le suit en cas de transfert). |
 | CAP-02 | Dans un même effectif généré, deux joueurs n'ont jamais la même capacité. |
 | CAP-03 | Toutes les capacités s'activent manuellement par le coach pendant le match, en touchant le joueur sur le terrain. Les capacités « Banc » s'activent depuis le banc. |
-| CAP-04 | Chaque capacité définit : poste, cible (soi, coéquipier, adversaire, zone, équipe), effet chiffré, durée. Le coût et la recharge dépendent de la rareté. |
+| CAP-04 | Chaque capacité définit : poste, cible (soi, coéquipier, adversaire, zone, équipe), effet chiffré, durée. Le coût dépend de la rareté. Chaque capacité ne sert qu'une fois par match : la jouer est un choix. |
 | CAP-05 | Les activations consomment la Jauge de Gueulante du coach (10 points max, 3 au coup d'envoi), qui se recharge de 1 point toutes les 10 minutes, +1 quand l'équipe encaisse un but : 4 à 6 activations par match. |
 | CAP-06 | Une capacité n'a aucun effet en dehors du match : ni budget, ni confiance, ni blessure longue, ni fatigue pour la suite. |
-| CAP-08 | La fiche du joueur détaille l'effet, la durée, la recharge et le coût au niveau actuel et au niveau suivant. |
+| CAP-08 | La fiche du joueur détaille l'effet, la durée et le coût au niveau actuel et au niveau suivant. |
 | CAP-09 | Pendant le match, chaque effet actif apparaît sur les joueurs concernés (halo et picto, vert pour un bonus, rouge pour un malus) avec un compte à rebours. |
 | CAP-10 | Chaque capacité progresse sur 5 niveaux au fil de la carrière, grâce à l'expérience gagnée par activation (selon son impact sur le match) et à l'entraînement. Chaque niveau est plus dur à obtenir que le précédent : le niveau 5 demande presque une carrière. Les joueurs des autres clubs progressent chaque saison, et un joueur généré a le niveau de capacité de son âge : un vétéran arrive avec une capacité plus haute qu'un jeune. |
-| CAP-11 | Chaque capacité progresse à chaque niveau : effet +10 %, durée +10 % (au moins une minute) ; une capacité sans chiffre à faire grandir gagne un petit bonus d'équipe. Le niveau 5 ajoute en plus une cible, sinon 50 % de durée, sinon réduit la recharge de 5 minutes. Détail dans [equilibrage-capacites.md](equilibrage-capacites.md). |
-| CAP-12 | Chaque capacité a une rareté. Commune : un effet simple, sûr et sans contrepartie. Rare : plus forte, avec une petite mécanique en plus. Légendaire : peut renverser un match, sans recharge, utilisable autant de fois que la jauge le permet. Mythique : change les règles du match, une seule fois par rencontre, et l'IA y a droit aussi. Plus une capacité est forte, plus elle est rare à la génération des joueurs. |
+| CAP-11 | Chaque capacité progresse à chaque niveau : effet +10 %, durée +10 % (au moins une minute) ; une capacité sans chiffre à faire grandir gagne un petit bonus d'équipe. Le niveau 5 ajoute en plus une cible, sinon 50 % de durée, sinon un effet 25 % plus fort. Une capacité peut avoir une durée fixe (Le Bus de l'amicale) : ses niveaux ne renforcent alors que l'effet. Détail dans [equilibrage-capacites.md](equilibrage-capacites.md). |
+| CAP-12 | Chaque capacité a une rareté. Commune : un effet simple, sûr et sans contrepartie. Rare : plus forte, avec une petite mécanique en plus. Légendaire : peut renverser un match. Mythique : change les règles du match, et l'IA y a droit aussi. Quelle que soit sa rareté, une capacité ne sert qu'une fois par match. Plus une capacité est forte, plus elle est rare à la génération des joueurs. |
 | CAP-13 | Les capacités de Banc sont cachées jusqu'à l'arrivée du joueur au club ou à leur première activation. |
 | CAP-16 | Quand une capacité cible un coéquipier ou un adversaire, le coach choisit lui-même la cible sur le terrain : les cibles valides sont mises en évidence, les autres grisées. Le choix se fait match en pause. |
 | CAP-17 | Une cible est valide si elle est sur le terrain, n'est pas déjà hors jeu et appartient à la ligne visée. Pour une capacité à plusieurs cibles, le coach les choisit une à une. |
 | CAP-18 | Les capacités de zone se déclenchent à l'emplacement du joueur : le coach choisit le moment, pas la cible. Seules les capacités décrites « au hasard » gardent une cible aléatoire. |
 | CAP-19 | Les capacités liées à un événement (penalty, coup franc, corner) restent manuelles : le jeu se met en pause et propose de les activer, sans obligation. Certaines ne s'activent que sur un coup franc (pas sur un corner). |
 | CAP-22 | Relancer une capacité dont l'effet est encore actif le prolonge sans le cumuler. |
-| CAP-20 | Le coach peut annuler une activation tant qu'il n'a pas validé la cible : la capacité n'est alors ni consommée ni mise en recharge. |
+| CAP-20 | Le coach peut annuler une activation tant qu'il n'a pas validé la cible : la capacité n'est alors pas consommée. |
 | CAP-21 | Une activation, du coach comme de l'adversaire, s'annonce au centre de l'écran pendant 5 secondes avec l'avatar du joueur et la description de l'effet, match en pause. Flèches vers les cibles, zone colorée et textes s'affichent sur le terrain. |
 
 ## Catalogue des capacités
 
 CAT-01 : le jeu contient les 55 capacités ci-dessous. Les chiffres des tableaux sont ceux de la conception d'origine. Les valeurs réelles, équilibrées par mesure, sont dans `src/domain/abilities/data/` et leurs cibles dans [equilibrage-capacites.md](equilibrage-capacites.md).
 
-| Rareté | Part des joueurs générés | Coût | Recharge | Multiplicateur de valeur |
+| Rareté | Part des joueurs générés | Coût | Utilisation | Multiplicateur de valeur |
 | --- | --- | --- | --- | --- |
-| Commune | ~70 % | 2 | 15 min | ×1 |
-| Rare | ~25 % | 3 | 15 min | ×1,5 |
-| Légendaire | ~4,5 % | 5 | Aucune | ×3 |
+| Commune | ~70 % | 2 | Une fois par match | ×1 |
+| Rare | ~25 % | 3 | Une fois par match | ×1,5 |
+| Légendaire | ~4,5 % | 5 | Une fois par match | ×3 |
 | Mythique | ~0,5 % | 7 | Une fois par match | ×10 |
 
 ### Communes (29)
@@ -161,7 +161,7 @@ CAT-01 : le jeu contient les 55 capacités ci-dessous. Les chiffres des tableaux
 | Le Vomisseur | MIL | Sa zone | Tous les adversaires de la zone au sol, 5 min |
 | Le Retraité de 42 ans | MIL | Équipe | Les 2 prochaines occasions à +40 % |
 | Le Pique-assiette | MIL | Coach adverse | Vole 2 points de jauge |
-| Le Sombrero bourré | ATT | Soi | Prochaine occasion franche. S'il marque, sa recharge est remise à zéro |
+| Le Sombrero bourré | ATT | Soi | Prochaine occasion franche. S'il marque, il peut rejouer sa capacité |
 | Le Revenant de la Feria | ATT | Soi | Bonus au tir égal à la minute de jeu pendant 23 min (70e = +70 %) |
 | Le Chef de chant | Tous | Équipe | +20 % à toutes les stats, 15 min. Chaque but marqué prolonge de 5 min |
 | Le Capitaine gueulard | Tous | Équipe | Retire tous les malus en cours. +1 point de jauge si au moins 3 sont retirés |

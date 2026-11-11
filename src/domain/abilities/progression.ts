@@ -18,7 +18,8 @@ export const CAREER_START_AGE = 18;
 
 /** Coût en Jauge de Gueulante et recharge en minutes (0 = aucune) selon la rareté. */
 export const RARITY_COST: Record<Rarity, number> = { common: 2, rare: 3, legendary: 5, mythic: 7 };
-export const RARITY_COOLDOWN: Record<Rarity, number> = { common: 15, rare: 15, legendary: 0, mythic: 0 };
+/** Plus de recharge : chaque capacité ne sert qu'une fois par match (CAP-04). */
+export const RARITY_COOLDOWN: Record<Rarity, number> = { common: 0, rare: 0, legendary: 0, mythic: 0 };
 
 /** Gain d'effet par niveau au-delà du premier (CAP-11). */
 const EFFECT_GAIN_PER_LEVEL = 0.1;
@@ -31,9 +32,9 @@ const DURATION_GAIN_PER_LEVEL = 0.1;
 export const LEVEL_BONUS_PER_LEVEL = 0.03;
 export const LEVEL_BONUS_DURATION = 10;
 export const LEVEL_BONUS_LABEL = 'Bonus de niveau';
-/** Au niveau 5 : durée allongée ou recharge réduite pour les capacités sans cible à choisir. */
+/** Au niveau 5 : durée allongée, sinon effet renforcé, pour les capacités sans cible à choisir. */
 const LEVEL5_DURATION_FACTOR = 1.5;
-const LEVEL5_COOLDOWN_REDUCTION = 5;
+const LEVEL5_EFFECT_FACTOR = 1.25;
 
 const BASE_ACTIVATION_XP = 10;
 
@@ -70,7 +71,7 @@ export function xpForActivation(impact: number): number {
   return Math.round(BASE_ACTIVATION_XP * (1 + clamp(impact, 0, 1) * 2));
 }
 
-export type Level5Bonus = 'extraTarget' | 'longerDuration' | 'shorterCooldown' | null;
+export type Level5Bonus = 'extraTarget' | 'longerDuration' | 'strongerEffect' | null;
 
 function hasDuration(effect: Effect): boolean {
   return 'duration' in effect || effect.type === 'cancelGoal';
@@ -80,12 +81,12 @@ function hasPickedTargets({ kind }: Targeting): boolean {
   return kind === 'teammate' || kind === 'opponent' || kind === 'randomOpponent';
 }
 
-/** Ce que le niveau 5 ajoute (CAP-11) : +1 cible, sinon +50 % de durée, sinon une recharge plus courte. */
+/** Ce que le niveau 5 ajoute (CAP-11) : +1 cible, sinon +50 % de durée, sinon un effet 25 % plus fort. */
 export function level5Bonus(ability: Ability): Level5Bonus {
   if (ability.rarity === 'mythic') return null;
   if (hasPickedTargets(ability.targeting)) return 'extraTarget';
-  if (ability.effects.some(hasDuration)) return 'longerDuration';
-  return RARITY_COOLDOWN[ability.rarity] > 0 ? 'shorterCooldown' : null;
+  if (!ability.fixedDuration && ability.effects.some(hasDuration)) return 'longerDuration';
+  return 'strongerEffect';
 }
 
 /**
@@ -94,17 +95,19 @@ export function level5Bonus(ability: Ability): Level5Bonus {
  */
 export function statsAtLevel(ability: Ability, level: number): AbilityStats {
   const lvl = clamp(Math.round(level), 1, MAX_LEVEL);
-  const factor = 1 + (lvl - 1) * EFFECT_GAIN_PER_LEVEL;
   const bonus = lvl === MAX_LEVEL ? level5Bonus(ability) : null;
+  const factor = (1 + (lvl - 1) * EFFECT_GAIN_PER_LEVEL) * (bonus === 'strongerEffect' ? LEVEL5_EFFECT_FACTOR : 1);
   const durationFactor = bonus === 'longerDuration' ? LEVEL5_DURATION_FACTOR : 1;
   const cooldown = RARITY_COOLDOWN[ability.rarity];
-  const effects = ability.effects.map((effect) => lengthen(extendPerLevel(scaleEffect(effect, factor), lvl), durationFactor));
+  // Une capacité à durée fixe ne gagne que de l'effet avec le niveau.
+  const durationLevel = ability.fixedDuration ? 1 : lvl;
+  const effects = ability.effects.map((effect) => lengthen(extendPerLevel(scaleEffect(effect, factor), durationLevel), durationFactor));
   if (lvl > 1 && !ability.effects.some(growsWithLevel)) effects.push(levelBonus(lvl));
   return {
     effects,
     targeting: bonus === 'extraTarget' ? { ...ability.targeting, count: (ability.targeting.count ?? 1) + 1 } : ability.targeting,
     cost: RARITY_COST[ability.rarity],
-    cooldown: bonus === 'shorterCooldown' ? cooldown - LEVEL5_COOLDOWN_REDUCTION : cooldown,
+    cooldown,
   };
 }
 

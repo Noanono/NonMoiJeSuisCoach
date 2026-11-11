@@ -1,8 +1,9 @@
 import { ABILITIES } from '../abilities/catalog';
 import { CAREER_XP_PER_SEASON, gainXp } from '../abilities/progression';
 import { facilitiesOf, facilityBonus } from '../club/facilities';
+import { CUP_WINNER_PRIZE, leaguePrize } from '../club/finance';
 import { reviewSeason, seasonObjective } from '../club/president';
-import { createCup, fixtureWinnerId } from '../league/cup';
+import { createCup, cupWinnerId, fixtureWinnerId } from '../league/cup';
 import { autoLineup, EMPTY_SLOT } from '../league/lineup';
 import { applyDivisionMoves, computeDivisionMoves } from '../league/promotion';
 import { generateLeagueFixtures } from '../league/schedule';
@@ -87,8 +88,9 @@ export function endSeason(state: GameState, rng: Rng): void {
   const review = reviewSeason(state.objective, { finalPosition: position, cupRoundsWon: roundsWon });
   const awards = seasonAwards(state, division.id);
   state.outlook.presidentConfidence = Math.max(0, Math.min(100, state.outlook.presidentConfidence + review.confidenceDelta));
-  state.history.push({ season: state.season, clubName: human.name, divisionName: division.name, position, cupRoundsWon: roundsWon, verdict: review.verdict, awards });
   state.news.push(`Fin de saison : ${position}e de ${division.name}. ${review.verdict}`, ...awards);
+  const prizeMoney = payPrizes(state, standings);
+  state.history.push({ season: state.season, clubName: human.name, divisionName: division.name, position, cupRoundsWon: roundsWon, verdict: review.verdict, awards, prizeMoney });
 
   const moves = computeDivisionMoves(state.divisions, standings);
   const applied = applyDivisionMoves(state.divisions, state.clubs, moves);
@@ -107,6 +109,43 @@ export function endSeason(state: GameState, rng: Rng): void {
   welcomeYouth(state, rng);
   state.season += 1;
   startSeason(state, rng);
+}
+
+/**
+ * Primes de fin de saison (CLUB-01) : chaque club touche sa prime de classement, le vainqueur de la
+ * coupe une prime en plus. Rend ce qu'a touché le club du coach.
+ */
+function payPrizes(state: GameState, standings: Record<string, StandingRow[]>): number {
+  let humanPrize = 0;
+  for (const division of state.divisions) {
+    const rows = standings[division.id] ?? [];
+    rows.forEach((row, index) => {
+      const club = state.clubs[row.clubId];
+      if (!club) return;
+      const prize = leaguePrize(division.tier, index + 1, rows.length);
+      club.budget += prize;
+      if (club.isHuman) {
+        humanPrize += prize;
+        state.news.push(`Prime de classement : ${formatPrize(prize)}. Le trésorier compte deux fois pour être sûr.`);
+      }
+    });
+  }
+  const winnerId = cupWinnerId(state.cup);
+  const winner = winnerId ? state.clubs[winnerId] : undefined;
+  if (winner) {
+    winner.budget += CUP_WINNER_PRIZE;
+    if (winner.isHuman) {
+      humanPrize += CUP_WINNER_PRIZE;
+      state.news.push(`COUPE GAGNÉE ! Prime de ${formatPrize(CUP_WINNER_PRIZE)}, le trophée trône déjà sur le comptoir.`);
+    } else {
+      state.news.push(`La coupe est remportée par ${winner.name}.`);
+    }
+  }
+  return humanPrize;
+}
+
+function formatPrize(amount: number): string {
+  return `${amount.toLocaleString('fr-FR')} €`;
 }
 
 /** Les capacités des joueurs hors du club du coach gagnent une saison d'XP (CAP-10). */

@@ -94,6 +94,7 @@
               <th scope="col">Division</th>
               <th scope="col" class="num">Place</th>
               <th scope="col" class="num">Tours de coupe</th>
+              <th scope="col" class="num">Primes</th>
               <th scope="col">Verdict</th>
             </tr>
           </thead>
@@ -105,6 +106,7 @@
                 <td>{record.divisionName}</td>
                 <td class="num">{record.position}e</td>
                 <td class="num">{record.cupRoundsWon}</td>
+                <td class="num">{record.prizeMoney === undefined ? '–' : formatEuros(record.prizeMoney)}</td>
                 <td>{record.verdict}</td>
               </tr>
             {/each}

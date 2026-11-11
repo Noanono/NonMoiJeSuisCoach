@@ -241,7 +241,10 @@ function takeShot(run: Run, shot: Shot): boolean {
       creditActive(state, defending.side, IMPACT.actionCancelled, 'penalty à retirer');
       return takeShot(run, { ...shot, bonus: 0 });
     }
-    if (boost?.shooterId === shooter.id) shooter.cooldownUntil = 0;
+    if (boost?.shooterId === shooter.id) {
+      shooter.cooldownUntil = 0;
+      shooter.usedAbility = false;
+    }
     recordGoal(run, attacking.side, shooter, { penalty: kind === 'penalty' });
     return true;
   }

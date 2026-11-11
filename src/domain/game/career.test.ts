@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { DIALOGUES } from '../club/dialogues';
 import { facilitiesOf, MAX_FACILITY_LEVEL, upgradeCost } from '../club/facilities';
+import { CUP_WINNER_PRIZE, leaguePrize } from '../club/finance';
+import { cupRoundFixtures } from '../league/cup';
 import { createRng } from '../core/rng';
 import { dismissEventWindow, tick } from '../match';
 import { overall } from '../player/rating';
@@ -236,5 +238,35 @@ describe('niveau des capacités dans le monde (CAP-10)', () => {
     withRng(state, (rng) => endSeason(state, rng));
     expect(state.players[mine.id]!.ability.xp).toBe(mineXp);
     expect(state.players[other.id]!.ability.xp).toBeGreaterThan(otherXp);
+  });
+});
+
+describe('primes de fin de saison (CLUB-01)', () => {
+  test('la prime dépend de la place et du niveau de la division', () => {
+    expect(leaguePrize(1, 1, 10)).toBeGreaterThan(leaguePrize(1, 2, 10));
+    expect(leaguePrize(1, 10, 10)).toBeCloseTo(leaguePrize(1, 1, 10) * 0.1, -2);
+    expect(leaguePrize(1, 1, 10)).toBeGreaterThan(leaguePrize(2, 1, 10));
+    expect(leaguePrize(4, 1, 10)).toBeGreaterThan(leaguePrize(4, 10, 10));
+  });
+
+  test('en fin de saison, le club du coach touche sa prime de classement', () => {
+    const state = newGame({ seed: 45 });
+    const before = humanClub(state).budget;
+    withRng(state, (rng) => endSeason(state, rng));
+    const record = state.history.at(-1)!;
+    expect(record.prizeMoney).toBe(leaguePrize(4, record.position, 10));
+    expect(humanClub(state).budget).toBe(before + record.prizeMoney!);
+  });
+
+  test('le vainqueur de la coupe touche une prime en plus', () => {
+    const state = newGame({ seed: 46 });
+    const cup = state.cup;
+    // Coupe jouée jusqu'à une finale gagnée par le club du coach.
+    cup.currentRound = cup.totalRounds;
+    cup.fixtures.push({ id: 'finale', competition: 'cup', divisionId: null, round: cup.totalRounds, week: 99, homeId: state.humanClubId, awayId: Object.keys(state.clubs).find((id) => id !== state.humanClubId)!, result: { homeGoals: 2, awayGoals: 0, scorers: [] } });
+    expect(cupRoundFixtures(cup, cup.totalRounds).some((fixture) => fixture.id === 'finale')).toBe(true);
+    withRng(state, (rng) => endSeason(state, rng));
+    const record = state.history.at(-1)!;
+    expect(record.prizeMoney).toBe(leaguePrize(4, record.position, 10) + CUP_WINNER_PRIZE);
   });
 });

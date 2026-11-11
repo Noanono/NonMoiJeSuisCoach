@@ -21,7 +21,7 @@ function activate(state: MatchState, playerId: string, targetIds: string[] = [])
 }
 
 describe('activation des capacités', () => {
-  test('la jauge est débitée et la recharge démarre à la validation (CAP-04, CAP-05)', () => {
+  test('la jauge est débitée à la validation, et la capacité ne resservira pas du match (CAP-04, CAP-05)', () => {
     const state = humanMatch({ 5: 'pilier' });
     expect(previewActivation(state, 'home', 'h-5')).toMatchObject({ available: true, cost: 2, rarity: 'common' });
     const events = activate(state, 'h-5');
@@ -29,8 +29,9 @@ describe('activation des capacités', () => {
     expect(state.home.gauge).toBe(GAUGE_START - 2);
     const preview = previewActivation(state, 'home', 'h-5');
     expect(preview.available).toBe(false);
-    expect(preview.cooldownRemaining).toBe(15);
-    expect(preview.reason).toContain('15 min');
+    expect(preview.reason).toContain('Déjà utilisée');
+    state.home.gauge = 10;
+    expect(previewActivation(state, 'home', 'h-5').available).toBe(false);
   });
 
   test('annuler avant validation ne consomme ni jauge ni recharge (CAP-20)', () => {
@@ -90,15 +91,18 @@ describe('activation des capacités', () => {
     expect(previewActivation(state, 'home', 'h-5')).toMatchObject({ available: false });
   });
 
-  test('une légendaire se rejoue autant que la jauge le permet', () => {
+  test('une légendaire aussi ne sert qu’une fois, même jauge pleine', () => {
     const state = humanMatch({}, { bench: ['malediction'] });
     state.home.gauge = 10;
     activate(state, 'h-b0');
     expect(state.home.gauge).toBe(5);
-    expect(previewActivation(state, 'home', 'h-b0').available).toBe(true);
-    activate(state, 'h-b0');
-    expect(state.home.gauge).toBe(0);
-    expect(previewActivation(state, 'home', 'h-b0').reason).toContain('5 point(s)');
+    expect(previewActivation(state, 'home', 'h-b0').reason).toContain('Déjà utilisée');
+  });
+
+  test('sans jauge suffisante, la raison est donnée', () => {
+    const state = humanMatch({}, { bench: ['malediction'] });
+    state.home.gauge = 2;
+    expect(previewActivation(state, 'home', 'h-b0').reason).toContain('3 point(s)');
   });
 
   test('une capacité cachée se révèle à sa première activation (CAP-13)', () => {

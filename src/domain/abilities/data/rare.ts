@@ -30,6 +30,7 @@ export const RARE_ABILITIES: readonly Ability[] = [
     category: 'defense',
     position: 'DEF',
     targeting: { kind: 'team' },
+    fixedDuration: true,
     description: 'Toute l’équipe recule et se gare devant la cage.',
     effects: [
       { type: 'modifier', scope: 'team', stat: 'defense', value: 3.5, duration: 45 },

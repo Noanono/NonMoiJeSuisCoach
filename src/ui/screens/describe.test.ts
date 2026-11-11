@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
   availabilityLabel,
-  describeCooldown,
   describeEffect,
   describeLevel5,
   describeTargeting,
@@ -44,10 +43,8 @@ describe('describeEffect (CAP-08 : effets chiffrés)', () => {
   });
 });
 
-describe('recharge, ciblage et disponibilité', () => {
-  test('la recharge et le bonus de niveau 5 se lisent en clair', () => {
-    expect(plain(describeCooldown(20))).toBe('Recharge 20 min');
-    expect(describeCooldown(0)).toBe('Aucune recharge');
+describe('niveau 5, ciblage et disponibilité', () => {
+  test('le bonus de niveau 5 se lit en clair', () => {
     expect(describeLevel5('extraTarget')).toBe('Une cible de plus.');
   });
 
