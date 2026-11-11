@@ -18,6 +18,8 @@ export interface CupState {
   fixtures: Fixture[];
   /** Dernier tour tiré. */
   currentRound: number;
+  /** Tours dont les primes ont été versées (CLUB-01). */
+  paidRounds?: number[];
 }
 
 const MIN_CUP_CLUBS = 2;

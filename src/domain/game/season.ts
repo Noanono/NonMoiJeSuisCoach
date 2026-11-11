@@ -1,9 +1,10 @@
 import { ABILITIES } from '../abilities/catalog';
 import { CAREER_XP_PER_SEASON, gainXp } from '../abilities/progression';
 import { facilitiesOf, facilityBonus } from '../club/facilities';
-import { CUP_WINNER_PRIZE, leaguePrize } from '../club/finance';
+import { leaguePrize } from '../club/finance';
 import { reviewSeason, seasonObjective } from '../club/president';
-import { createCup, cupWinnerId, fixtureWinnerId } from '../league/cup';
+import { createCup, fixtureWinnerId } from '../league/cup';
+import { cupPrizeFor } from './cupPrizes';
 import { autoLineup, EMPTY_SLOT } from '../league/lineup';
 import { applyDivisionMoves, computeDivisionMoves } from '../league/promotion';
 import { generateLeagueFixtures } from '../league/schedule';
@@ -112,8 +113,8 @@ export function endSeason(state: GameState, rng: Rng): void {
 }
 
 /**
- * Primes de fin de saison (CLUB-01) : chaque club touche sa prime de classement, le vainqueur de la
- * coupe une prime en plus. Rend ce qu'a touché le club du coach.
+ * Primes de fin de saison (CLUB-01) : chaque club touche sa prime de classement. Les primes de coupe
+ * sont versées pendant la saison, à l'élimination. Rend le total de la saison du club du coach.
  */
 function payPrizes(state: GameState, standings: Record<string, StandingRow[]>): number {
   let humanPrize = 0;
@@ -130,18 +131,7 @@ function payPrizes(state: GameState, standings: Record<string, StandingRow[]>): 
       }
     });
   }
-  const winnerId = cupWinnerId(state.cup);
-  const winner = winnerId ? state.clubs[winnerId] : undefined;
-  if (winner) {
-    winner.budget += CUP_WINNER_PRIZE;
-    if (winner.isHuman) {
-      humanPrize += CUP_WINNER_PRIZE;
-      state.news.push(`COUPE GAGNÉE ! Prime de ${formatPrize(CUP_WINNER_PRIZE)}, le trophée trône déjà sur le comptoir.`);
-    } else {
-      state.news.push(`La coupe est remportée par ${winner.name}.`);
-    }
-  }
-  return humanPrize;
+  return humanPrize + cupPrizeFor(state.cup, state.humanClubId);
 }
 
 function formatPrize(amount: number): string {

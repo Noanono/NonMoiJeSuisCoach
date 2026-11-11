@@ -55,7 +55,7 @@ Le jeu mêle une vraie couche de gestion (effectif, tactique, mercato, budget) e
 
 | ID | Exigence |
 | --- | --- |
-| CLUB-01 | Le club dispose d'un budget, alimenté par les résultats, les sponsors, la buvette et les primes de fin de saison, et dépensé en salaires et transferts. Prime de classement : 600 000 € pour le champion de l'élite, divisée par 2,5 à chaque division plus bas (environ 38 000 € en district), le dernier touchant 10 % de la prime du champion. Le vainqueur de la coupe touche 100 000 €, quelle que soit sa division. |
+| CLUB-01 | Le club dispose d'un budget, alimenté par les résultats, les sponsors, la buvette et les primes de fin de saison, et dépensé en salaires et transferts. Prime de classement : 600 000 € pour le champion de l'élite, divisée par 2,5 à chaque division plus bas (environ 38 000 € en district), le dernier touchant 10 % de la prime du champion. En coupe, chaque club touche une prime dès son élimination, qui double à chaque tour franchi : de 1 600 € au tour préliminaire à 50 000 € pour le finaliste ; le vainqueur touche 100 000 €, quelle que soit sa division. La prime apparaît dans le bilan de la semaine. |
 | CLUB-02 | Le mercato permet d'acheter et de vendre des joueurs, dans la limite du budget, pendant des fenêtres définies dans la saison. |
 | CLUB-03 | Les clubs adverses font aussi des offres sur les joueurs du coach, qu'il peut accepter ou refuser. |
 | CLUB-04 | Le président fixe des objectifs en début de saison (maintien, montée, parcours en coupe…). |

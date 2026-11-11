@@ -3,6 +3,7 @@ import { DIALOGUES } from '../club/dialogues';
 import { facilitiesOf, MAX_FACILITY_LEVEL, upgradeCost } from '../club/facilities';
 import { CUP_WINNER_PRIZE, leaguePrize } from '../club/finance';
 import { cupRoundFixtures } from '../league/cup';
+import { cupStagePrize, payCupRound } from './cupPrizes';
 import { createRng } from '../core/rng';
 import { dismissEventWindow, tick } from '../match';
 import { overall } from '../player/rating';
@@ -268,5 +269,30 @@ describe('primes de fin de saison (CLUB-01)', () => {
     withRng(state, (rng) => endSeason(state, rng));
     const record = state.history.at(-1)!;
     expect(record.prizeMoney).toBe(leaguePrize(4, record.position, 10) + CUP_WINNER_PRIZE);
+  });
+});
+
+describe('primes de coupe selon le tour atteint (CLUB-01)', () => {
+  test('la prime double à chaque tour, la finale perdue vaut la moitié de la victoire', () => {
+    expect(cupStagePrize(6, 6)).toBe(CUP_WINNER_PRIZE / 2);
+    expect(cupStagePrize(6, 5)).toBe(CUP_WINNER_PRIZE / 4);
+    expect(cupStagePrize(6, 2)).toBeGreaterThan(cupStagePrize(6, 1));
+  });
+
+  test('éliminé, le club du coach touche sa prime tout de suite, une seule fois', () => {
+    // Une partie où le club du coach joue le premier tour (sinon il est exempté).
+    const plays = (game: GameState) => game.cup.fixtures.find((entry) => entry.round === game.cup.currentRound && (entry.homeId === game.humanClubId || entry.awayId === game.humanClubId));
+    let seed = 47;
+    while (!plays(newGame({ seed }))) seed++;
+    const state = newGame({ seed });
+    const fixture = plays(state)!;
+    for (const entry of cupRoundFixtures(state.cup, state.cup.currentRound)) entry.result = { homeGoals: 0, awayGoals: 1, scorers: [] };
+    const humanIsHome = fixture.homeId === state.humanClubId;
+    const before = humanClub(state).budget;
+    payCupRound(state, state.cup.currentRound);
+    payCupRound(state, state.cup.currentRound);
+    const expected = humanIsHome ? cupStagePrize(state.cup.totalRounds, state.cup.currentRound) : 0;
+    expect(humanClub(state).budget).toBe(before + expected);
+    if (humanIsHome) expect(state.lastFinance.at(-1)).toEqual({ label: 'Prime de coupe', amount: expected });
   });
 });

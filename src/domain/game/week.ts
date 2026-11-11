@@ -11,6 +11,7 @@ import { createRng, type Rng } from '../core/rng';
 import { isTransferWindowOpen, SEASON_WEEKS } from '../league/calendar';
 import { drawNextCupRound, isCupRoundComplete } from '../league/cup';
 import type { Fixture, Player } from '../types';
+import { payCupRound } from './cupPrizes';
 import { scaleConfidenceDelta } from './difficulty';
 import { pickJobOffers } from './jobs';
 import { playAiFixture } from './matches';
@@ -199,11 +200,12 @@ function updateOffers(state: GameState, rng: Rng): void {
   if (offers.length > 0) state.news.push(`${offers.length} offre(s) reçue(s) pour tes joueurs. Le fax chauffe.`);
 }
 
+/** Tour de coupe terminé : primes des éliminés (et du vainqueur après la finale), puis tirage du suivant. */
 function advanceCup(state: GameState, rng: Rng): void {
-  const { cup } = state;
-  if (cup.currentRound < cup.totalRounds && isCupRoundComplete(cup, cup.currentRound)) {
-    state.cup = drawNextCupRound(cup, rng);
-  }
+  const round = state.cup.currentRound;
+  if (round < 1 || !isCupRoundComplete(state.cup, round)) return;
+  payCupRound(state, round);
+  if (round < state.cup.totalRounds) state.cup = drawNextCupRound(state.cup, rng);
 }
 
 /** Dialogue de la semaine (CLUB-06), avec des scènes dédiées avant un derby (UNIV-09). */
