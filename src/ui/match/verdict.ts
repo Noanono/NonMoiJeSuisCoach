@@ -55,6 +55,10 @@ export function windowTitle(window: EventWindow, pendingPlay: PendingPlay | null
       return `${setPiece} pour toi : quelqu'un a une idée ?`;
     case 'opponentSetPiece':
       return `${setPiece} pour eux : quelqu'un a une idée ?`;
+    case 'ownFreeKick':
+      return window.freeKick ? 'Coup franc pour toi : tir, centre ou combinaison ?' : "Coup franc pour toi : quelqu'un a une idée ?";
+    case 'opponentFreeKick':
+      return window.freeKick ? 'Coup franc contre toi : quel mur ?' : "Coup franc pour eux : quelqu'un a une idée ?";
     case 'ownPenalty':
       return "Penalty pour toi : quelqu'un veut s'en mêler ?";
     case 'opponentPenalty':

@@ -12,7 +12,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     category: 'defense',
     position: 'GK',
     description: 'Gonfle le ventre et bouche la moitié de la cage.',
-    effects: [{ type: 'modifier', scope: 'self', stat: 'goalkeeping', value: 1.8, duration: 25 }],
+    effects: [{ type: 'modifier', scope: 'self', stat: 'goalkeeping', value: 2.2, duration: 35 }],
   }),
   common({
     id: 'le-bavard',
@@ -20,7 +20,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     category: 'defense',
     position: 'GK',
     description: 'Raconte ses vacances à l’attaquant au moment où il arme.',
-    effects: [{ type: 'opponentChanceMalus', value: 0.6, shots: 2 }],
+    effects: [{ type: 'opponentChanceMalus', value: 0.6, shots: 3 }],
   }),
   common({
     id: 'le-danseur',
@@ -29,7 +29,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'GK',
     trigger: 'opponentPenalty',
     description: 'Gesticule sur sa ligne comme un soir de mariage.',
-    effects: [{ type: 'opponentChanceMalus', value: 0.6, shots: 1 }],
+    effects: [{ type: 'opponentChanceMalus', value: 0.5, shots: 1 }],
   }),
   common({
     id: 'le-degagement-de-mule',
@@ -49,7 +49,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'DEF',
     targeting: { kind: 'zone' },
     description: 'Arrose sa zone à la main. Le terrain devient une patinoire.',
-    effects: [{ type: 'modifier', scope: 'zoneOpponents', stat: 'speed', value: -0.75, duration: 25 }],
+    effects: [{ type: 'modifier', scope: 'zoneOpponents', stat: 'speed', value: -0.8, duration: 30 }],
   }),
   common({
     id: 'l-agriculteur',
@@ -57,7 +57,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     category: 'defense',
     position: 'DEF',
     description: 'Mollets de taureau et odeur de ferme : personne ne passe.',
-    effects: [{ type: 'modifier', scope: 'self', stat: 'all', value: 1.5, duration: 30 }],
+    effects: [{ type: 'modifier', scope: 'self', stat: 'all', value: 1.8, duration: 30 }],
   }),
   common({
     id: 'le-rugbyman-reconverti',
@@ -103,7 +103,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'MID',
     targeting: { kind: 'opponent', count: 1 },
     description: 'Noue discrètement les lacets d’un adversaire au sol.',
-    effects: [{ type: 'knockout', scope: 'targets', duration: 11 }],
+    effects: [{ type: 'knockout', scope: 'targets', duration: 16 }],
   }),
   common({
     id: 'le-marchand-de-sable',
@@ -164,7 +164,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'ATT',
     trigger: 'ownDeadBall',
     description: 'Une gorgée avant de poser le ballon. La main ne tremble plus.',
-    effects: [{ type: 'chanceBoost', value: 0.3 }],
+    effects: [{ type: 'chanceBoost', value: 0.27 }],
   }),
   common({
     id: 'le-bulldozer',
@@ -192,7 +192,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     position: 'ANY',
     targeting: { kind: 'opponent', count: 1 },
     description: 'Une remarque sur sa coupe de cheveux, et il ne joue plus au foot.',
-    effects: [{ type: 'modifier', scope: 'targets', stat: 'all', value: -0.55, duration: 15 }],
+    effects: [{ type: 'modifier', scope: 'targets', stat: 'all', value: -0.55, duration: 18 }],
   }),
   common({
     id: 'short-trop-court',
@@ -231,5 +231,43 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     targeting: { kind: 'teammate', count: 3, downed: true },
     description: 'De la pommade au camphre, et ça repart.',
     effects: [{ type: 'revive', scope: 'targets' }],
+  }),
+
+  // --- Coups de pied arrêtés -------------------------------------------------
+  common({
+    id: 'le-regard-qui-tue',
+    name: 'Le Regard qui tue',
+    category: 'attack',
+    position: 'ATT',
+    trigger: 'ownPenalty',
+    description: 'Fixe le gardien dans les yeux pendant trois minutes avant de frapper. Le gardien cligne le premier.',
+    effects: [{ type: 'chanceBoost', value: 0.2 }, { type: 'modifier', scope: 'self', stat: 'shooting', value: 0.6, duration: 15 }],
+  }),
+  common({
+    id: 'le-gardien-qui-parle',
+    name: 'Le Gardien qui parle',
+    category: 'defense',
+    position: 'GK',
+    trigger: 'opponentPenalty',
+    description: 'Raconte au tireur que sa femme l’attend à la buvette avec un air bizarre.',
+    effects: [{ type: 'modifier', scope: 'self', stat: 'goalkeeping', value: 1.8, duration: 18 }],
+  }),
+  common({
+    id: 'le-pied-de-velours',
+    name: 'Le Pied de velours',
+    category: 'attack',
+    position: 'MID',
+    trigger: 'ownFreeKick',
+    description: 'Pose le ballon comme un œuf, recule de six pas, et vise la lucarne. Seulement en frappe directe.',
+    effects: [{ type: 'setPieceBoost', option: 'shot', value: 0.3 }],
+  }),
+  common({
+    id: 'la-tete-de-pioche',
+    name: 'La Tête de pioche',
+    category: 'attack',
+    position: 'DEF',
+    trigger: 'ownSetPiece',
+    description: 'Monte sur tous les centres, front en avant. Il n’a jamais eu mal à la tête de sa vie.',
+    effects: [{ type: 'setPieceBoost', option: 'cross', value: 0.28 }],
   }),
 ];

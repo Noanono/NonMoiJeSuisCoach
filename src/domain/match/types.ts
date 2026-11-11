@@ -166,6 +166,10 @@ export interface TeamState {
   shotMaluses: ShotMalus[];
   /** Prochaines actions adverses à annuler. */
   pendingCancels: number;
+  /** Bonus réservés au coup de pied arrêté en cours (perdus s'il est joué autrement). */
+  setPieceBoosts: { option: 'shot' | 'cross'; value: number }[];
+  /** Penalties adverses marqués à faire retirer. */
+  retakePenalties: number;
   delayed: DelayedEffect[];
   substitutionsUsed: number;
   /** Les buts de l'équipe comptent double jusqu'à cette minute écoulée incluse. */
@@ -238,6 +242,8 @@ export interface EventWindow {
   side: Side;
   trigger: AbilityTrigger;
   eligiblePlayerIds: string[];
+  /** Coup franc : le coach choisit l'option (attaque) ou le mur (défense), même sans capacité à jouer. */
+  freeKick?: 'attack' | 'defense';
 }
 
 /** Activation en cours de ciblage (CAP-16, CAP-17, CAP-20). */
@@ -251,10 +257,21 @@ export interface PendingActivation {
 }
 
 /** Coup de pied arrêté ou penalty annoncé, joué au tick suivant (après la fenêtre éventuelle). */
+/** Distance d'un coup franc : elle décide de l'option la plus rentable. */
+export type FreeKickDistance = 'close' | 'medium' | 'far';
+/** Ce que l'équipe qui tire fait du coup franc. */
+export type FreeKickOption = 'shot' | 'cross' | 'combination';
+/** Taille du mur de l'équipe qui défend. */
+export type WallSize = 'small' | 'normal' | 'large';
+
 export interface PendingPlay {
   kind: 'freeKick' | 'corner' | 'penalty';
   side: Side;
   takerId: string | null;
+  /** Coup franc : distance, option choisie par l'attaque, mur choisi par la défense. */
+  distance?: FreeKickDistance;
+  option?: FreeKickOption;
+  wall?: WallSize;
 }
 
 export interface ShootoutResult {

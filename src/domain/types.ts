@@ -120,7 +120,10 @@ export type AbilityTrigger =
   | 'ownPenalty'
   | 'opponentPenalty'
   | 'ownDeadBall'
-  | 'halftime';
+  | 'halftime'
+  /** Coup franc seulement (pas les corners) : CAP-19. */
+  | 'ownFreeKick'
+  | 'opponentFreeKick';
 
 /**
  * Effets primitifs interprétés par le moteur de match. Tous restent dans le match :
@@ -162,7 +165,17 @@ export type Effect =
   /** Chaque but de l'équipe compte double. */
   | { type: 'doubleGoals'; duration: number }
   /** Exclus et blessés reviennent, toute l'équipe repart à 100 % d'énergie. */
-  | { type: 'miracle' };
+  | { type: 'miracle' }
+  /** Bonus sur le coup de pied arrêté en cours, seulement s'il est joué de cette façon (tir direct ou centre). */
+  | { type: 'setPieceBoost'; option: 'shot' | 'cross'; value: number }
+  /** Le ballon du coup franc avance d'un cran (lointain → moyen → proche). */
+  | { type: 'moveBallCloser' }
+  /** Le coup de pied arrêté adverse est annulé. */
+  | { type: 'cancelSetPiece' }
+  /** Les `count` prochains penalties adverses marqués sont à retirer. */
+  | { type: 'retakePenalty'; count: number }
+  /** Le coup franc en cours devient un penalty. */
+  | { type: 'turnIntoPenalty' };
 
 export interface AbilityStats {
   effects: Effect[];

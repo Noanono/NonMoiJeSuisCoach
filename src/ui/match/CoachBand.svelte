@@ -1,17 +1,37 @@
 <script lang="ts">
   import Button from '../kit/Button.svelte';
+  import {
+    defaultFreeKickOption,
+    defaultWall,
+    FREE_KICK_CONVERSION,
+    FREE_KICK_DISTANCE_LABEL,
+    type FreeKickOption,
+    type WallSize,
+  } from '../../domain/match';
   import type { MatchController } from './controller.svelte';
   import { windowTitle } from './verdict';
 
   /**
-   * Bandeau scotch rayé quand le match attend le coach : choix des cibles (CAP-16, CAP-17)
-   * ou fenêtre d'événement (CAP-19). Le ciblage passe avant : il peut naître d'une fenêtre.
+   * Bandeau scotch rayé quand le match attend le coach : choix des cibles (CAP-16, CAP-17),
+   * fenêtre d'événement (CAP-19), et sur coup franc le choix de l'option ou du mur.
+   * Le ciblage passe avant : il peut naître d'une fenêtre.
    */
   interface Props {
     controller: MatchController;
   }
 
   let { controller }: Props = $props();
+
+  const OPTIONS: { id: FreeKickOption; label: string; hint: string }[] = [
+    { id: 'shot', label: 'Frappe directe', hint: 'le meilleur tireur vise la lucarne' },
+    { id: 'cross', label: 'Centre', hint: 'les grands montent ; risque de contre si c’est repoussé' },
+    { id: 'combination', label: 'Combinaison', hint: 'passe courte, action sûre' },
+  ];
+  const WALLS: { id: WallSize; label: string; hint: string }[] = [
+    { id: 'small', label: 'Petit mur', hint: 'meilleur sur les centres, faible contre la frappe' },
+    { id: 'normal', label: 'Mur normal', hint: 'équilibré' },
+    { id: 'large', label: 'Grand mur', hint: 'ferme la frappe, laisse de l’espace sur les centres' },
+  ];
 
   // L'état d'attente est muté en place par le moteur : on relit à chaque version.
   const prompt = $derived.by(() => {
@@ -29,10 +49,28 @@
     }
     const window = match.awaiting;
     if (window && window.side === controller.coachSide) {
-      return { kind: 'window' as const, title: windowTitle(window, match.pendingPlay) };
+      const play = match.pendingPlay;
+      const distance = play?.kind === 'freeKick' ? (play.distance ?? 'medium') : null;
+      return {
+        kind: 'window' as const,
+        title: windowTitle(window, play),
+        hasAbilities: window.eligiblePlayerIds.length > 0,
+        freeKick:
+          window.freeKick && play && distance
+            ? {
+                role: window.freeKick,
+                distance: FREE_KICK_DISTANCE_LABEL[distance],
+                odds: FREE_KICK_CONVERSION[distance],
+                option: play.option ?? defaultFreeKickOption(distance),
+                wall: play.wall ?? defaultWall(distance),
+              }
+            : null,
+      };
     }
     return null;
   });
+
+  const percent = (value: number) => `${Math.round(value * 100)} %`;
 
   /** Échap annule le ciblage en cours, sans rien consommer (CAP-20). */
   function cancelOnEscape(event: KeyboardEvent): void {
@@ -54,6 +92,45 @@
       <div class="actions">
         <Button variant="primary" size="s" disabled={!complete} onclick={() => controller.confirm()}>Valider</Button>
         <Button variant="secondary" size="s" onclick={() => controller.cancel()}>Laisser tomber</Button>
+      </div>
+    {:else if prompt.freeKick}
+      {@const freeKick = prompt.freeKick}
+      <div class="coup-franc">
+        <p class="consigne" aria-live="polite">
+          <span class="banderole-titre">{prompt.title}</span>
+          <span class="tampon distance">Coup franc {freeKick.distance}</span>
+          {#if prompt.hasAbilities}<span class="texte-s">Une capacité peut s'en mêler : touche un joueur surligné.</span>{/if}
+        </p>
+        {#if freeKick.role === 'attack'}
+          <div class="choix" role="radiogroup" aria-label="Option du coup franc">
+            {#each OPTIONS as option (option.id)}
+              <button
+                class="carte"
+                role="radio"
+                aria-checked={freeKick.option === option.id}
+                onclick={() => controller.chooseFreeKick(option.id)}
+              >
+                <span class="texte-fort">{option.label}</span>
+                <span class="mono">~{percent(freeKick.odds[option.id])}</span>
+                <span class="texte-s">{option.hint}</span>
+              </button>
+            {/each}
+          </div>
+        {:else}
+          <div class="choix" role="radiogroup" aria-label="Taille du mur">
+            {#each WALLS as wall (wall.id)}
+              <button class="carte" role="radio" aria-checked={freeKick.wall === wall.id} onclick={() => controller.chooseWall(wall.id)}>
+                <span class="texte-fort">{wall.label}</span>
+                <span class="texte-s">{wall.hint}</span>
+              </button>
+            {/each}
+          </div>
+        {/if}
+        <div class="actions">
+          <Button variant="primary" size="s" onclick={() => controller.dismissWindow()}>
+            {freeKick.role === 'attack' ? 'Jouer le coup franc' : 'En place'}
+          </Button>
+        </div>
       </div>
     {:else}
       <p class="consigne" aria-live="polite">
@@ -96,7 +173,8 @@
     font-size: 24px;
     line-height: 1.1;
   }
-  .compteur {
+  .compteur,
+  .distance {
     background: var(--encre-fixe);
     color: var(--craie-fixe);
     padding: 0 var(--space-2);
@@ -106,5 +184,31 @@
   .actions {
     display: flex;
     gap: var(--space-2);
+  }
+  .coup-franc {
+    display: grid;
+    gap: var(--space-2);
+    width: 100%;
+  }
+  .choix {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+    gap: var(--space-2);
+  }
+  .carte {
+    display: grid;
+    gap: 2px;
+    text-align: left;
+    padding: var(--space-2);
+    font: inherit;
+    color: var(--encre-fixe);
+    background: var(--craie-fixe);
+    border: var(--trait-fin) solid var(--encre-fixe);
+    cursor: pointer;
+  }
+  .carte[aria-checked='true'] {
+    background: var(--encre-fixe);
+    color: var(--craie-fixe);
+    box-shadow: var(--ombre-presse);
   }
 </style>

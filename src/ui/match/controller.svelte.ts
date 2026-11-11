@@ -5,6 +5,8 @@
  */
 import {
   cancelActivation,
+  chooseFreeKickOption,
+  chooseWall,
   confirmActivation,
   dismissEventWindow,
   isPaused,
@@ -16,6 +18,8 @@ import {
   tick,
   type ActivationRecord,
   type MatchState,
+  type FreeKickOption,
+  type WallSize,
   type Side,
 } from '../../domain/match';
 import type { Instructions } from '../../domain/types';
@@ -154,6 +158,18 @@ export class MatchController {
   /** Laisse passer la fenêtre d'événement (CAP-19). */
   dismissWindow(): void {
     dismissEventWindow(this.match);
+    store.touchMatch();
+  }
+
+  /** Coup franc pour le coach : tir direct, centre ou combinaison. */
+  chooseFreeKick(option: FreeKickOption): void {
+    chooseFreeKickOption(this.match, this.coachSide, option);
+    store.touchMatch();
+  }
+
+  /** Coup franc adverse : taille du mur. */
+  chooseWall(wall: WallSize): void {
+    chooseWall(this.match, this.coachSide, wall);
     store.touchMatch();
   }
 

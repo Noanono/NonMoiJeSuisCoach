@@ -87,8 +87,24 @@ const LINES = {
     'Rouge direct pour {player} ! Il part en serrant des mains en tribune comme un élu local.',
   ],
   freeKick: [
-    'Coup franc dangereux pour {team}. Le mur se met en place, les mains là où il faut.',
-    "Coup franc bien placé pour {team}. Dans le mur, tout le monde prie, certains pour de vrai.",
+    'Coup franc {label} pour {team}. Le mur se met en place, les mains là où il faut.',
+    "Coup franc {label} pour {team}. Dans le mur, tout le monde prie, certains pour de vrai.",
+  ],
+  freeKickCounter: [
+    'Le centre de {team} est repoussé, et {opponent} part en contre : la défense était montée boire un coup.',
+    "Dégagement de la tête, et {opponent} file en contre-attaque. Les défenseurs de {team} redescendent en marchant.",
+  ],
+  setPieceCancelled: [
+    "Bousculade dans le mur : l'arbitre siffle une faute contre {team}. Le coup franc s'évapore.",
+    "Le mur avance, recule, se bouscule… l'arbitre en a marre et rend le ballon à {opponent}.",
+  ],
+  penaltyRetaken: [
+    "But… refusé ! Le ballon n'était pas sur le point, le penalty de {team} est à retirer.",
+    "Le ramasseur de balles jure que le ballon avait bougé : penalty à retirer pour {team}.",
+  ],
+  turnedIntoPenalty: [
+    'Le tireur de {team} s\'effondre avant même de frapper… et l\'arbitre montre le point blanc ! PENALTY.',
+    "Plongeon digne d'un oscar pour {team} : le coup franc devient un penalty.",
   ],
   corner: [
     'Corner pour {team}. Tout le monde monte, sauf le gardien qui refait ses lacets.',
@@ -183,6 +199,8 @@ export const TRIGGER_LABEL = {
   opponentPenalty: 'sur un penalty adverse',
   ownDeadBall: 'sur un penalty ou un coup franc pour toi',
   halftime: 'à la mi-temps',
+  ownFreeKick: 'sur un coup franc pour toi',
+  opponentFreeKick: 'sur un coup franc adverse',
 } as const;
 
 export function fill(template: string, vars: CommentaryVars): string {

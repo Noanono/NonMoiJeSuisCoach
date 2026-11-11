@@ -178,6 +178,8 @@ function createTeam(sheet: TeamSheet, side: Side, lookup: AbilityLookup, boost: 
     chanceBoosts: [],
     shotMaluses: [],
     pendingCancels: 0,
+    setPieceBoosts: [],
+    retakePenalties: 0,
     delayed: [],
     substitutionsUsed: 0,
     doubleGoalsUntil: NEVER,

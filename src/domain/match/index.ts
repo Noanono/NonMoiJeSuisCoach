@@ -11,6 +11,15 @@ export {
   cancelActivation,
 } from './activation';
 export { dismissEventWindow } from './windows';
+export {
+  chooseFreeKickOption,
+  chooseWall,
+  defaultFreeKickOption,
+  defaultWall,
+  FREE_KICK_CONVERSION,
+  FREE_KICK_DISTANCE_LABEL,
+  WALL_FACTOR,
+} from './plays';
 export { canEnter, canLeave, MAX_SUBSTITUTIONS, substitutePlayer, substitutionsLeft } from './substitutions';
 export { summarize, toMatchResult } from './summary';
 export { simulateQuick } from './quick';

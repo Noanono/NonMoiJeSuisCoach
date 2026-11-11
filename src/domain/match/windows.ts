@@ -33,9 +33,14 @@ export function clearTriggers(state: MatchState): void {
   state.triggers.away = null;
 }
 
-/** La capacité répond-elle au déclencheur ouvert ? `ownDeadBall` vaut pour penalty et coup de pied arrêté. */
+/**
+ * La capacité répond-elle au déclencheur ouvert ? `ownDeadBall` vaut pour penalty et coup de pied arrêté ;
+ * un coup franc est aussi un coup de pied arrêté (les corners n'ouvrent que `ownSetPiece`).
+ */
 export function triggerIsOpen(ability: AbilityTrigger, open: AbilityTrigger | null): boolean {
-  if (ability === 'ownDeadBall') return open === 'ownSetPiece' || open === 'ownPenalty';
+  if (ability === 'ownDeadBall') return open === 'ownSetPiece' || open === 'ownFreeKick' || open === 'ownPenalty';
+  if (ability === 'ownSetPiece') return open === 'ownSetPiece' || open === 'ownFreeKick';
+  if (ability === 'opponentSetPiece') return open === 'opponentSetPiece' || open === 'opponentFreeKick';
   return ability === open;
 }
 
@@ -53,8 +58,11 @@ function offerWindow(run: Run, side: Side): void {
   const trigger = state.triggers[side];
   if (state.awaiting || !trigger) return;
   const eligible = eligiblePlayerIds(state, side);
-  if (eligible.length === 0) return;
-  state.awaiting = { side, trigger, eligiblePlayerIds: eligible };
+  const play = state.pendingPlay;
+  // Sur un coup franc, le coach a toujours un choix à faire : option en attaque, mur en défense.
+  const freeKick = play?.kind === 'freeKick' ? (play.side === side ? 'attack' : 'defense') : undefined;
+  if (eligible.length === 0 && !freeKick) return;
+  state.awaiting = { side, trigger, eligiblePlayerIds: eligible, ...(freeKick ? { freeKick } : {}) };
   pushEvent(run, 'eventWindow', side, comment(run.rng, 'eventWindow', { label: TRIGGER_LABEL[trigger] }));
 }
 
@@ -63,7 +71,8 @@ export function refreshWindow(state: MatchState): void {
   const window = state.awaiting;
   if (!window) return;
   window.eligiblePlayerIds = eligiblePlayerIds(state, window.side);
-  if (window.eligiblePlayerIds.length === 0) state.awaiting = null;
+  const freeKickPending = window.freeKick !== undefined && state.pendingPlay?.kind === 'freeKick';
+  if (window.eligiblePlayerIds.length === 0 && !freeKickPending) state.awaiting = null;
 }
 
 /** Le coach laisse passer la fenêtre (CAP-19) : rien n'est consommé. */

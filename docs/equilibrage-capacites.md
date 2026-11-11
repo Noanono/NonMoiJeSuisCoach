@@ -18,9 +18,11 @@ Principes :
 - les fourchettes ne se chevauchent pas : une rareté au-dessus est toujours plus forte ;
 - le point de gueulante rapporte un peu plus à chaque rareté : économiser pour une grosse capacité est récompensé ;
 - une mythique retourne un match à elle seule (environ un point par activation, souvent la différence entre un nul et une victoire) ;
-- une capacité liée à un événement rare (penalty adverse…) est jugée sur son effet quand l'événement survient et peut dépasser sa fourchette. Liste : `SITUATIONAL_ABILITIES` dans `src/domain/match/impactBench.ts`.
+- une capacité de penalty ou de coup franc est jugée sur ce qu'elle rapporte quand l'événement arrive, avec les mêmes fourchettes : elle ne sert pas souvent, mais elle doit valoir son prix quand on la joue ;
+- un penalty est déjà marqué 3 fois sur 4 : une capacité qui ne fait qu'améliorer le tir plafonne vite. Les capacités de penalty ajoutent donc un effet qui dure (bonus de tir, élan de l'équipe, adversaire déconcentré), et les communes de penalty ont exceptionnellement deux effets ;
+- une capacité peut être déclarée situationnelle (`SITUATIONAL_ABILITIES` dans `src/domain/match/impactBench.ts`) si elle a le droit de dépasser sa fourchette ; la liste est vide aujourd'hui.
 
-Les cibles sont codées dans `IMPACT_TARGETS` (`src/domain/match/impactBench.ts`). Le test `impactBench.test.ts` vérifie à chaque lancement de la suite que chaque capacité reste dans sa fourchette (150 matchs par capacité, avec une marge de 0,15 point pour le bruit de mesure).
+Les cibles sont codées dans `IMPACT_TARGETS` (`src/domain/match/impactBench.ts`). Le test `impactBench.test.ts` vérifie à chaque lancement de la suite que chaque capacité reste dans sa fourchette (250 matchs par capacité, avec une marge de 0,2 point pour le bruit de mesure : il détecte une capacité cassée, pas un écart fin).
 
 ## Progression par niveau (CAP-11)
 
@@ -71,6 +73,25 @@ Le niveau 5 reste exceptionnel ; les clubs IA y amènent quelques vétérans au 
 
 Le niveau de capacité compte dans la valeur marchande : +20 % par niveau au-delà du premier (×1,8 au niveau 5).
 
+## Coups francs (MATCH-12)
+
+Un coup franc est tiré à une distance au hasard : proche (30 %), moyenne (45 %) ou lointaine (25 %). L'équipe qui tire choisit son option, celle qui défend la taille de son mur (`FREE_KICK_CONVERSION` et `WALL_FACTOR` dans `src/domain/match/plays.ts`).
+
+Probabilité de but mesurée entre deux équipes égales, mur normal :
+
+| Distance | Frappe directe | Centre | Combinaison |
+| --- | ---: | ---: | ---: |
+| Proche | 14 % | 6 % | 8 % |
+| Moyenne | 7,5 % | 9 % | 8 % |
+| Lointaine | 4 % | 9 % | 8 % |
+
+- **Mur** : un grand mur réduit la frappe directe de 30 % mais améliore les centres de 15 % ; un petit mur fait l'inverse (+30 % / −15 %). La combinaison n'est pas touchée.
+- **Centre repoussé** : 5 % de risque de contre adverse, la défense étant montée.
+- **Choix par défaut** (IA, ou coach qui laisse filer) : frappe directe de près, centre sinon ; grand mur de près, normal à moyenne distance, petit de loin.
+- Le nombre de buts par match n'a pas bougé avec ce système (2,94 entre deux équipes égales).
+
+Capacités liées (déclencheurs `ownFreeKick` et `opponentFreeKick`, qui ne s'ouvrent que sur un coup franc, pas sur un corner) : Le Pied de velours, Le Ballon déplacé, Le Plongeon d'Oscar, La Bousculade dans le mur. La Tête de pioche et Le Mur de saucisses valent aussi sur corner.
+
 ## Jauge de gueulante (CAP-05)
 
 La jauge reste rare exprès : jouer une capacité doit être un choix réfléchi, pas un réflexe. Chaque activation pèse lourd, mais on n'en déclenche que quelques-unes par match.
@@ -93,3 +114,4 @@ Le script `scripts/ability-impact.ts` mesure chaque capacité sur 1 000 matchs (
 ## Historique
 
 - **Novembre 2026** : premier équilibrage. Avant, l'impact moyen allait de +0,10 point (commune) à +0,51 point (mythique), et la mythique rapportait moins par point de gueulante que la légendaire. Les valeurs ont été recalées sur les cibles ci-dessus et toutes les capacités progressent désormais à chaque niveau. La jauge garde son rythme d'origine. Les paliers d'XP ont été relevés (niveau 5 à 5 000 XP au lieu de 300) pour que le niveau 5 demande presque une carrière.
+- **Novembre 2026** : coups francs avec distance, choix de l'option (frappe directe, centre, combinaison) et du mur. Neuf capacités de penalty et de coup franc ajoutées (55 en tout), mesurées sur l'événement qu'elles visent et recalées dans leur fourchette. Quelques capacités existantes ont été réajustées après ce changement.

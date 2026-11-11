@@ -3,14 +3,16 @@
  *
  * Deux équipes identiques, sans autre capacité. À la minute `ACTIVATION_MINUTE`, le camp domicile
  * active la capacité étudiée ; on compare ensuite, à graines égales, avec le même match sans activation.
- * Une capacité liée à un événement (penalty, coup franc, mi-temps, but…) est activée à la première
- * occurrence de cet événement après cette minute, comme le ferait un coach.
+ * Une capacité de penalty ou de coup franc est mesurée sur l'événement provoqué à cette minute, dans
+ * les deux versions ; le coach joue alors l'option qui convient à la capacité (tir direct, centre).
+ * Les autres capacités liées à un événement (mi-temps, but…) sont activées à sa première occurrence.
  * Le contexte qui rend la capacité utilisable (joueurs au sol, but adverse récent, malus à effacer…)
  * est installé dans les deux versions, pour ne mesurer que la capacité.
  */
 import { getAbility } from '../abilities/catalog';
 import type { Ability, Effect } from '../types';
 import { recordGoal } from './actions';
+import { announceSetPiece, awardPenalty, chooseFreeKickOption } from './plays';
 import { confirmActivation, selectTarget, startActivation } from './activation';
 import { makeSheet } from './fixtures';
 import { tick } from './simulation';
@@ -33,7 +35,7 @@ export const IMPACT_TARGETS: Record<Ability['rarity'], { min: number; max: numbe
 };
 
 /** Capacités liées à un événement rare : jugées sur leur effet quand il survient, elles peuvent dépasser. */
-export const SITUATIONAL_ABILITIES: readonly string[] = ['le-danseur'];
+export const SITUATIONAL_ABILITIES: readonly string[] = [];
 /** Fenêtre d'observation des effets instantanés (occasion, annulation, jauge…). */
 const DEFAULT_WINDOW = 15;
 const MAX_TICKS = 400;
@@ -80,8 +82,44 @@ function advanceTo(state: MatchState, elapsed: number): void {
 }
 
 /** Joue jusqu'à la première ouverture du déclencheur de la capacité (après `elapsed`). */
+/** Événement provoqué pour chaque déclencheur de coup de pied arrêté : qui l'obtient, et lequel. */
+const SET_PIECE_EVENTS: Partial<Record<Ability['trigger'], { side: Side; kind: 'penalty' | 'freeKick' }>> = {
+  ownPenalty: { side: 'home', kind: 'penalty' },
+  opponentPenalty: { side: 'away', kind: 'penalty' },
+  ownFreeKick: { side: 'home', kind: 'freeKick' },
+  ownSetPiece: { side: 'home', kind: 'freeKick' },
+  ownDeadBall: { side: 'home', kind: 'freeKick' },
+  opponentFreeKick: { side: 'away', kind: 'freeKick' },
+  opponentSetPiece: { side: 'away', kind: 'freeKick' },
+};
+
+/** Provoque le penalty ou le coup franc de la capacité, une fois l'action en cours jouée. */
+function provokeSetPiece(state: MatchState, event: { side: Side; kind: 'penalty' | 'freeKick' }): boolean {
+  for (let i = 0; i < MAX_TICKS && (state.pendingPlay || state.awaiting) && state.status !== 'finished'; i++) {
+    if (state.awaiting) dismissEventWindow(state);
+    tick(state);
+  }
+  if (state.status === 'finished') return false;
+  const run = beginRun(state);
+  if (event.kind === 'penalty') awardPenalty(run, event.side, null);
+  else announceSetPiece(run, event.side, 'freeKick');
+  endRun(run);
+  return true;
+}
+
+/** Option de coup franc qu'un coach choisit avec cette capacité, s'il y en a une. */
+function optionFor(ability: Ability): 'shot' | 'cross' | null {
+  for (const effect of ability.effects) {
+    if (effect.type === 'setPieceBoost') return effect.option;
+    if (effect.type === 'moveBallCloser') return 'shot';
+  }
+  return null;
+}
+
 function advanceToTrigger(state: MatchState, ability: Ability): boolean {
   if (ability.trigger === 'anytime') return state.status !== 'finished';
+  const event = SET_PIECE_EVENTS[ability.trigger];
+  if (event) return provokeSetPiece(state, event);
   for (let i = 0; i < MAX_TICKS && state.status !== 'finished'; i++) {
     if (triggerIsOpen(ability.trigger, state.triggers.home)) return true;
     if (state.awaiting) dismissEventWindow(state);
@@ -172,6 +210,8 @@ function playOne(ability: Ability, level: number, seed: number, withAbility: boo
   setUpContext(state, ability, bearerSlot);
   const bearerId = bench ? 'h-b0' : `h-${bearerSlot}`;
   const activated = reached && withAbility && activate(state, bearerId);
+  const option = optionFor(ability);
+  if (activated && option) chooseFreeKickOption(state, 'home', option);
   playToEnd(state);
   const difference = state.home.goals - state.away.goals;
   const points = difference > 0 ? 3 : difference === 0 ? 1 : 0;

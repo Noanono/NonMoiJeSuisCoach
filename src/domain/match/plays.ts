@@ -11,7 +11,7 @@ import { comment } from './commentary';
 import { creditActive, IMPACT } from './impact';
 import { isActive, opponentSide, pushEvent, teamOf, type Run } from './state';
 import { createStrength, measureTeam, shootingBoost, shootingValue, type TeamStrength } from './strength';
-import type { ChanceKind, MatchPlayer, MatchState, Side, TeamState } from './types';
+import type { ChanceKind, FreeKickDistance, FreeKickOption, MatchPlayer, MatchState, PendingPlay, Side, TeamState, WallSize } from './types';
 import { openTriggers } from './windows';
 
 // --- Occasions -------------------------------------------------------------
@@ -57,6 +57,45 @@ const LONG_BALL_COUNTER_SHARE = 0.3;
 const LONG_BALL_LONG_SHOT_SHARE = 0.25;
 /** Face à un pressing haut, plus d'espaces dans le dos : plus de contres. */
 const HIGH_PRESS_COUNTER_BONUS = 0.1;
+
+// --- Coups francs ------------------------------------------------------------
+
+/** Répartition des distances de coup franc. */
+const FREE_KICK_DISTANCE_SHARE: Record<FreeKickDistance, number> = { close: 0.3, medium: 0.45, far: 0.25 };
+export const FREE_KICK_DISTANCE_LABEL: Record<FreeKickDistance, string> = { close: 'proche', medium: 'à moyenne distance', far: 'lointain' };
+/**
+ * Probabilité de but de base selon la distance et l'option, avant le talent du tireur et le mur :
+ * de près on frappe, de loin on centre, la combinaison est sûre partout.
+ */
+export const FREE_KICK_CONVERSION: Record<FreeKickDistance, Record<FreeKickOption, number>> = {
+  close: { shot: 0.13, cross: 0.06, combination: 0.08 },
+  medium: { shot: 0.07, cross: 0.09, combination: 0.08 },
+  far: { shot: 0.03, cross: 0.1, combination: 0.075 },
+};
+/** Un grand mur bloque les frappes directes mais laisse de l'espace sur les centres, un petit mur l'inverse. */
+export const WALL_FACTOR: Record<WallSize, Record<FreeKickOption, number>> = {
+  small: { shot: 1.3, cross: 0.85, combination: 1 },
+  normal: { shot: 1, cross: 1, combination: 1 },
+  large: { shot: 0.7, cross: 1.15, combination: 1 },
+};
+/** Sur un centre repoussé, les défenseurs montés laissent parfois un contre. */
+const CROSS_COUNTER_RISK = 0.05;
+const CLOSER: Record<FreeKickDistance, FreeKickDistance> = { far: 'medium', medium: 'close', close: 'close' };
+
+/** Choix logique par défaut (IA, ou coach qui laisse filer) : frapper de près, centrer sinon. */
+export function defaultFreeKickOption(distance: FreeKickDistance): FreeKickOption {
+  return distance === 'close' ? 'shot' : 'cross';
+}
+
+/** Mur par défaut : grand de près pour fermer la frappe, petit de loin pour défendre les centres. */
+export function defaultWall(distance: FreeKickDistance): WallSize {
+  return distance === 'close' ? 'large' : distance === 'medium' ? 'normal' : 'small';
+}
+
+/** Le ballon avance d'un cran (Le Ballon déplacé). */
+export function closerDistance(distance: FreeKickDistance): FreeKickDistance {
+  return CLOSER[distance];
+}
 
 export const SHOOTER_WEIGHTS: Record<Position, number> = { GK: 0, DEF: 0.5, MID: 2, ATT: 5 };
 const HEADER_WEIGHTS: Record<Position, number> = { GK: 0, DEF: 2, MID: 1.5, ATT: 3 };
@@ -175,10 +214,14 @@ interface Shot {
   keeper: number;
   /** Probabilité imposée (La Panenka ivre), sans bonus ni malus. */
   fixedChance?: number;
+  /** Probabilité de base à la place de celle du type d'occasion (coups francs). */
+  base?: number;
+  /** Bonus ajouté à la probabilité (capacités de coup de pied arrêté). */
+  bonus?: number;
 }
 
-/** Résout un tir : annulation éventuelle, but, arrêt (parfois corner) ou tir non cadré. */
-function takeShot(run: Run, shot: Shot): void {
+/** Résout un tir : annulation éventuelle, but, arrêt (parfois corner) ou tir non cadré. Rend vrai s'il y a but. */
+function takeShot(run: Run, shot: Shot): boolean {
   const { state, rng } = run;
   const { attacking, shooter, kind } = shot;
   const defending = teamOf(state, opponentSide(attacking.side));
@@ -187,16 +230,24 @@ function takeShot(run: Run, shot: Shot): void {
     defending.pendingCancels--;
     pushEvent(run, 'actionCancelled', attacking.side, comment(rng, 'actionCancelled', { ...vars, label: 'action annulée' }));
     creditActive(state, defending.side, IMPACT.actionCancelled, 'action adverse annulée');
-    return;
+    return false;
   }
   const boost = shot.fixedChance === undefined ? attacking.chanceBoosts.shift() : undefined;
-  if (rng.chance(conversionChance(shot, defending, boost?.value ?? 0))) {
+  if (rng.chance(conversionChance(shot, defending, (boost?.value ?? 0) + (shot.bonus ?? 0)))) {
+    if (kind === 'penalty' && defending.retakePenalties > 0) {
+      // Le Ramasseur de balles : le penalty marqué est à retirer.
+      defending.retakePenalties--;
+      pushEvent(run, 'penalty', attacking.side, comment(rng, 'penaltyRetaken', vars));
+      creditActive(state, defending.side, IMPACT.actionCancelled, 'penalty à retirer');
+      return takeShot(run, { ...shot, bonus: 0 });
+    }
     if (boost?.shooterId === shooter.id) shooter.cooldownUntil = 0;
     recordGoal(run, attacking.side, shooter, { penalty: kind === 'penalty' });
-    return;
+    return true;
   }
   creditActive(state, defending.side, IMPACT.chanceStopped, 'occasion adverse repoussée');
   reportMissedShot(run, shot, vars);
+  return false;
 }
 
 function reportMissedShot(run: Run, shot: Shot, vars: { player: string; team: string; opponent: string }): void {
@@ -221,7 +272,7 @@ function conversionChance(shot: Shot, defending: TeamState, boost: number): numb
   if (shot.fixedChance !== undefined) return shot.fixedChance;
   const exponent = shot.kind === 'penalty' ? PENALTY_SKILL_EXPONENT : SHOOTING_EXPONENT;
   const skill = clamp(shootingValue(shot.shooter) / Math.max(1, shot.keeper), MIN_SKILL_RATIO, MAX_SKILL_RATIO);
-  let chance = BASE_CONVERSION[shot.kind] * skill ** exponent + boost;
+  let chance = (shot.base ?? BASE_CONVERSION[shot.kind]) * skill ** exponent + boost;
   chance *= 1 - consumeShotMalus(defending);
   return clamp(chance, MIN_CONVERSION, MAX_CONVERSION);
 }
@@ -239,11 +290,52 @@ function consumeShotMalus(defending: TeamState): number {
 
 /** Annonce un coup franc ou un corner, joué au tick suivant après la fenêtre éventuelle (CAP-19). */
 export function announceSetPiece(run: Run, side: Side, kind: 'freeKick' | 'corner'): void {
-  const { state } = run;
+  const { state, rng } = run;
   if (state.pendingPlay) return;
-  pushEvent(run, kind, side, comment(run.rng, kind, { team: teamOf(state, side).name }));
-  state.pendingPlay = { kind, side, takerId: null };
-  openTriggers(run, side, 'ownSetPiece', 'opponentSetPiece');
+  if (kind === 'corner') {
+    pushEvent(run, kind, side, comment(rng, kind, { team: teamOf(state, side).name }));
+    state.pendingPlay = { kind, side, takerId: null };
+    openTriggers(run, side, 'ownSetPiece', 'opponentSetPiece');
+    return;
+  }
+  const distance = drawDistance(rng.next());
+  pushEvent(run, kind, side, comment(rng, kind, { team: teamOf(state, side).name, label: FREE_KICK_DISTANCE_LABEL[distance] }), {
+    label: FREE_KICK_DISTANCE_LABEL[distance],
+  });
+  const attackers = teamOf(state, side);
+  const defenders = teamOf(state, opponentSide(side));
+  // L'IA choisit tout de suite ; le coach choisit dans sa fenêtre (défaut : le choix logique).
+  state.pendingPlay = {
+    kind,
+    side,
+    takerId: null,
+    distance,
+    ...(attackers.isHuman ? {} : { option: defaultFreeKickOption(distance) }),
+    ...(defenders.isHuman ? {} : { wall: defaultWall(distance) }),
+  };
+  openTriggers(run, side, 'ownFreeKick', 'opponentFreeKick');
+}
+
+function drawDistance(roll: number): FreeKickDistance {
+  if (roll < FREE_KICK_DISTANCE_SHARE.close) return 'close';
+  if (roll < FREE_KICK_DISTANCE_SHARE.close + FREE_KICK_DISTANCE_SHARE.medium) return 'medium';
+  return 'far';
+}
+
+/** Le coach choisit l'option de son coup franc (tir, centre ou combinaison). */
+export function chooseFreeKickOption(state: MatchState, side: Side, option: FreeKickOption): boolean {
+  const play = state.pendingPlay;
+  if (play?.kind !== 'freeKick' || play.side !== side) return false;
+  play.option = option;
+  return true;
+}
+
+/** Le coach règle son mur sur un coup franc adverse. */
+export function chooseWall(state: MatchState, side: Side, wall: WallSize): boolean {
+  const play = state.pendingPlay;
+  if (play?.kind !== 'freeKick' || play.side === side) return false;
+  play.wall = wall;
+  return true;
 }
 
 /** Siffle un penalty pour `side` (il remplace un coup de pied arrêté en attente). */
@@ -276,11 +368,49 @@ export function resolvePendingPlay(run: Run): void {
   if (!play) return;
   state.pendingPlay = null;
   const attacking = teamOf(state, play.side);
+  const boosts = attacking.setPieceBoosts.splice(0);
   measureOpposition(state, play.side);
+  if (play.kind === 'freeKick') {
+    resolveFreeKick(run, attacking, play, boosts);
+    return;
+  }
   const shooter = chooseTaker(run, attacking, play.kind, play.takerId);
   if (!shooter) return;
+  // Un corner est un centre : seuls les bonus de centre s'appliquent.
+  const bonus = play.kind === 'corner' ? sumBoosts(boosts, 'cross') : 0;
   const kind: ChanceKind = play.kind === 'penalty' ? 'penalty' : 'setPiece';
-  takeShot(run, { attacking, shooter, kind, keeper: scratchStrength.keeper });
+  takeShot(run, { attacking, shooter, kind, keeper: scratchStrength.keeper, bonus });
+}
+
+function sumBoosts(boosts: readonly { option: 'shot' | 'cross'; value: number }[], option: 'shot' | 'cross'): number {
+  return boosts.filter((boost) => boost.option === option).reduce((total, boost) => total + boost.value, 0);
+}
+
+/** Coup franc : l'option et le mur décident du tireur et de la probabilité de but. */
+function resolveFreeKick(run: Run, attacking: TeamState, play: PendingPlay, boosts: { option: 'shot' | 'cross'; value: number }[]): void {
+  const { state, rng } = run;
+  const distance = play.distance ?? 'medium';
+  const option = play.option ?? defaultFreeKickOption(distance);
+  const wall = play.wall ?? defaultWall(distance);
+  const elapsed = state.elapsed;
+  const shooter =
+    option === 'shot'
+      ? chooseTaker(run, attacking, 'freeKick', play.takerId)
+      : option === 'cross'
+        ? pickWeighted(rng, attacking, elapsed, HEADER_WEIGHTS)
+        : pickShooter(rng, attacking, elapsed);
+  if (!shooter) return;
+  const base = FREE_KICK_CONVERSION[distance][option] * WALL_FACTOR[wall][option];
+  const bonus = option === 'combination' ? 0 : sumBoosts(boosts, option);
+  const scored = takeShot(run, { attacking, shooter, kind: 'setPiece', keeper: scratchStrength.keeper, base, bonus });
+  if (scored || option !== 'cross' || !rng.chance(CROSS_COUNTER_RISK)) return;
+  // Centre repoussé : la défense était montée, l'adversaire part en contre.
+  const defending = teamOf(state, opponentSide(attacking.side));
+  const runner = pickShooter(rng, defending, elapsed);
+  if (!runner) return;
+  pushEvent(run, 'ambiance', defending.side, comment(rng, 'freeKickCounter', { team: attacking.name, opponent: defending.name }));
+  measureTeam(attacking, elapsed, scratchStrength);
+  takeShot(run, { attacking: defending, shooter: runner, kind: 'counter', keeper: scratchStrength.keeper });
 }
 
 function chooseTaker(run: Run, team: TeamState, kind: 'freeKick' | 'corner' | 'penalty', takerId: string | null) {

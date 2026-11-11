@@ -4,7 +4,7 @@
  * cibles parmi les cibles valides. Ses activations passent par le même moteur et
  * sont annoncées dans le live.
  */
-import type { AbilityCategory } from '../types';
+import type { AbilityCategory, Effect } from '../types';
 import { checkAvailability, performActivation } from './activation';
 import { opponentSide, teamOf, type Run } from './state';
 import { aiReplaceInjured } from './substitutions';
@@ -91,8 +91,16 @@ export function aiReactToTrigger(run: Run, side: Side): void {
   for (const player of teamOf(state, side).players) {
     if (!player.ability || player.ability.trigger === 'anytime' || !triggerIsOpen(player.ability.trigger, trigger)) continue;
     if (checkAvailability(state, side, player) !== null) continue;
+    if (!fitsSetPiece(state, player.ability.effects)) continue;
     if (rng.chance(TRIGGER_USE_CHANCE)) activate(run, side, player);
   }
+}
+
+/** Un bonus de tir direct ne sert à rien sur un centre (et inversement) : l'IA ne le gaspille pas. */
+function fitsSetPiece(state: MatchState, effects: readonly Effect[]): boolean {
+  const play = state.pendingPlay;
+  const option = play?.kind === 'corner' ? 'cross' : play?.option;
+  return effects.every((effect) => effect.type !== 'setPieceBoost' || option === undefined || effect.option === option);
 }
 
 function activate(run: Run, side: Side, player: MatchPlayer): void {

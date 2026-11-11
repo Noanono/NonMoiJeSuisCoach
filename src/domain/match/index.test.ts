@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { makeSheet, testMatchOptions } from './fixtures';
-import { activeEffects, confirmActivation, createMatch, startActivation, summarize, tick } from './index';
+import { activeEffects, confirmActivation, createMatch, dismissEventWindow, startActivation, summarize, tick } from './index';
 
 describe('API publique du moteur de match', () => {
   test('un coach humain mène son match jusqu’au bout, avec la fenêtre de mi-temps (CAP-19, MATCH-02)', () => {
@@ -14,6 +14,9 @@ describe('API publique du moteur de match', () => {
         startActivation(state, 'home', 'h-5');
         expect(confirmActivation(state).some((event) => event.kind === 'activation')).toBe(true);
         expect(activeEffects(state, 'h-0')[0]).toMatchObject({ value: 0.05, remaining: 45 });
+      } else if (state.awaiting?.freeKick) {
+        // Coup franc : le coach laisse le choix par défaut (frappe de près, centre de loin).
+        dismissEventWindow(state);
       } else if (state.awaiting) {
         throw new Error(`Fenêtre inattendue : ${state.awaiting.trigger}`);
       }

@@ -6,7 +6,7 @@ import { clamp } from '../core/rng';
 import { addGauge, cancelRecentGoal, knockOut } from './actions';
 import { comment } from './commentary';
 import { creditActivation, IMPACT } from './impact';
-import { playInstantChance } from './plays';
+import { closerDistance, FREE_KICK_DISTANCE_LABEL, playInstantChance } from './plays';
 import { isActive, isOnPitch, NEVER, opponentSide, pushEvent, refreshRating, teamOf, type Run } from './state';
 import { resolveScope } from './targets';
 import type { ActivationRecord, FloatingText, MatchPlayer, Side, TeamState } from './types';
@@ -124,6 +124,40 @@ export function applyEffect(context: EffectContext, effect: Effect): void {
       return;
     case 'miracle':
       return miracle(context, team);
+    case 'setPieceBoost':
+      team.setPieceBoosts.push({ option: effect.option, value: effect.value });
+      float(context, source, `${percentText(effect.value)} ${effect.option === 'shot' ? 'FRAPPE' : 'CENTRE'}`, 'bonus');
+      return;
+    case 'moveBallCloser': {
+      const play = state.pendingPlay;
+      if (play?.kind !== 'freeKick' || play.side !== side || !play.distance) return;
+      play.distance = closerDistance(play.distance);
+      float(context, source, `BALLON AVANCÉ : ${FREE_KICK_DISTANCE_LABEL[play.distance].toUpperCase()}`, 'bonus');
+      return;
+    }
+    case 'cancelSetPiece': {
+      const play = state.pendingPlay;
+      if (!play || play.side === side || play.kind === 'penalty') return;
+      state.pendingPlay = null;
+      if (state.awaiting?.freeKick) state.awaiting = null;
+      pushEvent(run, 'actionCancelled', side, comment(run.rng, 'setPieceCancelled', { team: opponents.name, opponent: team.name }));
+      creditActivation(context.activation, IMPACT.actionCancelled, 'coup de pied arrêté annulé');
+      float(context, source, 'COUP FRANC ANNULÉ', 'bonus');
+      return;
+    }
+    case 'retakePenalty':
+      team.retakePenalties += effect.count;
+      float(context, source, 'PENALTY À RETIRER', 'bonus');
+      return;
+    case 'turnIntoPenalty': {
+      const play = state.pendingPlay;
+      if (play?.kind !== 'freeKick' || play.side !== side) return;
+      state.pendingPlay = { kind: 'penalty', side, takerId: null };
+      if (state.awaiting?.freeKick) state.awaiting.freeKick = undefined;
+      pushEvent(run, 'penalty', side, comment(run.rng, 'turnedIntoPenalty', { team: team.name }));
+      float(context, source, 'PENALTY !', 'bonus');
+      return;
+    }
   }
 }
 

@@ -63,11 +63,13 @@ const TRIGGER_LABEL: Record<AbilityTrigger, string> = {
   anytime: 'À tout moment',
   afterOwnGoal: 'Après un but de son équipe',
   ownSetPiece: 'Sur coup de pied arrêté offensif',
-  opponentSetPiece: 'Sur coup franc adverse',
+  opponentSetPiece: 'Sur coup de pied arrêté adverse',
   ownPenalty: 'Sur penalty pour son équipe',
   opponentPenalty: 'Sur penalty adverse',
   ownDeadBall: 'Sur penalty ou coup franc pour son équipe',
   halftime: 'À la mi-temps',
+  ownFreeKick: 'Sur coup franc pour son équipe',
+  opponentFreeKick: 'Sur coup franc adverse',
 };
 
 /** Pourcentage arrondi à l'unité, sans signe : 0.335 → « 34 % ». */
@@ -141,6 +143,18 @@ export function describeEffect(effect: Effect): string {
       return `Chaque but de son équipe compte double pendant ${effect.duration}${NBSP}min`;
     case 'miracle':
       return "Ramène les exclus et les blessés, et remet toute l'équipe à 100 % d'énergie";
+    case 'setPieceBoost':
+      return effect.option === 'shot'
+        ? `${signedPercent(effect.value)} de chances de but si le coup franc est tiré directement`
+        : `${signedPercent(effect.value)} de chances de but sur un centre (coup franc ou corner)`;
+    case 'moveBallCloser':
+      return 'Le ballon du coup franc avance d’un cran (lointain → moyen → proche)';
+    case 'cancelSetPiece':
+      return 'Annule le coup franc ou le corner adverse';
+    case 'retakePenalty':
+      return effect.count > 1 ? `Les ${effect.count} prochains penalties adverses marqués sont à retirer` : 'Le prochain penalty adverse marqué est à retirer';
+    case 'turnIntoPenalty':
+      return 'Le coup franc devient un penalty';
   }
 }
 

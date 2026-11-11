@@ -113,6 +113,7 @@ export function scaleEffect(effect: Effect, factor: number): Effect {
   switch (effect.type) {
     case 'modifier':
     case 'chanceBoost':
+    case 'setPieceBoost':
       return { ...effect, value: effect.value * factor };
     case 'energy':
       return { ...effect, value: towardCertainty(effect.value, factor) };
@@ -151,6 +152,7 @@ export function growsWithLevel(effect: Effect): boolean {
     case 'swapTeams':
     case 'doubleGoals':
     case 'cleanSheetGauge':
+    case 'setPieceBoost':
       return true;
     case 'knockout':
       return effect.scope !== 'self';

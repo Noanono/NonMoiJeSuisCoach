@@ -118,9 +118,11 @@ describe('activation des capacités', () => {
 });
 
 describe('fenêtres d’événement (CAP-19)', () => {
-  function setPieceAgainstHome(state: MatchState): void {
+  /** Coup franc (ou corner) de l'IA contre le coach. */
+  function setPieceAgainstHome(state: MatchState, kind: 'freeKick' | 'corner' = 'freeKick'): void {
+    state.away.isHuman = false;
     const run = beginRun(state);
-    announceSetPiece(run, 'away', 'freeKick');
+    announceSetPiece(run, 'away', kind);
     endRun(run);
   }
 
@@ -128,11 +130,13 @@ describe('fenêtres d’événement (CAP-19)', () => {
     const state = humanMatch({ 3: 'mur' });
     expect(previewActivation(state, 'home', 'h-3').available).toBe(false);
     setPieceAgainstHome(state);
-    expect(state.awaiting).toEqual({ side: 'home', trigger: 'opponentSetPiece', eligiblePlayerIds: ['h-3'] });
+    expect(state.awaiting).toEqual({ side: 'home', trigger: 'opponentFreeKick', eligiblePlayerIds: ['h-3'], freeKick: 'defense' });
     expect(tick(state)).toEqual([]);
     activate(state, 'h-3');
-    expect(state.awaiting).toBeNull();
+    // La capacité est jouée ; reste le choix du mur.
+    expect(state.awaiting).toMatchObject({ eligiblePlayerIds: [], freeKick: 'defense' });
     expect(state.home.shotMaluses).toEqual([{ value: 0.3, shotsLeft: 1 }]);
+    dismissEventWindow(state);
     tick(state);
     expect(state.pendingPlay).toBeNull();
     expect(state.elapsed).toBe(0);
@@ -148,10 +152,18 @@ describe('fenêtres d’événement (CAP-19)', () => {
     expect(state.pendingPlay).toBeNull();
   });
 
-  test('sans capacité éligible, le match ne s’arrête pas', () => {
+  test('sans capacité éligible, un corner ne fait pas s’arrêter le match', () => {
+    const state = humanMatch({ 5: 'pilier' });
+    setPieceAgainstHome(state, 'corner');
+    expect(state.awaiting).toBeNull();
+  });
+
+  test('un coup franc arrête toujours le match : le coach choisit son mur', () => {
     const state = humanMatch({ 5: 'pilier' });
     setPieceAgainstHome(state);
-    expect(state.awaiting).toBeNull();
+    expect(state.awaiting).toMatchObject({ side: 'home', eligiblePlayerIds: [], freeKick: 'defense' });
+    expect(state.pendingPlay?.kind).toBe('freeKick');
+    expect(state.pendingPlay?.option).toBeDefined();
   });
 
   test('Bière tiède répond au penalty comme au coup franc', () => {

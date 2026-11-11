@@ -32,8 +32,8 @@ export const RARE_ABILITIES: readonly Ability[] = [
     targeting: { kind: 'team' },
     description: 'Toute l’équipe recule et se gare devant la cage.',
     effects: [
-      { type: 'modifier', scope: 'team', stat: 'defense', value: 2.5, duration: 35 },
-      { type: 'cleanSheetGauge', value: 2, duration: 35 },
+      { type: 'modifier', scope: 'team', stat: 'defense', value: 3.5, duration: 45 },
+      { type: 'cleanSheetGauge', value: 2, duration: 45 },
     ],
   }),
   rare({
@@ -106,7 +106,7 @@ export const RARE_ABILITIES: readonly Ability[] = [
     position: 'ANY',
     targeting: { kind: 'team' },
     description: 'Il hurle si fort que tout le monde oublie ses malheurs et repart au charbon.',
-    effects: [{ type: 'clearMaluses', bonusGauge: 1, threshold: 3 }, { type: 'modifier', scope: 'team', stat: 'all', value: 0.45, duration: 20 }],
+    effects: [{ type: 'clearMaluses', bonusGauge: 1, threshold: 3 }, { type: 'modifier', scope: 'team', stat: 'all', value: 0.38, duration: 20 }],
   }),
   rare({
     id: 'le-chien-du-president',
@@ -116,5 +116,34 @@ export const RARE_ABILITIES: readonly Ability[] = [
     targeting: { kind: 'opponent', count: 1 },
     description: 'Lâché sur la pelouse, il change de victime quand il s’ennuie.',
     effects: [{ type: 'knockout', scope: 'targets', duration: 30, chaseDuration: 30 }],
+  }),
+
+  // --- Coups de pied arrêtés -------------------------------------------------
+  rare({
+    id: 'le-ballon-deplace',
+    name: 'Le Ballon déplacé',
+    category: 'attack',
+    position: 'ATT',
+    trigger: 'ownFreeKick',
+    description: 'Pendant que l’arbitre compte les pas du mur, le ballon avance tout seul de quelques mètres.',
+    effects: [{ type: 'moveBallCloser' }, { type: 'setPieceBoost', option: 'shot', value: 0.5 }],
+  }),
+  rare({
+    id: 'la-bousculade-dans-le-mur',
+    name: 'La Bousculade dans le mur',
+    category: 'defense',
+    position: 'DEF',
+    trigger: 'opponentFreeKick',
+    description: 'Il pousse, il tire, il crie. L’arbitre finit par siffler faute contre l’attaque pour avoir la paix.',
+    effects: [{ type: 'cancelSetPiece' }, { type: 'modifier', scope: 'opponents', stat: 'concentration', value: -0.4, duration: 15 }],
+  }),
+  rare({
+    id: 'le-ramasseur-de-balles',
+    name: 'Le Ramasseur de balles',
+    category: 'defense',
+    position: 'BENCH',
+    trigger: 'opponentPenalty',
+    description: 'Le neveu du président jure que le ballon n’était pas sur le point. L’arbitre le croit, allez savoir.',
+    effects: [{ type: 'retakePenalty', count: 1 }, { type: 'modifier', scope: 'opponents', stat: 'concentration', value: -0.3, duration: 10 }],
   }),
 ];

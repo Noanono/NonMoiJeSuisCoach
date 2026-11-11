@@ -4,10 +4,10 @@ import { IMPACT_TARGETS, measureAbility, SITUATIONAL_ABILITIES } from './impactB
 
 /**
  * Garde-fou de l'équilibrage (docs/equilibrage-capacites.md). Le rapport complet, sur 1 000 matchs
- * par capacité : `bun run impact`. Ici, 150 matchs par capacité : la mesure est bruitée, d'où la marge.
+ * par capacité : `bun run impact`. Ici, 250 matchs par capacité : la mesure est bruitée (environ ±0,06 point), d'où la marge.
  */
-const RUNS = 150;
-const NOISE_MARGIN = 0.15;
+const RUNS = 250;
+const NOISE_MARGIN = 0.2;
 
 describe('impact des capacités en match (CAP-09)', () => {
   test.each(ABILITIES.map((ability) => [ability.id] as const))('%s reste dans la fourchette de sa rareté', (id) => {

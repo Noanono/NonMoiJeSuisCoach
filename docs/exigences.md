@@ -49,6 +49,7 @@ Le jeu mêle une vraie couche de gestion (effectif, tactique, mercato, budget) e
 | MATCH-09 | Une mini-carte animée montre les joueurs et le ballon. Le coach attaque toujours vers la droite et son équipe est à gauche du tableau de score. |
 | MATCH-10 | Un bouton en coin rappelle l'impact de chaque effet, match en pause. |
 | MATCH-11 | Un but arrête le match et s'annonce au centre de l'écran (buteur, minute, score). Le coach reprend quand il veut. |
+| MATCH-12 | Un coup franc est annoncé avec sa distance (proche, moyenne, lointaine). Le match s'arrête : l'équipe qui tire choisit frappe directe, centre ou combinaison, celle qui défend choisit la taille de son mur. De près la frappe directe paie, de loin le centre ; un grand mur ferme la frappe mais ouvre les centres, un petit mur l'inverse. Un centre repoussé laisse parfois un contre. L'IA fait des choix logiques ; si le coach laisse filer, le choix logique est joué. |
 
 ## Club, mercato et président
 
@@ -99,14 +100,14 @@ Le gameplay repose sur les capacités : chaque joueur en a une, personnelle, que
 | CAP-16 | Quand une capacité cible un coéquipier ou un adversaire, le coach choisit lui-même la cible sur le terrain : les cibles valides sont mises en évidence, les autres grisées. Le choix se fait match en pause. |
 | CAP-17 | Une cible est valide si elle est sur le terrain, n'est pas déjà hors jeu et appartient à la ligne visée. Pour une capacité à plusieurs cibles, le coach les choisit une à une. |
 | CAP-18 | Les capacités de zone se déclenchent à l'emplacement du joueur : le coach choisit le moment, pas la cible. Seules les capacités décrites « au hasard » gardent une cible aléatoire. |
-| CAP-19 | Les capacités liées à un événement (penalty, coup franc) restent manuelles : le jeu se met en pause et propose de les activer, sans obligation. |
+| CAP-19 | Les capacités liées à un événement (penalty, coup franc, corner) restent manuelles : le jeu se met en pause et propose de les activer, sans obligation. Certaines ne s'activent que sur un coup franc (pas sur un corner). |
 | CAP-22 | Relancer une capacité dont l'effet est encore actif le prolonge sans le cumuler. |
 | CAP-20 | Le coach peut annuler une activation tant qu'il n'a pas validé la cible : la capacité n'est alors ni consommée ni mise en recharge. |
 | CAP-21 | Une activation, du coach comme de l'adversaire, s'annonce au centre de l'écran pendant 5 secondes avec l'avatar du joueur et la description de l'effet, match en pause. Flèches vers les cibles, zone colorée et textes s'affichent sur le terrain. |
 
 ## Catalogue des capacités
 
-CAT-01 : le jeu contient les 46 capacités ci-dessous. Les valeurs réelles, équilibrées par mesure, sont dans `src/domain/abilities/data/` et leurs cibles dans [equilibrage-capacites.md](equilibrage-capacites.md).
+CAT-01 : le jeu contient les 55 capacités ci-dessous. Les chiffres des tableaux sont ceux de la conception d'origine. Les valeurs réelles, équilibrées par mesure, sont dans `src/domain/abilities/data/` et leurs cibles dans [equilibrage-capacites.md](equilibrage-capacites.md).
 
 | Rareté | Part des joueurs générés | Coût | Recharge | Multiplicateur de valeur |
 | --- | --- | --- | --- | --- |
@@ -115,7 +116,7 @@ CAT-01 : le jeu contient les 46 capacités ci-dessous. Les valeurs réelles, éq
 | Légendaire | ~4,5 % | 5 | Aucune | ×3 |
 | Mythique | ~0,5 % | 7 | Une fois par match | ×10 |
 
-### Communes (25)
+### Communes (29)
 
 | Capacité | Poste | Cible | Effet |
 | --- | --- | --- | --- |
@@ -144,8 +145,12 @@ CAT-01 : le jeu contient les 46 capacités ci-dessous. Les valeurs réelles, éq
 | Le Porteur d'eau | Banc | 1 coéquipier | Efface 50 % de sa fatigue |
 | Le DJ du vestiaire | Banc | Équipe | +15 % de vitesse, 15 min |
 | Le Kiné douteux | Banc | 1 coéquipier au sol | Le relève immédiatement |
+| Le Regard qui tue | ATT | Penalty pour toi | +réussite du penalty, puis bonus de tir pour le porteur |
+| Le Gardien qui parle | GB | Penalty adverse | Gros bonus d'arrêts pour le gardien, quelques minutes |
+| Le Pied de velours | MIL | Coup franc pour toi | +réussite, seulement en frappe directe |
+| La Tête de pioche | DEF | Coup franc ou corner pour toi | +réussite, seulement sur un centre |
 
-### Rares (12)
+### Rares (15)
 
 | Capacité | Poste | Cible | Effet et mécanique |
 | --- | --- | --- | --- |
@@ -161,8 +166,11 @@ CAT-01 : le jeu contient les 46 capacités ci-dessous. Les valeurs réelles, éq
 | Le Chef de chant | Tous | Équipe | +20 % à toutes les stats, 15 min. Chaque but marqué prolonge de 5 min |
 | Le Capitaine gueulard | Tous | Équipe | Retire tous les malus en cours. +1 point de jauge si au moins 3 sont retirés |
 | Le Chien du président | Banc | 1 adversaire | Hors jeu 8 min, puis le chien poursuit un autre adversaire 8 min |
+| Le Ballon déplacé | ATT | Coup franc pour toi | Le ballon avance d'un cran (lointain → moyen → proche) et la frappe directe gagne en réussite |
+| La Bousculade dans le mur | DEF | Coup franc adverse | Annule le coup franc ; l'adversaire perd de la concentration |
+| Le Ramasseur de balles | Banc | Penalty adverse | S'il est marqué, le penalty est à retirer ; l'adversaire perd de la concentration |
 
-### Légendaires (5)
+### Légendaires (7)
 
 | Capacité | Poste | Effet |
 | --- | --- | --- |
@@ -171,6 +179,8 @@ CAT-01 : le jeu contient les 46 capacités ci-dessous. Les valeurs réelles, éq
 | La Mêlée générale | Tous | 3 adversaires choisis et le porteur hors jeu, 15 min |
 | La Coupure de courant | Banc | Annule le dernier but adverse s'il date de moins de 5 min |
 | La Malédiction de mémé | Banc | −30 % à toute l'équipe adverse, 23 min |
+| Le Plongeon d'Oscar | Tous | Sur un coup franc pour toi : il devient un penalty, et l'adversaire s'énerve (malus à toute l'équipe) |
+| La Panenka de légende | ATT | Sur un penalty pour toi : réussite quasi sûre, puis toute l'équipe s'envole (bonus à toutes les stats) |
 
 ### Mythiques (4)
 

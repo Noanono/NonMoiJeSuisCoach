@@ -106,7 +106,7 @@ export function liveHeadline(event: MatchEvent, coachSide: Side, nameOf: (player
     case 'penalty':
       return `Penalty pour ${team}`;
     case 'freeKick':
-      return `Coup franc dangereux pour ${team}`;
+      return `Coup franc ${event.label ?? 'dangereux'} pour ${team}`;
     case 'injury':
       return `${name} blessé`;
     case 'activation':

@@ -14,12 +14,12 @@ function slugify(name: string): string {
 }
 
 describe('catalogue des capacités (CAT-01)', () => {
-  test('46 capacités : 25 communes, 12 rares, 5 légendaires, 4 mythiques', () => {
-    expect(ABILITIES).toHaveLength(46);
+  test('55 capacités : 29 communes, 15 rares, 7 légendaires, 4 mythiques', () => {
+    expect(ABILITIES).toHaveLength(55);
     expect(abilitiesByRarity('mythic')).toHaveLength(4);
-    expect(abilitiesByRarity('common')).toHaveLength(25);
-    expect(abilitiesByRarity('rare')).toHaveLength(12);
-    expect(abilitiesByRarity('legendary')).toHaveLength(5);
+    expect(abilitiesByRarity('common')).toHaveLength(29);
+    expect(abilitiesByRarity('rare')).toHaveLength(15);
+    expect(abilitiesByRarity('legendary')).toHaveLength(7);
   });
 
   test('les identifiants sont uniques et tirés du nom', () => {
@@ -28,8 +28,8 @@ describe('catalogue des capacités (CAT-01)', () => {
     expect(getAbility('l-agriculteur').name).toBe('L’Agriculteur');
   });
 
-  test('une commune n’a qu’un seul effet, une rare au plus deux', () => {
-    for (const ability of abilitiesByRarity('common')) expect(ability.effects).toHaveLength(1);
+  test('une commune n’a qu’un seul effet (deux sur penalty, plafonné par nature), une rare au plus deux', () => {
+    for (const ability of abilitiesByRarity('common')) expect(ability.effects).toHaveLength(ability.trigger === 'ownPenalty' ? 2 : 1);
     for (const ability of abilitiesByRarity('rare')) expect(ability.effects.length).toBeLessThanOrEqual(2);
   });
 
