@@ -99,6 +99,22 @@ describe('activation des capacités', () => {
     expect(previewActivation(state, 'home', 'h-b0').reason).toContain('Déjà utilisée');
   });
 
+  test('une capacité d’occasion resert à chaque occasion', () => {
+    const home = makeSheet({ clubId: 'h', isHuman: true, abilities: { 9: 'biere-tiede' } });
+    const state = createMatch({ home, away: makeSheet({ clubId: 'a', isHuman: true }), seed: 1 });
+    state.home.gauge = 10;
+    for (let penalty = 0; penalty < 2; penalty++) {
+      const run = beginRun(state);
+      awardPenalty(run, 'home', null);
+      endRun(run);
+      expect(previewActivation(state, 'home', 'h-9').available).toBe(true);
+      activate(state, 'h-9');
+      dismissEventWindow(state);
+      tick(state);
+    }
+    expect(state.home.gauge).toBe(10 - 2 * 2);
+  });
+
   test('sans jauge suffisante, la raison est donnée', () => {
     const state = humanMatch({}, { bench: ['malediction'] });
     state.home.gauge = 2;

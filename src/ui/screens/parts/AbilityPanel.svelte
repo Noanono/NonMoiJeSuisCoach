@@ -78,7 +78,7 @@
         </tr>
         <tr>
           <th scope="row">Utilisation</th>
-          {#each columns as column (column.level)}<td class="mono">Une fois par match</td>{/each}
+          {#each columns as column (column.level)}<td class="mono">{ability.trigger === 'anytime' ? 'Une fois par match' : 'À chaque occasion'}</td>{/each}
         </tr>
         <tr>
           <th scope="row">Coût</th>

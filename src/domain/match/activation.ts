@@ -46,8 +46,9 @@ function hasRecentGoal(state: MatchState, side: Side, withinMinutes: number): bo
 
 function usageReason(state: MatchState, side: Side, player: MatchPlayer): string | null {
   const ability = player.ability!;
-  // Chaque capacité ne sert qu'une fois par match : la jouer est un choix (CAP-04).
-  if (player.usedAbility) return UNAVAILABLE.oncePerMatch;
+  // Une capacité ne sert qu'une fois par match (CAP-04), sauf celles d'occasion (penalty, coup franc…),
+  // qui reviennent à chaque fois que l'événement se présente.
+  if (player.usedAbility && ability.trigger === 'anytime') return UNAVAILABLE.oncePerMatch;
   if (player.cooldownUntil > state.elapsed) return fill(UNAVAILABLE.cooldown, { n: player.cooldownUntil - state.elapsed });
   const gauge = teamOf(state, side).gauge;
   if (gauge < ability.cost) return fill(UNAVAILABLE.gauge, { n: ability.cost - gauge });
