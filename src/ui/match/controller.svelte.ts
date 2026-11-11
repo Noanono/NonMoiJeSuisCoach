@@ -5,8 +5,14 @@
  */
 import {
   cancelActivation,
+  canMoveToLine,
+  canSwapPositions,
   chooseFreeKickOption,
+  chooseKeeperDive,
+  choosePenaltyStyle,
   chooseWall,
+  moveToLine,
+  swapPositions,
   confirmActivation,
   dismissEventWindow,
   isPaused,
@@ -19,10 +25,12 @@ import {
   type ActivationRecord,
   type MatchState,
   type FreeKickOption,
+  type KeeperDive,
+  type PenaltyStyle,
   type WallSize,
   type Side,
 } from '../../domain/match';
-import type { Instructions } from '../../domain/types';
+import type { Instructions, Position } from '../../domain/types';
 import type { AvatarPlayer } from '../kit/avatar';
 import { describeEffect } from '../screens/describe';
 import { substitutionFromDrag } from './activation';
@@ -173,13 +181,40 @@ export class MatchController {
     store.touchMatch();
   }
 
-  /** Fin d'un glisser sur le terrain : `targetId` est le jeton visé, s'il y en a un. */
-  dropPlayer(draggedId: string, targetId: string | null): void {
+  /** Penalty pour le coach : frappe placée, en force ou Panenka. */
+  choosePenaltyStyle(style: PenaltyStyle): void {
+    choosePenaltyStyle(this.match, this.coachSide, style);
+    store.touchMatch();
+  }
+
+  /** Penalty adverse : plongeon du gardien. */
+  chooseKeeperDive(dive: KeeperDive): void {
+    chooseKeeperDive(this.match, this.coachSide, dive);
+    store.touchMatch();
+  }
+
+  /**
+   * Fin d'un glisser sur le terrain : `targetId` est le jeton visé, `line` la ligne du coach visée.
+   * Titulaire sur titulaire = échange de postes ; titulaire sur une ligne = changement de formation ;
+   * banc et terrain = remplacement.
+   */
+  dropPlayer(draggedId: string, targetId: string | null, line: Position | null = null): void {
     this.dragging = false;
-    if (!targetId || targetId === draggedId) return;
-    const change = substitutionFromDrag(this.match, this.coachSide, draggedId, targetId);
-    if (change) this.substitute(change.leavingId, change.enteringId);
-    else if (substitutionsLeft(this.coachSide === 'home' ? this.match.home : this.match.away) === 0) store.notify('Plus aucun changement disponible.');
+    if (targetId && targetId !== draggedId) {
+      if (canSwapPositions(this.match, this.coachSide, draggedId, targetId)) {
+        swapPositions(this.match, this.coachSide, draggedId, targetId);
+        store.touchMatch();
+        return;
+      }
+      const change = substitutionFromDrag(this.match, this.coachSide, draggedId, targetId);
+      if (change) this.substitute(change.leavingId, change.enteringId);
+      else if (substitutionsLeft(this.coachSide === 'home' ? this.match.home : this.match.away) === 0) store.notify('Plus aucun changement disponible.');
+      return;
+    }
+    if (line && canMoveToLine(this.match, this.coachSide, draggedId, line)) {
+      moveToLine(this.match, this.coachSide, draggedId, line);
+      store.touchMatch();
+    }
   }
 
   /** Consignes tactiques pendant une pause (MATCH-05). */

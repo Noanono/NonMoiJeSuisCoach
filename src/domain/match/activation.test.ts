@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { makeSheet, testMatchOptions } from './fixtures';
 import { cancelActivation, confirmActivation, previewActivation, selectTarget, startActivation } from './activation';
-import { announceSetPiece, awardPenalty } from './plays';
+import { announceSetPiece, awardPenalty, choosePenaltyStyle } from './plays';
 import { activeEffects } from './queries';
 import { tick } from './simulation';
 import { beginRun, createMatch, endRun, GAUGE_START, requirePlayer } from './state';
@@ -107,6 +107,8 @@ describe('activation des capacités', () => {
       const run = beginRun(state);
       awardPenalty(run, 'home', null);
       endRun(run);
+      // Pas de Panenka : elle ferait bouger la jauge.
+      choosePenaltyStyle(state, 'home', 'placed');
       expect(previewActivation(state, 'home', 'h-9').available).toBe(true);
       activate(state, 'h-9');
       dismissEventWindow(state);

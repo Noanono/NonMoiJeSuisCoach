@@ -153,7 +153,10 @@ export function applyEffect(context: EffectContext, effect: Effect): void {
       const play = state.pendingPlay;
       if (play?.kind !== 'freeKick' || play.side !== side) return;
       state.pendingPlay = { kind: 'penalty', side, takerId: null };
-      if (state.awaiting?.freeKick) state.awaiting.freeKick = undefined;
+      if (state.awaiting?.freeKick) {
+        state.awaiting.penalty = state.awaiting.freeKick;
+        state.awaiting.freeKick = undefined;
+      }
       pushEvent(run, 'penalty', side, comment(run.rng, 'turnedIntoPenalty', { team: team.name }));
       float(context, source, 'PENALTY !', 'bonus');
       return;

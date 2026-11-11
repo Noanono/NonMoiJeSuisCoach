@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { MatchController } from './controller.svelte';
   import PlayerAvatar from '../kit/PlayerAvatar.svelte';
+  import { canMoveToLine, canSwapPositions } from '../../domain/match';
+  import type { Position } from '../../domain/types';
   import { substitutionFromDrag } from './activation';
   import { pitchView, type TokenView } from './pitch';
   import FxLayer from './FxLayer.svelte';
@@ -33,16 +35,26 @@
 
   let drag = $state<Drag | null>(null);
   let hoveredId = $state<string | null>(null);
+  /** Ligne du coach survolée hors jeton : y lâcher un titulaire change la formation. */
+  let hoveredLine = $state<Position | null>(null);
   /** Un glisser relâché sur son propre jeton se termine par un `click` : celui-là ne compte pas. */
   let ignoreNextClick = false;
 
   const allTokens = $derived([...view.columns.flatMap((column) => column.tokens), ...view.bench]);
   const liftedToken = $derived(drag?.moving ? allTokens.find((token) => token.id === drag!.playerId) : undefined);
-  /** Jetons sur lesquels lâcher le joueur tenu : remplaçants s'il joue, titulaires s'il attend. */
+  /** Jetons sur lesquels lâcher le joueur tenu : remplaçants ou titulaires (changement), autres postes (échange). */
   const dropIds = $derived.by(() => {
     if (!drag?.moving) return new Set<string>();
     const { playerId } = drag;
-    return new Set(allTokens.filter((token) => substitutionFromDrag(controller.match, controller.coachSide, playerId, token.id)).map((token) => token.id));
+    const { match, coachSide } = controller;
+    return new Set(allTokens.filter((token) => canSwapPositions(match, coachSide, playerId, token.id) || substitutionFromDrag(match, coachSide, playerId, token.id)).map((token) => token.id));
+  });
+  /** Lignes où le joueur tenu peut aller (changement de formation). */
+  const dropLines = $derived.by(() => {
+    if (!drag?.moving) return new Set<Position>();
+    const { playerId } = drag;
+    const lines = view.columns.map((column) => column.line).filter((line): line is Position => line !== null);
+    return new Set(lines.filter((line) => canMoveToLine(controller.match, controller.coachSide, playerId, line)));
   });
 
   function startDrag(event: PointerEvent, playerId: string): void {
@@ -58,24 +70,29 @@
     if (!drag.moving && Math.hypot(drag.x - drag.startX, drag.y - drag.startY) < DRAG_THRESHOLD_PX) return;
     drag.moving = true;
     controller.dragging = true;
-    hoveredId = document.elementFromPoint(drag.x, drag.y)?.closest<HTMLElement>('[data-player-id]')?.dataset.playerId ?? null;
+    const under = document.elementFromPoint(drag.x, drag.y);
+    hoveredId = under?.closest<HTMLElement>('[data-player-id]')?.dataset.playerId ?? null;
+    hoveredLine = hoveredId ? null : ((under?.closest<HTMLElement>('[data-line]')?.dataset.line as Position | undefined) ?? null);
   }
 
   function endDrag(): void {
     if (!drag) return;
     const { playerId, moving } = drag;
     const targetId = hoveredId;
+    const line = hoveredLine;
     drag = null;
     hoveredId = null;
+    hoveredLine = null;
     if (!moving) return;
     ignoreNextClick = true;
-    controller.dropPlayer(playerId, targetId);
+    controller.dropPlayer(playerId, targetId, line);
   }
 
   function cancelDrag(event: KeyboardEvent): void {
     if (event.key !== 'Escape' || !drag) return;
     drag = null;
     hoveredId = null;
+    hoveredLine = null;
     controller.dragging = false;
   }
 
@@ -106,7 +123,14 @@
 <section class="terrain" bind:this={root} aria-label="Terrain : ton équipe face à l'adversaire">
   <div class="lignes">
     {#each view.columns as column (column.key)}
-      <div class="ligne" role="group" aria-label={column.label}>
+      <div
+        class="ligne"
+        class:accueil={column.line !== null && dropLines.has(column.line)}
+        class:survolee={column.line !== null && hoveredLine === column.line && dropLines.has(column.line)}
+        data-line={column.line}
+        role="group"
+        aria-label={column.label}
+      >
         {#each column.tokens as token (token.id)}
           {@render tokenOf(token)}
         {/each}
@@ -116,7 +140,7 @@
 
   {#if view.bench.length > 0}
     <div class="banc" role="group" aria-label="Ton banc">
-      <span class="tampon titre-banc">Banc<br /><span class="aide-banc">glisse pour changer</span></span>
+      <span class="tampon titre-banc">Banc<br /><span class="aide-banc">glisse pour changer<br />ou réorganiser</span></span>
       <div class="banc-jetons">
         {#each view.bench as token (token.id)}
           {@render tokenOf(token)}
@@ -169,6 +193,15 @@
     justify-content: space-evenly;
     align-items: center;
     gap: var(--space-2);
+  }
+  /* Glisser en cours : lignes où le joueur peut aller (changement de formation). */
+  .ligne.accueil {
+    outline: var(--trait-fin) dashed var(--scotch);
+    outline-offset: -2px;
+  }
+  .ligne.survolee {
+    outline: var(--trait-epais) solid var(--scotch);
+    background: color-mix(in srgb, var(--scotch) 18%, transparent);
   }
   .aide-banc {
     font-size: 10px;

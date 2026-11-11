@@ -13,6 +13,8 @@ export {
 export { dismissEventWindow } from './windows';
 export {
   chooseFreeKickOption,
+  chooseKeeperDive,
+  choosePenaltyStyle,
   chooseWall,
   defaultFreeKickOption,
   defaultWall,
@@ -20,7 +22,8 @@ export {
   FREE_KICK_DISTANCE_LABEL,
   WALL_FACTOR,
 } from './plays';
-export { canEnter, canLeave, MAX_SUBSTITUTIONS, substitutePlayer, substitutionsLeft } from './substitutions';
+export { canEnter, canLeave, canMoveToLine, canReposition, canSwapPositions, MAX_SUBSTITUTIONS, moveToLine, substitutePlayer, substitutionsLeft, swapPositions } from './substitutions';
+export { expectedAgainstDive, expectedPenaltyChance, KEEPER_HABIT_LABEL, KEEPER_STAY_CHANCE, keeperHabit, PENALTY_STYLE_LABEL } from './penaltyKick';
 export { summarize, toMatchResult } from './summary';
 export { simulateQuick } from './quick';
 export { activeEffects, type ActiveEffectView } from './queries';

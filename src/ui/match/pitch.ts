@@ -164,7 +164,7 @@ export function tokenView(state: MatchState, player: MatchPlayer, coachSide: Sid
 }
 
 export interface PitchView {
-  columns: { key: string; label: string; tokens: TokenView[] }[];
+  columns: { key: string; label: string; tokens: TokenView[]; /** Ligne du coach (on peut y glisser un joueur), `null` chez l'adversaire. */ line: Position | null }[];
   bench: TokenView[];
 }
 
@@ -176,6 +176,7 @@ export function pitchView(state: MatchState, coachSide: Side): PitchView {
       key: column.key,
       label: `${column.side === coachSide ? 'Ta' : 'Leur'} ligne : ${LINE_LABEL[column.line]}`,
       tokens: column.players.map(toView),
+      line: column.side === coachSide ? column.line : null,
     })),
     bench: benchPlayers(state, coachSide).map(toView),
   };

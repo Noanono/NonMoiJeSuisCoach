@@ -244,6 +244,8 @@ export interface EventWindow {
   eligiblePlayerIds: string[];
   /** Coup franc : le coach choisit l'option (attaque) ou le mur (défense), même sans capacité à jouer. */
   freeKick?: 'attack' | 'defense';
+  /** Penalty : le coach choisit la frappe (attaque) ou le plongeon de son gardien (défense). */
+  penalty?: 'attack' | 'defense';
 }
 
 /** Activation en cours de ciblage (CAP-16, CAP-17, CAP-20). */
@@ -263,6 +265,12 @@ export type FreeKickDistance = 'close' | 'medium' | 'far';
 export type FreeKickOption = 'shot' | 'cross' | 'combination';
 /** Taille du mur de l'équipe qui défend. */
 export type WallSize = 'small' | 'normal' | 'large';
+/** Style de frappe au penalty : placée (sûre), en force (brutale) ou Panenka (le bluff). */
+export type PenaltyStyle = 'placed' | 'power' | 'panenka';
+/** Ce que fait le gardien sur un penalty. */
+export type KeeperDive = 'left' | 'right' | 'center';
+/** Habitude cachée d'un gardien face aux penalties. */
+export type KeeperHabit = 'diver' | 'neutral' | 'stayer';
 
 export interface PendingPlay {
   kind: 'freeKick' | 'corner' | 'penalty';
@@ -272,6 +280,9 @@ export interface PendingPlay {
   distance?: FreeKickDistance;
   option?: FreeKickOption;
   wall?: WallSize;
+  /** Penalty : frappe choisie par le tireur, plongeon choisi par le gardien. */
+  style?: PenaltyStyle;
+  dive?: KeeperDive;
 }
 
 export interface ShootoutResult {
@@ -311,6 +322,8 @@ export interface MatchState {
   /** Déclencheur ouvert pour chaque camp (CAP-19), effacé à la minute suivante. */
   triggers: Record<Side, AbilityTrigger | null>;
   shootout: ShootoutResult | null;
+  /** Gardiens dont le staff a percé les habitudes au penalty (après en avoir affronté un). */
+  scoutedKeeperIds?: string[];
   /** XP gagnée par joueur (CAP-10), calculée au coup de sifflet final. */
   xpGains: Record<string, number>;
   nextActivationId: number;

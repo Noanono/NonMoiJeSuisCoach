@@ -11,7 +11,9 @@ import { comment } from './commentary';
 import { creditActive, IMPACT } from './impact';
 import { isActive, opponentSide, pushEvent, teamOf, type Run } from './state';
 import { createStrength, measureTeam, shootingBoost, shootingValue, type TeamStrength } from './strength';
-import type { ChanceKind, FreeKickDistance, FreeKickOption, MatchPlayer, MatchState, PendingPlay, Side, TeamState, WallSize } from './types';
+import { addGauge } from './actions';
+import { aimFor, aiPenaltyStyle, keeperDive, keeperRead, PANENKA_GAUGE_SWING, PENALTY_STYLE_CHANCE, PENALTY_STYLE_LABEL } from './penaltyKick';
+import type { ChanceKind, FreeKickDistance, FreeKickOption, KeeperDive, MatchPlayer, MatchState, PenaltyStyle, PendingPlay, Side, TeamState, WallSize } from './types';
 import { openTriggers } from './windows';
 
 // --- Occasions -------------------------------------------------------------
@@ -341,6 +343,22 @@ export function chooseWall(state: MatchState, side: Side, wall: WallSize): boole
   return true;
 }
 
+/** Le coach choisit la frappe de son tireur au penalty. */
+export function choosePenaltyStyle(state: MatchState, side: Side, style: PenaltyStyle): boolean {
+  const play = state.pendingPlay;
+  if (play?.kind !== 'penalty' || play.side !== side) return false;
+  play.style = style;
+  return true;
+}
+
+/** Le coach choisit le plongeon de son gardien sur un penalty adverse. */
+export function chooseKeeperDive(state: MatchState, side: Side, dive: KeeperDive): boolean {
+  const play = state.pendingPlay;
+  if (play?.kind !== 'penalty' || play.side === side) return false;
+  play.dive = dive;
+  return true;
+}
+
 /** Siffle un penalty pour `side` (il remplace un coup de pied arrêté en attente). */
 export function awardPenalty(run: Run, side: Side, takerId: string | null): void {
   const { state } = run;
@@ -377,12 +395,14 @@ export function resolvePendingPlay(run: Run): void {
     resolveFreeKick(run, attacking, play, boosts);
     return;
   }
+  if (play.kind === 'penalty') {
+    resolvePenalty(run, attacking, play);
+    return;
+  }
   const shooter = chooseTaker(run, attacking, play.kind, play.takerId);
   if (!shooter) return;
   // Un corner est un centre : seuls les bonus de centre s'appliquent.
-  const bonus = play.kind === 'corner' ? sumBoosts(boosts, 'cross') : 0;
-  const kind: ChanceKind = play.kind === 'penalty' ? 'penalty' : 'setPiece';
-  takeShot(run, { attacking, shooter, kind, keeper: scratchStrength.keeper, bonus });
+  takeShot(run, { attacking, shooter, kind: 'setPiece', keeper: scratchStrength.keeper, bonus: sumBoosts(boosts, 'cross') });
 }
 
 function sumBoosts(boosts: readonly { option: 'shot' | 'cross'; value: number }[], option: 'shot' | 'cross'): number {
@@ -414,6 +434,31 @@ function resolveFreeKick(run: Run, attacking: TeamState, play: PendingPlay, boos
   pushEvent(run, 'ambiance', defending.side, comment(rng, 'freeKickCounter', { team: attacking.name, opponent: defending.name }));
   measureTeam(attacking, elapsed, scratchStrength);
   takeShot(run, { attacking: defending, shooter: runner, kind: 'counter', keeper: scratchStrength.keeper });
+}
+
+/**
+ * Penalty (P4) : le tireur choisit sa frappe, le gardien son plongeon. Le côté visé est tiré au
+ * sort (pas de choix de côté) ; la Panenka va au centre. Une Panenka fait basculer la gueulante.
+ */
+function resolvePenalty(run: Run, attacking: TeamState, play: PendingPlay): void {
+  const { state, rng } = run;
+  const shooter = chooseTaker(run, attacking, 'penalty', play.takerId);
+  if (!shooter) return;
+  const defending = teamOf(state, opponentSide(attacking.side));
+  const keeper = defending.players.find((player) => player.line === 'GK' && isActive(player, state.elapsed));
+  const style = play.style ?? aiPenaltyStyle(rng);
+  const dive = play.dive ?? keeperDive(rng, keeper?.id ?? defending.clubId);
+  const aim = aimFor(rng, style);
+  const read = keeperRead(aim, dive);
+  if (keeper && !(state.scoutedKeeperIds ?? []).includes(keeper.id)) state.scoutedKeeperIds = [...(state.scoutedKeeperIds ?? []), keeper.id];
+  pushEvent(run, 'ambiance', attacking.side, comment(rng, `penaltyDuel_${read}`, { player: shooter.name, team: attacking.name, label: PENALTY_STYLE_LABEL[style] }));
+  const scored = takeShot(run, { attacking, shooter, kind: 'penalty', keeper: scratchStrength.keeper, base: PENALTY_STYLE_CHANCE[style][read] });
+  if (style !== 'panenka') return;
+  const winner = scored ? attacking : defending;
+  const loser = scored ? defending : attacking;
+  addGauge(winner, PANENKA_GAUGE_SWING);
+  addGauge(loser, -PANENKA_GAUGE_SWING);
+  pushEvent(run, 'ambiance', attacking.side, comment(rng, scored ? 'panenkaScored' : 'panenkaFailed', { player: shooter.name, team: attacking.name, opponent: defending.name }));
 }
 
 function chooseTaker(run: Run, team: TeamState, kind: 'freeKick' | 'corner' | 'penalty', takerId: string | null) {

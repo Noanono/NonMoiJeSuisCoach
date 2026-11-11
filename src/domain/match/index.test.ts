@@ -14,8 +14,8 @@ describe('API publique du moteur de match', () => {
         startActivation(state, 'home', 'h-5');
         expect(confirmActivation(state).some((event) => event.kind === 'activation')).toBe(true);
         expect(activeEffects(state, 'h-0')[0]).toMatchObject({ value: 0.05, remaining: 45 });
-      } else if (state.awaiting?.freeKick) {
-        // Coup franc : le coach laisse le choix par défaut (frappe de près, centre de loin).
+      } else if (state.awaiting?.freeKick || state.awaiting?.penalty) {
+        // Coup franc ou penalty : le coach laisse le choix par défaut.
         dismissEventWindow(state);
       } else if (state.awaiting) {
         throw new Error(`Fenêtre inattendue : ${state.awaiting.trigger}`);

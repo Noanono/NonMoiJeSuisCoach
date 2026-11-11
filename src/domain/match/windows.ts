@@ -60,9 +60,12 @@ function offerWindow(run: Run, side: Side): void {
   const eligible = eligiblePlayerIds(state, side);
   const play = state.pendingPlay;
   // Sur un coup franc, le coach a toujours un choix à faire : option en attaque, mur en défense.
-  const freeKick = play?.kind === 'freeKick' ? (play.side === side ? 'attack' : 'defense') : undefined;
-  if (eligible.length === 0 && !freeKick) return;
-  state.awaiting = { side, trigger, eligiblePlayerIds: eligible, ...(freeKick ? { freeKick } : {}) };
+  const role = play && play.side === side ? 'attack' : 'defense';
+  const freeKick = play?.kind === 'freeKick' ? role : undefined;
+  // Sur un penalty aussi : la frappe pour le tireur, le plongeon pour le gardien.
+  const penalty = play?.kind === 'penalty' ? role : undefined;
+  if (eligible.length === 0 && !freeKick && !penalty) return;
+  state.awaiting = { side, trigger, eligiblePlayerIds: eligible, ...(freeKick ? { freeKick } : {}), ...(penalty ? { penalty } : {}) };
   pushEvent(run, 'eventWindow', side, comment(run.rng, 'eventWindow', { label: TRIGGER_LABEL[trigger] }));
 }
 
@@ -72,7 +75,8 @@ export function refreshWindow(state: MatchState): void {
   if (!window) return;
   window.eligiblePlayerIds = eligiblePlayerIds(state, window.side);
   const freeKickPending = window.freeKick !== undefined && state.pendingPlay?.kind === 'freeKick';
-  if (window.eligiblePlayerIds.length === 0 && !freeKickPending) state.awaiting = null;
+  const penaltyPending = window.penalty !== undefined && state.pendingPlay?.kind === 'penalty';
+  if (window.eligiblePlayerIds.length === 0 && !freeKickPending && !penaltyPending) state.awaiting = null;
 }
 
 /** Le coach laisse passer la fenêtre (CAP-19) : rien n'est consommé. */

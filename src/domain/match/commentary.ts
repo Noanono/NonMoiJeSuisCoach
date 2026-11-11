@@ -47,7 +47,7 @@ const LINES = {
     'BUUUT de {player} ! {score}. Le speaker en perd son dentier.',
   ],
   penaltyGoal: [
-    'Penalty transformé par {player} ! {score}. Le gardien est parti boire un café du mauvais côté.',
+    'Penalty transformé par {player} ! {score}. Le gardien regarde passer le ballon, café à la main.',
     "{player} ne tremble pas sur le penalty, {score}. Sang-froid de comptable.",
   ],
   goalCancelled: [
@@ -114,6 +114,26 @@ const LINES = {
     'PENALTY pour {team} ! La tribune retient son souffle et sa bière.',
     "Penalty pour {team} ! L'arbitre montre le point blanc avec beaucoup de conviction.",
   ],
+  penaltyDuel_wrong: [
+    "{player} s'élance, {label}… le gardien part de l'autre côté.",
+    '{player} choisit la {label}, et le gardien plonge dans le vide.',
+  ],
+  penaltyDuel_right: [
+    "{player} s'élance, {label}… le gardien a deviné le côté !",
+    '{player} choisit la {label}, mais le gardien part du bon côté.',
+  ],
+  penaltyDuel_center: [
+    "{player} s'élance, {label}… le gardien n'a pas bougé d'un pouce.",
+    '{player} choisit la {label}, face à un gardien planté au milieu de sa cage.',
+  ],
+  panenkaScored: [
+    'PANENKA ! {player} pique le ballon au-dessus du gardien couché. {team} gonfle le torse, {opponent} baisse la tête.',
+    'Une Panenka, en plein match : à la buvette, on en parlera encore à Noël. {team} est galvanisé.',
+  ],
+  panenkaFailed: [
+    "La Panenka de {player} finit dans les bras du gardien, qui n'a même pas eu à bouger. {opponent} se moque, {team} se cache.",
+    'Panenka ratée : le gardien cueille le ballon comme une pomme. {player} va entendre parler de ce moment longtemps.',
+  ],
   penaltyMissed: [
     "Penalty manqué par {player} ! Le gardien de {opponent} a deviné, ou il a eu de la chance.",
     "{player} rate son penalty. Le ballon est encore en orbite au-dessus du stade.",
@@ -149,7 +169,7 @@ const LINES = {
     "{player} est au tapis pour {minutes} min. Il compte les étoiles, il en est à douze.",
   ],
   eventWindow: [
-    "Pause : {label}. Tu as des capacités à dégainer, c'est maintenant ou jamais.",
+    "Pause : {label}. C'est à toi de décider, maintenant ou jamais.",
     "Le match s'arrête un instant : {label}. Tes joueurs te regardent, à toi de jouer.",
   ],
   shootout: [
