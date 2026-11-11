@@ -120,11 +120,15 @@ export interface TokenView {
   /** Coût de la capacité si elle peut partir maintenant, `null` sinon. */
   readyCost: number | null;
   readyRarity: Rarity | null;
+  /** Adversaire : rareté de sa capacité, en liseré, si elle est connue (une capacité cachée ne se trahit pas). */
+  opponentRarity: Rarity | null;
   /** Le joueur est sous l'effet d'une capacité : le malus l'emporte, c'est ce qu'il faut voir. */
   halo: 'bonus' | 'malus' | null;
   /** Libellé complet pour les lecteurs d'écran. */
   label: string;
 }
+
+const RARITY_WORD: Record<Rarity, string> = { common: 'commune', rare: 'rare', legendary: 'légendaire', mythic: 'mythique' };
 
 const BENCH_REASON = 'Banc';
 const SUBBED_REASON = 'Sorti';
@@ -141,6 +145,8 @@ export function tokenView(state: MatchState, player: MatchPlayer, coachSide: Sid
   const readyCost = ready && ready.available ? ready.cost : null;
   const readyRarity = readyCost !== null ? (player.ability?.rarity ?? null) : null;
   const halo = chips.some((chip) => chip.tone === 'malus') ? 'malus' : chips.length > 0 ? 'bonus' : null;
+  const known = player.ability !== null && (player.abilityRevealed || !player.ability.hidden);
+  const opponentRarity = !own && known ? player.ability!.rarity : null;
   const avatar = { id: player.id, age: player.profile.age, clubId: player.profile.clubId, position: player.profile.position };
   const rating = Math.round(ratingAtPosition(player.profile, player.line ?? player.profile.position));
   const energy = Math.round(100 - player.profile.fatigue);
@@ -151,9 +157,10 @@ export function tokenView(state: MatchState, player: MatchPlayer, coachSide: Sid
   if (reason) parts.push(reason);
   parts.push(...chips.map((chip) => chip.detail));
   if (readyCost !== null) parts.push(`capacité prête, coût ${readyCost}`);
+  if (opponentRarity) parts.push(`capacité ${RARITY_WORD[opponentRarity]}`);
   if (focus.chosen) parts.push('cible choisie');
   else if (focus.highlighted) parts.push(state.pending ? 'cible valide' : 'peut agir maintenant');
-  return { id: player.id, name: shortName(player), avatar, position, displaced, rating, energy, own, status, reason, chips, focus, readyCost, readyRarity, halo, draggable: own && focus.interactive && state.pending === null && (canLeave(player) || canEnter(player)), label: parts.join(', ') };
+  return { id: player.id, name: shortName(player), avatar, position, displaced, rating, energy, own, status, reason, chips, focus, readyCost, readyRarity, opponentRarity, halo, draggable: own && focus.interactive && state.pending === null && (canLeave(player) || canEnter(player)), label: parts.join(', ') };
 }
 
 export interface PitchView {

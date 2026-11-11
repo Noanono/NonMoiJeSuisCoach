@@ -14,6 +14,21 @@ function match() {
 }
 
 describe('terrain en direct (CAP-03)', () => {
+  test('un adversaire porte le liseré de la rareté de sa capacité, sauf si elle est cachée', () => {
+    const state = createMatch({
+      home: makeSheet({ clubId: 'h', isHuman: true, abilities: { 9: 'le-sombrero-bourre' } }),
+      away: makeSheet({ clubId: 'a', abilities: { 9: 'le-sombrero-bourre' }, benchAbilities: ['le-kebab-du-siecle'] }),
+      seed: 3,
+    });
+    expect(tokenView(state, findPlayer(state, 'a-9')!, 'home').opponentRarity).toBe('rare');
+    expect(tokenView(state, findPlayer(state, 'h-9')!, 'home').opponentRarity).toBeNull();
+    const bench = findPlayer(state, 'a-b0')!;
+    bench.abilityRevealed = false;
+    expect(tokenView(state, bench, 'home').opponentRarity).toBeNull();
+    bench.abilityRevealed = true;
+    expect(tokenView(state, bench, 'home').opponentRarity).toBe('mythic');
+  });
+
   test('place le coach de son gardien à son attaque, l’adversaire en miroir', () => {
     const columns = pitchColumns(match(), 'away');
     expect(columns.map((column) => `${column.side}-${column.line}`)).toEqual([

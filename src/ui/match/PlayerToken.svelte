@@ -38,6 +38,8 @@
   class:cible-changement={dropTarget}
   class:survol-changement={hovered && dropTarget}
   class:souleve={lifted}
+  class:lisere={token.opponentRarity !== null}
+  data-rarity={token.opponentRarity}
   data-player-id={token.id}
   disabled={!token.focus.interactive}
   aria-label={token.label}
@@ -96,6 +98,26 @@
     background: var(--craie-2);
     border-width: var(--trait-fin);
     box-shadow: none;
+  }
+  /* Adversaire : liseré intérieur à la couleur de la rareté de sa capacité. */
+  .lisere::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border: 3px solid var(--lisere);
+    pointer-events: none;
+  }
+  .lisere[data-rarity='common'] {
+    --lisere: #9c978a;
+  }
+  .lisere[data-rarity='rare'] {
+    --lisere: var(--scotch);
+  }
+  .lisere[data-rarity='legendary'] {
+    --lisere: var(--fumigene);
+  }
+  .lisere[data-rarity='mythic'] {
+    --lisere: var(--mythique);
   }
   .hors-jeu {
     filter: grayscale(1);
