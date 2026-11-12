@@ -21,11 +21,21 @@ export function openTriggers(
   const opponent = opponentSide(side);
   state.triggers[side] = ownTrigger;
   state.triggers[opponent] = opponentTrigger;
+  // Nouvelle occasion : chaque camp a de nouveau droit à une capacité d'occasion.
+  state.home.occasionAbilityUsed = false;
+  state.away.occasionAbilityUsed = false;
   for (const concerned of [side, opponent]) {
     if (!state.triggers[concerned]) continue;
     if (teamOf(state, concerned).isHuman) offerWindow(run, concerned);
     else aiReactToTrigger(run, concerned);
   }
+}
+
+/** Déclencheurs d'une occasion de but (penalty, coup franc, corner) : une seule capacité par camp. */
+const OCCASION_TRIGGERS: ReadonlySet<AbilityTrigger> = new Set<AbilityTrigger>(['ownPenalty', 'opponentPenalty', 'ownSetPiece', 'opponentSetPiece', 'ownFreeKick', 'opponentFreeKick']);
+
+export function isOccasion(trigger: AbilityTrigger | null): boolean {
+  return trigger !== null && OCCASION_TRIGGERS.has(trigger);
 }
 
 export function clearTriggers(state: MatchState): void {

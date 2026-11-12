@@ -5,7 +5,7 @@
     defaultWall,
     expectedAgainstDive,
     expectedPenaltyChance,
-    FREE_KICK_CONVERSION,
+    freeKickChances,
     FREE_KICK_DISTANCE_LABEL,
     KEEPER_HABIT_LABEL,
     KEEPER_STAY_CHANCE,
@@ -68,7 +68,11 @@
             ? {
                 role: window.freeKick,
                 distance: FREE_KICK_DISTANCE_LABEL[distance],
-                odds: FREE_KICK_CONVERSION[distance],
+                // Chances exactes au moment du choix : tireur, gardien, mur et capacités en cours.
+                odds: freeKickChances(match),
+                wallOdds: Object.fromEntries(WALLS.map((wall) => [wall.id, freeKickChances(match, wall.id)?.[play.option ?? defaultFreeKickOption(distance)]?.chance ?? 0])) as Record<WallSize, number>,
+                wallLabel: WALLS.find((wall) => wall.id === (play.wall ?? defaultWall(distance)))?.label ?? '',
+                theirOption: OPTIONS.find((option) => option.id === (play.option ?? defaultFreeKickOption(distance)))?.label ?? '',
                 option: play.option ?? defaultFreeKickOption(distance),
                 wall: play.wall ?? defaultWall(distance),
               }
@@ -110,6 +114,10 @@
   }
 
   const percent = (value: number) => `${Math.round(value * 100)} %`;
+  /** Pourcentage au dixième : « 12,4 % ». */
+  const exact = (value: number) => `${(value * 100).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+  /** Points de probabilité ajoutés par les capacités : « 5,0 pts ». */
+  const points = (value: number) => `${Math.abs(value * 100).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} pts`;
 
   /** Échap annule le ciblage en cours, sans rien consommer (CAP-20). */
   function cancelOnEscape(event: KeyboardEvent): void {
@@ -138,11 +146,13 @@
         <p class="consigne" aria-live="polite">
           <span class="banderole-titre">{prompt.title}</span>
           <span class="tampon distance">Coup franc {freeKick.distance}</span>
+          <span class="texte-s">{freeKick.role === 'attack' ? `En face : ${freeKick.wallLabel.toLowerCase()}.` : `Ils vont jouer : ${freeKick.theirOption.toLowerCase()}.`}</span>
           {#if prompt.hasAbilities}<span class="texte-s">Une capacité peut s'en mêler : touche un joueur surligné.</span>{/if}
         </p>
         {#if freeKick.role === 'attack'}
           <div class="choix" role="radiogroup" aria-label="Option du coup franc">
             {#each OPTIONS as option (option.id)}
+              {@const odds = freeKick.odds?.[option.id]}
               <button
                 class="carte"
                 role="radio"
@@ -150,7 +160,9 @@
                 onclick={() => controller.chooseFreeKick(option.id)}
               >
                 <span class="texte-fort">{option.label}</span>
-                <span class="mono">~{percent(freeKick.odds[option.id])}</span>
+                <span class="mono">but {exact(odds?.chance ?? 0)}</span>
+                {#if odds?.takerName}<span class="texte-s">Tireur : {odds.takerName}</span>{/if}
+                {#if odds && odds.boost !== 0}<span class="texte-s mono">dont capacités {odds.boost > 0 ? '+' : '−'}{points(odds.boost)}</span>{/if}
                 <span class="texte-s">{option.hint}</span>
               </button>
             {/each}
@@ -160,6 +172,7 @@
             {#each WALLS as wall (wall.id)}
               <button class="carte" role="radio" aria-checked={freeKick.wall === wall.id} onclick={() => controller.chooseWall(wall.id)}>
                 <span class="texte-fort">{wall.label}</span>
+                <span class="mono">but adverse {exact(freeKick.wallOdds[wall.id])}</span>
                 <span class="texte-s">{wall.hint}</span>
               </button>
             {/each}

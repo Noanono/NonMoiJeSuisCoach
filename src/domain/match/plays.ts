@@ -275,11 +275,14 @@ function reportMissedShot(run: Run, shot: Shot, vars: { player: string; team: st
 
 function conversionChance(shot: Shot, defending: TeamState, boost: number): number {
   if (shot.fixedChance !== undefined) return shot.fixedChance;
-  const exponent = shot.kind === 'penalty' ? PENALTY_SKILL_EXPONENT : SHOOTING_EXPONENT;
-  const skill = clamp(shootingValue(shot.shooter) / Math.max(1, shot.keeper), MIN_SKILL_RATIO, MAX_SKILL_RATIO);
-  let chance = (shot.base ?? BASE_CONVERSION[shot.kind]) * skill ** exponent + boost;
-  chance *= 1 - consumeShotMalus(defending);
-  return clamp(chance, MIN_CONVERSION, MAX_CONVERSION);
+  return shotChance(shot.shooter, shot.keeper, shot.kind, shot.base ?? BASE_CONVERSION[shot.kind], boost, consumeShotMalus(defending));
+}
+
+/** Probabilité de but d'un tir : talent du tireur face au gardien, bonus ajoutés, malus adverse. Ne consomme rien. */
+function shotChance(shooter: MatchPlayer, keeper: number, kind: ChanceKind, base: number, boost: number, malus: number): number {
+  const exponent = kind === 'penalty' ? PENALTY_SKILL_EXPONENT : SHOOTING_EXPONENT;
+  const skill = clamp(shootingValue(shooter) / Math.max(1, keeper), MIN_SKILL_RATIO, MAX_SKILL_RATIO);
+  return clamp((base * skill ** exponent + boost) * (1 - malus), MIN_CONVERSION, MAX_CONVERSION);
 }
 
 /** Consomme un tir du premier malus infligé par l'équipe qui défend. */
@@ -481,6 +484,64 @@ function bestShooter(team: TeamState, elapsed: number): MatchPlayer | undefined 
     }
   }
   return best;
+}
+
+/** Chance de but d'une option de coup franc, telle que la simulation la jouera. */
+export interface FreeKickChance {
+  /** Probabilité de but, de 0 à 1 (moyenne sur les joueurs qui peuvent reprendre un centre ou une combinaison). */
+  chance: number;
+  /** Part des capacités dans cette probabilité (bonus de coup de pied arrêté et d'occasion), en points de probabilité. */
+  boost: number;
+  /** Tireur désigné pour la frappe directe ; `null` quand le ballon peut arriver sur plusieurs joueurs. */
+  takerName: string | null;
+}
+
+/**
+ * Chances exactes du coup franc en attente pour chaque option et une taille de mur : tireur, gardien,
+ * mur, capacités en cours (bonus de coup franc, bonus d'occasion, malus de l'adversaire, action annulée).
+ * Ne touche pas à l'état : c'est ce que le coach voit au moment de choisir.
+ */
+export function freeKickChances(state: MatchState, wall?: WallSize): Record<FreeKickOption, FreeKickChance> | null {
+  const play = state.pendingPlay;
+  if (play?.kind !== 'freeKick') return null;
+  const elapsed = state.elapsed;
+  const attacking = teamOf(state, play.side);
+  const defending = teamOf(state, opponentSide(play.side));
+  const strength = createStrength();
+  const swapped = state.swappedUntil >= elapsed;
+  measureTeam(teamOf(state, swapped ? play.side : opponentSide(play.side)), elapsed, strength);
+  const distance = play.distance ?? 'medium';
+  const usedWall = wall ?? play.wall ?? defaultWall(distance);
+  const cancelled = defending.pendingCancels > 0;
+  const chanceBoost = attacking.chanceBoosts[0]?.value ?? 0;
+  const malus = clamp(defending.shotMaluses[0]?.value ?? 0, 0, 1);
+  const options: FreeKickOption[] = ['shot', 'cross', 'combination'];
+  const result = {} as Record<FreeKickOption, FreeKickChance>;
+  for (const option of options) {
+    const base = FREE_KICK_CONVERSION[distance][option] * WALL_FACTOR[usedWall][option];
+    const boost = chanceBoost + (option === 'combination' ? 0 : sumBoosts(attacking.setPieceBoosts, option));
+    const chanceOf = (shooter: MatchPlayer) => (cancelled ? 0 : shotChance(shooter, strength.keeper, 'setPiece', base, boost, malus));
+    if (option === 'shot') {
+      const designated = play.takerId ? attacking.players.find((player) => player.id === play.takerId) : undefined;
+      const taker = designated && isActive(designated, elapsed) ? designated : bestShooter(attacking, elapsed);
+      result.shot = { chance: taker ? chanceOf(taker) : 0, boost: cancelled ? 0 : boost, takerName: taker?.name ?? null };
+      continue;
+    }
+    const weightOf =
+      option === 'cross'
+        ? (player: MatchPlayer) => HEADER_WEIGHTS[player.line!]
+        : (player: MatchPlayer) => SHOOTER_WEIGHTS[player.line!] * (1 + shootingBoost(player) * SHOOTER_BOOST_WEIGHT);
+    let total = 0;
+    let weighted = 0;
+    for (const player of attacking.players) {
+      if (player.line === null || !isActive(player, elapsed)) continue;
+      const weight = weightOf(player);
+      total += weight;
+      weighted += weight * chanceOf(player);
+    }
+    result[option] = { chance: total > 0 ? weighted / total : 0, boost: cancelled ? 0 : boost, takerName: null };
+  }
+  return result;
 }
 
 // --- Fautes ----------------------------------------------------------------

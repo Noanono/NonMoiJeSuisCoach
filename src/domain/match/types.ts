@@ -170,6 +170,8 @@ export interface TeamState {
   setPieceBoosts: { option: 'shot' | 'cross'; value: number }[];
   /** Penalties adverses marqués à faire retirer. */
   retakePenalties: number;
+  /** Une capacité d'occasion a déjà servi sur le penalty ou le coup de pied arrêté en cours. */
+  occasionAbilityUsed: boolean;
   delayed: DelayedEffect[];
   substitutionsUsed: number;
   /** Les buts de l'équipe comptent double jusqu'à cette minute écoulée incluse. */

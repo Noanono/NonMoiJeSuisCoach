@@ -10,7 +10,7 @@ import { IMPACT, IMPACT_WINDOW_MINUTES } from './impact';
 import { beginRun, endRun, opponentSide, pushEvent, requirePlayer, teamOf, type Run } from './state';
 import { chosenTargetCount, validTargets } from './targets';
 import type { ActivationPreview, ActivationRecord, MatchEvent, MatchPlayer, MatchState, PreparedAbility, Side } from './types';
-import { refreshWindow, triggerIsOpen } from './windows';
+import { isOccasion, refreshWindow, triggerIsOpen } from './windows';
 
 const HIDDEN_NAME = '???';
 
@@ -49,6 +49,8 @@ function usageReason(state: MatchState, side: Side, player: MatchPlayer): string
   // Une capacité ne sert qu'une fois par match (CAP-04), sauf celles d'occasion (penalty, coup franc…),
   // qui reviennent à chaque fois que l'événement se présente.
   if (player.usedAbility && ability.trigger === 'anytime') return UNAVAILABLE.oncePerMatch;
+  // Une seule capacité d'occasion par camp et par occasion de but.
+  if (ability.trigger !== 'anytime' && isOccasion(state.triggers[side]) && teamOf(state, side).occasionAbilityUsed) return UNAVAILABLE.oncePerOccasion;
   if (player.cooldownUntil > state.elapsed) return fill(UNAVAILABLE.cooldown, { n: player.cooldownUntil - state.elapsed });
   const gauge = teamOf(state, side).gauge;
   if (gauge < ability.cost) return fill(UNAVAILABLE.gauge, { n: ability.cost - gauge });
@@ -156,8 +158,10 @@ export function performActivation(run: Run, order: ActivationOrder): ActivationR
 
 /** Jauge et utilisation unique dans le match (CAP-04, CAP-05). */
 function consumeActivation(state: MatchState, player: MatchPlayer, ability: PreparedAbility): void {
-  teamOf(state, player.side).gauge -= ability.cost;
+  const team = teamOf(state, player.side);
+  team.gauge -= ability.cost;
   player.usedAbility = true;
+  if (ability.trigger !== 'anytime' && isOccasion(state.triggers[player.side])) team.occasionAbilityUsed = true;
   if (ability.cooldown > 0) player.cooldownUntil = state.elapsed + ability.cooldown;
 }
 

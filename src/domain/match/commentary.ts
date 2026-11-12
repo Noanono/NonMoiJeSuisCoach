@@ -203,6 +203,7 @@ export const UNAVAILABLE = {
   wrongSide: "Ce n'est pas ton joueur. Tu coaches déjà assez de monde comme ça.",
   busy: "Une autre activation attend sa cible, termine-la d'abord.",
   gauge: 'Jauge de Gueulante à sec : il te manque {n} point(s). Hurle un peu plus fort.',
+  oncePerOccasion: "Une capacité a déjà été jouée sur cette occasion : une seule par action, sinon l'arbitre va finir par se douter de quelque chose.",
   oncePerMatch: "Déjà utilisée dans ce match : chaque capacité ne sert qu'une fois. Un miracle, ça ne se commande pas deux fois.",
   cooldown: 'Encore {n} min de recharge : il reprend son souffle et sa dignité.',
   trigger: 'Ça se déclenche {label} : attends le bon moment.',

@@ -90,7 +90,7 @@ Le gameplay repose sur les capacités : chaque joueur en a une, personnelle, que
 | CAP-01 | Chaque joueur possède exactement une capacité personnelle, liée à lui pour toute sa carrière (elle le suit en cas de transfert). |
 | CAP-02 | Dans un même effectif généré, deux joueurs n'ont jamais la même capacité. |
 | CAP-03 | Toutes les capacités s'activent manuellement par le coach pendant le match, en touchant le joueur sur le terrain. Les capacités « Banc » s'activent depuis le banc. |
-| CAP-04 | Chaque capacité définit : poste, cible (soi, coéquipier, adversaire, zone, équipe), effet chiffré, durée. Le coût dépend de la rareté. Chaque capacité ne sert qu'une fois par match : la jouer est un choix. Exception : les capacités d'occasion (penalty, coup franc, corner) resservent à chaque fois que l'événement se présente, tant que la jauge le permet. |
+| CAP-04 | Chaque capacité définit : poste, cible (soi, coéquipier, adversaire, zone, équipe), effet chiffré, durée. Le coût dépend de la rareté. Chaque capacité ne sert qu'une fois par match : la jouer est un choix. Exception : les capacités d'occasion (penalty, coup franc, corner) resservent à chaque fois que l'événement se présente, tant que la jauge le permet. Sur une même occasion de but, chaque camp ne joue qu'une seule capacité d'occasion. |
 | CAP-05 | Les activations consomment la Jauge de Gueulante du coach (10 points max, 3 au coup d'envoi), qui se recharge de 1 point toutes les 10 minutes, +1 quand l'équipe encaisse un but : 4 à 6 activations par match. |
 | CAP-06 | Une capacité n'a aucun effet en dehors du match : ni budget, ni confiance, ni blessure longue, ni fatigue pour la suite. |
 | CAP-08 | La fiche du joueur détaille l'effet, la durée et le coût au niveau actuel et au niveau suivant. |

@@ -20,6 +20,8 @@ export {
   defaultWall,
   FREE_KICK_CONVERSION,
   FREE_KICK_DISTANCE_LABEL,
+  freeKickChances,
+  type FreeKickChance,
   WALL_FACTOR,
 } from './plays';
 export { canEnter, canLeave, canMoveToLine, canReposition, canSwapPositions, MAX_SUBSTITUTIONS, moveToLine, substitutePlayer, substitutionsLeft, swapPositions } from './substitutions';

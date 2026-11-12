@@ -99,6 +99,37 @@ describe('activation des capacités', () => {
     expect(previewActivation(state, 'home', 'h-b0').reason).toContain('Déjà utilisée');
   });
 
+  test('une seule capacité d’occasion par camp et par occasion de but', () => {
+    const home = makeSheet({ clubId: 'h', isHuman: true, abilities: { 9: 'biere-tiede', 2: 'la-tete-de-pioche' } });
+    const state = createMatch({ home, away: makeSheet({ clubId: 'a', isHuman: true }), seed: 1 });
+    state.home.gauge = 10;
+    let run = beginRun(state);
+    announceSetPiece(run, 'home', 'corner');
+    endRun(run);
+    expect(state.awaiting?.eligiblePlayerIds.sort()).toEqual(['h-2', 'h-9']);
+    activate(state, 'h-9');
+    expect(previewActivation(state, 'home', 'h-2').available).toBe(false);
+    expect(previewActivation(state, 'home', 'h-2').reason).toContain('déjà été jouée sur cette occasion');
+    expect(state.awaiting).toBeNull();
+    tick(state);
+    run = beginRun(state);
+    announceSetPiece(run, 'home', 'corner');
+    endRun(run);
+    expect(previewActivation(state, 'home', 'h-2').available).toBe(true);
+  });
+
+  test('l’IA ne joue pas deux capacités sur la même occasion', () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      const home = makeSheet({ clubId: 'h', abilities: { 9: 'biere-tiede', 2: 'la-tete-de-pioche' } });
+      const state = createMatch({ home, away: makeSheet({ clubId: 'a', isHuman: true }), seed });
+      state.home.gauge = 10;
+      const run = beginRun(state);
+      announceSetPiece(run, 'home', 'corner');
+      endRun(run);
+      expect(state.activations.filter((record) => record.side === 'home').length).toBeLessThanOrEqual(1);
+    }
+  });
+
   test('une capacité d’occasion resert à chaque occasion', () => {
     const home = makeSheet({ clubId: 'h', isHuman: true, abilities: { 9: 'biere-tiede' } });
     const state = createMatch({ home, away: makeSheet({ clubId: 'a', isHuman: true }), seed: 1 });

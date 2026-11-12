@@ -182,6 +182,7 @@ function createTeam(sheet: TeamSheet, side: Side, lookup: AbilityLookup, boost: 
     retakePenalties: 0,
     delayed: [],
     substitutionsUsed: 0,
+    occasionAbilityUsed: false,
     doubleGoalsUntil: NEVER,
     consequences: [],
   };
