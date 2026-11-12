@@ -3,13 +3,11 @@
   import {
     defaultFreeKickOption,
     defaultWall,
-    expectedAgainstDive,
-    expectedPenaltyChance,
     freeKickChances,
     FREE_KICK_DISTANCE_LABEL,
     KEEPER_HABIT_LABEL,
-    KEEPER_STAY_CHANCE,
     keeperHabit,
+    penaltyChances,
     type FreeKickOption,
     type KeeperDive,
     type PenaltyStyle,
@@ -94,22 +92,31 @@
     { id: 'center', label: 'Rester au centre', hint: 'piège la Panenka et la frappe en force, battu par une frappe placée' },
   ];
 
-  /** Penalty : en attaque, ce qu'on sait du gardien adverse ; en défense, le choix du plongeon. */
+  /** Penalty : chances exactes (tireur, gardien, capacités) ; en attaque, ce qu'on sait du gardien adverse. */
   function penaltyPrompt(role: 'attack' | 'defense', shootingSide: Side) {
     const match = controller.match;
     const play = match.pendingPlay;
+    const chances = penaltyChances(match);
     const keeperTeam = shootingSide === 'home' ? match.away : match.home;
     const keeper = keeperTeam.players.find((player) => player.line === 'GK' && !player.sentOff);
-    const scouted = keeper !== undefined && (match.scoutedKeeperIds ?? []).includes(keeper.id);
-    const habit = keeper && scouted ? keeperHabit(keeper.id) : null;
-    const stay = KEEPER_STAY_CHANCE[habit ?? 'neutral'];
+    const habit = keeper && chances?.habitKnown ? keeperHabit(keeper.id) : null;
+    const details: string[] = [];
+    if (chances) {
+      const duel = chances.skillFactor;
+      details.push(`Tireur : ${chances.shooterName ?? '?'} · gardien : ${chances.keeperName ?? 'personne'} · duel ×${duel.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+      if (chances.boost !== 0) details.push(`Capacité du tireur : ${chances.boost > 0 ? '+' : '−'}${points(chances.boost)}`);
+      if (chances.malus > 0) details.push(`Capacité du gardien : −${Math.round(chances.malus * 100)} % de chances`);
+      if (chances.retake) details.push('Le Ramasseur de balles : un penalty marqué sera à retirer');
+    }
     return {
       role,
-      keeper: habit && keeper ? `Le staff a noté : ${keeper.name} ${KEEPER_HABIT_LABEL[habit]}.` : 'Habitudes du gardien inconnues : le staff les notera après son premier penalty.',
+      keeper: habit && keeper
+        ? `Le staff a noté : ${keeper.name} ${KEEPER_HABIT_LABEL[habit]} (au centre ${percent(chances?.keeperStay ?? 0)} du temps).`
+        : 'Habitudes du gardien inconnues : chiffres pour un gardien moyen (au centre 20 % du temps).',
+      details,
       style: play?.style ?? null,
       dive: play?.dive ?? null,
-      odds: Object.fromEntries(STYLES.map((style) => [style.id, expectedPenaltyChance(style.id, stay)])) as Record<PenaltyStyle, number>,
-      against: Object.fromEntries(DIVES.map((dive) => [dive.id, expectedAgainstDive(dive.id)])) as Record<KeeperDive, number>,
+      chances,
     };
   }
 
@@ -190,6 +197,7 @@
         <p class="consigne" aria-live="polite">
           <span class="banderole-titre">{penalty.role === 'attack' ? 'Penalty pour toi : quelle frappe ?' : 'Penalty contre toi : où plonge ton gardien ?'}</span>
           {#if penalty.role === 'attack'}<span class="texte-s">{penalty.keeper}</span>{/if}
+          {#each penalty.details as detail (detail)}<span class="texte-s mono">{detail}</span>{/each}
           {#if prompt.hasAbilities}<span class="texte-s">Une capacité peut s'en mêler : touche un joueur surligné.</span>{/if}
         </p>
         {#if penalty.role === 'attack'}
@@ -197,7 +205,13 @@
             {#each STYLES as style (style.id)}
               <button class="carte" role="radio" aria-checked={penalty.style === style.id} onclick={() => controller.choosePenaltyStyle(style.id)}>
                 <span class="texte-fort">{style.label}</span>
-                <span class="mono">~{percent(penalty.odds[style.id])}</span>
+                {#if penalty.chances}
+                  {@const read = penalty.chances.byRead[style.id]}
+                  <span class="mono texte-fort">{exact(penalty.chances.byStyle[style.id])}</span>
+                  <span class="texte-s mono">
+                    {#if style.id === 'panenka'}il plonge {exact(read.wrong)} · il reste {exact(read.center)}{:else}mauvais côté {exact(read.wrong)} · bon côté {exact(read.right)} · centre {exact(read.center)}{/if}
+                  </span>
+                {/if}
                 <span class="texte-s">{style.hint}</span>
               </button>
             {/each}
@@ -207,7 +221,7 @@
             {#each DIVES as dive (dive.id)}
               <button class="carte" role="radio" aria-checked={penalty.dive === dive.id} onclick={() => controller.chooseKeeperDive(dive.id)}>
                 <span class="texte-fort">{dive.label}</span>
-                <span class="mono">but adverse ~{percent(penalty.against[dive.id])}</span>
+                {#if penalty.chances}<span class="mono texte-fort">but adverse {exact(penalty.chances.byDive[dive.id])}</span>{/if}
                 <span class="texte-s">{dive.hint}</span>
               </button>
             {/each}

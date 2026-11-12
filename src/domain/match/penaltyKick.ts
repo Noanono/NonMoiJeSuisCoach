@@ -27,7 +27,7 @@ export const PENALTY_STYLE_LABEL: Record<PenaltyStyle, string> = {
 };
 
 /** Choix de l'IA quand elle tire : surtout placé, parfois en force, rarement la Panenka. */
-const AI_STYLE_SHARE: Record<PenaltyStyle, number> = { placed: 0.6, power: 0.3, panenka: 0.1 };
+export const AI_STYLE_SHARE: Record<PenaltyStyle, number> = { placed: 0.6, power: 0.3, panenka: 0.1 };
 
 /** Part des penalties où le gardien reste au centre, selon son habitude. */
 export const KEEPER_STAY_CHANCE: Record<KeeperHabit, number> = { diver: 0.1, neutral: 0.2, stayer: 0.35 };

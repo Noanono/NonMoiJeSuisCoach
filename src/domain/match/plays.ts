@@ -12,7 +12,7 @@ import { creditActive, IMPACT } from './impact';
 import { isActive, opponentSide, pushEvent, teamOf, type Run } from './state';
 import { createStrength, measureTeam, shootingBoost, shootingValue, type TeamStrength } from './strength';
 import { addGauge } from './actions';
-import { aimFor, aiPenaltyStyle, keeperDive, keeperRead, PANENKA_GAUGE_SWING, PENALTY_STYLE_CHANCE, PENALTY_STYLE_LABEL } from './penaltyKick';
+import { AI_STYLE_SHARE, aimFor, aiPenaltyStyle, KEEPER_STAY_CHANCE, keeperDive, keeperHabit, keeperRead, PANENKA_GAUGE_SWING, PENALTY_STYLE_CHANCE, PENALTY_STYLE_LABEL, type KeeperRead } from './penaltyKick';
 import type { ChanceKind, FreeKickDistance, FreeKickOption, KeeperDive, MatchPlayer, MatchState, PenaltyStyle, PendingPlay, Side, TeamState, WallSize } from './types';
 import { openTriggers } from './windows';
 
@@ -542,6 +542,99 @@ export function freeKickChances(state: MatchState, wall?: WallSize): Record<Free
     result[option] = { chance: total > 0 ? weighted / total : 0, boost: cancelled ? 0 : boost, takerName: null };
   }
   return result;
+}
+
+/** Chances exactes d'un penalty en attente, telles que la simulation les jouera. */
+export interface PenaltyChances {
+  shooterName: string | null;
+  keeperName: string | null;
+  /** Par frappe, selon ce que fait le gardien : mauvais côté, bon côté, reste au centre. */
+  byRead: Record<PenaltyStyle, Record<KeeperRead, number>>;
+  /** Par frappe, face aux habitudes du gardien (connues si le staff l'a déjà vu, sinon un gardien moyen). */
+  byStyle: Record<PenaltyStyle, number>;
+  /** Par plongeon, face au tireur de l'IA (60 % placée, 30 % en force, 10 % Panenka) ou à la frappe déjà choisie. */
+  byDive: Record<KeeperDive, number>;
+  /** Le gardien reste au centre une fois sur `keeperStay`. */
+  keeperStay: number;
+  habitKnown: boolean;
+  /** Effet du duel tireur/gardien sur les chances de base : 1 = à égalité. */
+  skillFactor: number;
+  /** Bonus des capacités du tireur, en points de probabilité. */
+  boost: number;
+  /** Malus infligé par le gardien (Le Danseur…), en part des chances retirée. */
+  malus: number;
+  /** Le Ramasseur de balles : un penalty marqué est à retirer. */
+  retake: boolean;
+}
+
+/**
+ * Chances exactes du penalty en attente (P4) : tireur, gardien, frappe, plongeon et capacités en cours
+ * (bonus d'occasion, malus du gardien, penalty à retirer). Ne touche pas à l'état.
+ */
+export function penaltyChances(state: MatchState): PenaltyChances | null {
+  const play = state.pendingPlay;
+  if (play?.kind !== 'penalty') return null;
+  const elapsed = state.elapsed;
+  const attacking = teamOf(state, play.side);
+  const defending = teamOf(state, opponentSide(play.side));
+  const strength = createStrength();
+  const swapped = state.swappedUntil >= elapsed;
+  measureTeam(teamOf(state, swapped ? play.side : opponentSide(play.side)), elapsed, strength);
+  const designated = play.takerId ? attacking.players.find((player) => player.id === play.takerId) : undefined;
+  const shooter = designated && isActive(designated, elapsed) ? designated : bestShooter(attacking, elapsed);
+  const keeper = defending.players.find((player) => player.line === 'GK' && isActive(player, elapsed));
+  const boost = attacking.chanceBoosts[0]?.value ?? 0;
+  const [first, second] = defending.shotMaluses;
+  const malus = clamp(first?.value ?? 0, 0, 1);
+  // Le penalty à retirer se rejoue sans le bonus, avec le malus suivant.
+  const nextMalus = clamp((first && first.shotsLeft > 1 ? first.value : second?.value) ?? 0, 0, 1);
+  const retake = defending.retakePenalties > 0;
+  const chance = (style: PenaltyStyle, read: KeeperRead) => {
+    if (!shooter) return 0;
+    const base = PENALTY_STYLE_CHANCE[style][read];
+    const once = shotChance(shooter, strength.keeper, 'penalty', base, boost, malus);
+    return retake ? once * shotChance(shooter, strength.keeper, 'penalty', base, 0, nextMalus) : once;
+  };
+  const styles: PenaltyStyle[] = ['placed', 'power', 'panenka'];
+  const byRead = Object.fromEntries(
+    styles.map((style) => [style, { wrong: chance(style, 'wrong'), right: chance(style, 'right'), center: chance(style, 'center') }]),
+  ) as Record<PenaltyStyle, Record<KeeperRead, number>>;
+  const habitKnown = keeper !== undefined && (state.scoutedKeeperIds ?? []).includes(keeper.id);
+  const keeperStay = KEEPER_STAY_CHANCE[keeper && habitKnown ? keeperHabit(keeper.id) : 'neutral'];
+  /** Une frappe face à un plongeon donné : la Panenka va au centre, les autres à gauche ou à droite. */
+  const againstDive = (style: PenaltyStyle, dive: KeeperDive) => {
+    const odds = byRead[style];
+    if (dive === 'center') return odds.center;
+    return style === 'panenka' ? odds.wrong : (odds.wrong + odds.right) / 2;
+  };
+  const sideShare = (1 - keeperStay) / 2;
+  const byStyle = Object.fromEntries(
+    styles.map((style) => [
+      style,
+      play.dive ? againstDive(style, play.dive) : keeperStay * againstDive(style, 'center') + 2 * sideShare * againstDive(style, 'left'),
+    ]),
+  ) as Record<PenaltyStyle, number>;
+  const dives: KeeperDive[] = ['left', 'right', 'center'];
+  const byDive = Object.fromEntries(
+    dives.map((dive) => [
+      dive,
+      play.style ? againstDive(play.style, dive) : styles.reduce((total, style) => total + AI_STYLE_SHARE[style] * againstDive(style, dive), 0),
+    ]),
+  ) as Record<KeeperDive, number>;
+  const skill = shooter ? clamp(shootingValue(shooter) / Math.max(1, strength.keeper), MIN_SKILL_RATIO, MAX_SKILL_RATIO) : 1;
+  return {
+    shooterName: shooter?.name ?? null,
+    keeperName: keeper?.name ?? null,
+    byRead,
+    byStyle,
+    byDive,
+    keeperStay,
+    habitKnown,
+    skillFactor: skill ** PENALTY_SKILL_EXPONENT,
+    boost,
+    malus,
+    retake,
+  };
 }
 
 // --- Fautes ----------------------------------------------------------------

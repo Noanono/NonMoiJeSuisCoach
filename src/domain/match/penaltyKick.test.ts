@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { makeSheet } from './fixtures';
 import { expectedAgainstDive, expectedPenaltyChance, KEEPER_STAY_CHANCE, keeperHabit, PENALTY_STYLE_CHANCE } from './penaltyKick';
-import { awardPenalty, chooseKeeperDive, choosePenaltyStyle } from './plays';
+import { awardPenalty, chooseKeeperDive, choosePenaltyStyle, penaltyChances } from './plays';
+import { confirmActivation, startActivation } from './activation';
 import { tick } from './simulation';
 import { beginRun, createMatch, endRun } from './state';
 import { dismissEventWindow } from './windows';
@@ -90,5 +91,45 @@ describe('penalty : style de frappe et plongeon (P4)', () => {
   test('équilibre : aucun plongeon du gardien ne ferme le penalty', () => {
     for (const dive of ['left', 'right', 'center'] as KeeperDive[]) expect(expectedAgainstDive(dive)).toBeGreaterThan(0.65);
     for (const style of ['placed', 'power', 'panenka'] as PenaltyStyle[]) expect(PENALTY_STYLE_CHANCE[style].wrong).toBeGreaterThan(0.9);
+  });
+
+  test('chances exactes : chaque frappe et chaque plongeon donnent ce que la simulation joue', () => {
+    const cases: [PenaltyStyle, KeeperDive][] = [['placed', 'left'], ['power', 'center'], ['panenka', 'right'], ['panenka', 'center']];
+    for (const [style, dive] of cases) {
+      const shown = (() => {
+        const state = penaltyMatch(1, 'home');
+        choosePenaltyStyle(state, 'home', style);
+        chooseKeeperDive(state, 'away', dive);
+        return penaltyChances(state)!.byStyle[style];
+      })();
+      const rate = conversion((state) => {
+        choosePenaltyStyle(state, 'home', style);
+        chooseKeeperDive(state, 'away', dive);
+      }, 'home', 2000);
+      expect(Math.abs(rate - shown)).toBeLessThan(0.035);
+    }
+  });
+
+  test('Le Danseur divise les chances du tireur par deux, et les chiffres le montrent', () => {
+    const state = createMatch({
+      home: makeSheet({ clubId: 'h' }),
+      away: makeSheet({ clubId: 'a', isHuman: true, abilities: { 0: 'le-danseur' } }),
+      seed: 3,
+    });
+    state.away.gauge = 10;
+    const run = beginRun(state);
+    awardPenalty(run, 'home', null);
+    endRun(run);
+    expect(state.awaiting?.eligiblePlayerIds).toEqual(['a-0']);
+    const before = penaltyChances(state)!;
+    startActivation(state, 'away', 'a-0');
+    confirmActivation(state);
+    const after = penaltyChances(state)!;
+    expect(after.malus).toBe(0.5);
+    // Moitié des chances avant le plafond de 97 % : un poil plus que la moitié des chances plafonnées.
+    for (const dive of ['left', 'center'] as KeeperDive[]) {
+      expect(after.byDive[dive]).toBeGreaterThan(before.byDive[dive] * 0.48);
+      expect(after.byDive[dive]).toBeLessThan(before.byDive[dive] * 0.52);
+    }
   });
 });
