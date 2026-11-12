@@ -9,9 +9,9 @@ import { moneyFactorBetween } from './finance';
 import { playerValue } from './valuation';
 
 /** Part de la valeur du joueur, selon la rareté de sa capacité actuelle. */
-export const REROLL_PRICE_RATIO: Record<Rarity, number> = { common: 0.25, rare: 0.4, legendary: 0.75, mythic: 1.2 };
+export const REROLL_PRICE_RATIO: Record<Rarity, number> = { common: 0.05, rare: 0.08, legendary: 0.15, mythic: 0.25 };
 /** Prix plancher au District, multiplié comme le reste des finances à chaque division plus haut. */
-export const REROLL_MIN_PRICE = 2_000;
+export const REROLL_MIN_PRICE = 300;
 const REROLL_MIN_PRICE_TIER = 4;
 const PRICE_ROUNDING = 100;
 export const REROLL_OPTIONS = 3;

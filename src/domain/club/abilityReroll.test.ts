@@ -18,7 +18,7 @@ describe('reroll de capacité (CAP-23)', () => {
     }
     const nobody = makePlayer({ attributes: { speed: 20, technique: 20, physical: 20, shooting: 20, defense: 20, goalkeeping: 5 } });
     expect(rerollPrice(nobody, 'common', 4)).toBe(REROLL_MIN_PRICE);
-    expect(rerollPrice(nobody, 'common', 3)).toBe(REROLL_MIN_PRICE * moneyFactorBetween(4, 3));
+    expect(rerollPrice(nobody, 'common', 3)).toBe(Math.round((REROLL_MIN_PRICE * moneyFactorBetween(4, 3)) / 100) * 100);
   });
 
   test('3 capacités différentes, compatibles, hors effectif, de la même rareté ou d’un rang au-dessus', () => {
