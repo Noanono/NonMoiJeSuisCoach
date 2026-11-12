@@ -1,4 +1,6 @@
 import type { Rng } from '../core/rng';
+import { moneyFactorBetween } from './finance';
+import { LEAGUE_DIALOGUES } from './leagueDialogues';
 import { applyConsequences, type Consequence, type ConsequenceResult, type ConsequenceTarget } from './model';
 
 /**
@@ -42,8 +44,36 @@ export interface Dialogue {
   speaker: DialogueSpeaker;
   speakerName: string;
   trigger: DialogueTrigger;
+  /** Divisions où le dialogue peut tomber (1 = élite) ; partout si absent. */
+  tiers?: readonly number[];
+  /** `{€N}` : montant à l'échelle du district, ajusté à la division du coach. */
   text: string;
   choices: DialogueChoice[];
+}
+
+/** Les montants des dialogues sont écrits pour le district : ils grossissent avec la division (CLUB-06). */
+export const DIALOGUE_BASE_TIER = 4;
+const MONEY_MARKER = /\{€(\d+)\}/g;
+
+/** Montant d'un dialogue dans la division du coach, arrondi pour rester lisible. */
+export function dialogueAmount(amount: number, divisionTier: number): number {
+  const scaled = amount * moneyFactorBetween(DIALOGUE_BASE_TIER, divisionTier);
+  const step = Math.abs(scaled) >= 10_000 ? 500 : Math.abs(scaled) >= 1_000 ? 100 : 50;
+  return Math.round(scaled / step) * step;
+}
+
+/** Le dialogue tel que le coach le lit dans sa division : montants des textes et du budget ajustés. */
+export function localizeDialogue(dialogue: Dialogue, divisionTier: number): Dialogue {
+  return {
+    ...dialogue,
+    text: dialogue.text.replace(MONEY_MARKER, (_, amount: string) => `${dialogueAmount(Number(amount), divisionTier).toLocaleString('fr-FR')} €`),
+    choices: dialogue.choices.map((choice) => ({
+      ...choice,
+      consequences: choice.consequences.map((consequence) =>
+        consequence.kind === 'budget' ? { ...consequence, value: dialogueAmount(consequence.value, divisionTier) } : consequence,
+      ),
+    })),
+  };
 }
 
 export const LOSING_STREAK_TRIGGER = 3;
@@ -51,7 +81,7 @@ export const WINNING_STREAK_TRIGGER = 3;
 export const LOW_BUDGET_TRIGGER = 1_000;
 export const LOW_CONFIDENCE_TRIGGER = 30;
 
-export const DIALOGUES: readonly Dialogue[] = [
+const BASE_DIALOGUES: readonly Dialogue[] = [
   {
     id: 'president-statue',
     speaker: 'president',
@@ -219,7 +249,7 @@ export const DIALOGUES: readonly Dialogue[] = [
     speaker: 'supporters',
     speakerName: 'Les Ultras de la Buvette',
     trigger: 'winningStreak',
-    text: 'Les Ultras de la Buvette (six personnes et un chien) veulent un tifo pour le prochain match à domicile. Ils demandent 300 € de peinture et ton accord pour la banderole « On boit, on gagne ».',
+    text: 'Les Ultras de la Buvette (six personnes et un chien) veulent un tifo pour le prochain match à domicile. Ils demandent {€300} de peinture et ton accord pour la banderole « On boit, on gagne ».',
     choices: [
       {
         id: 'fund',
@@ -321,7 +351,7 @@ export const DIALOGUES: readonly Dialogue[] = [
     speaker: 'barman',
     speakerName: 'Josiane, de la buvette',
     trigger: 'lowBudget',
-    text: "Les caisses sont presque vides, et Josiane rappelle que l'ardoise des joueurs à la buvette atteint 1 200 €. Elle accepte les espèces, les chèques et « les services rendus ».",
+    text: "Les caisses sont presque vides, et Josiane rappelle que l'ardoise des joueurs à la buvette atteint {€1200}. Elle accepte les espèces, les chèques et « les services rendus ».",
     choices: [
       {
         id: 'pay',
@@ -348,7 +378,7 @@ export const DIALOGUES: readonly Dialogue[] = [
     speaker: 'sponsor',
     speakerName: 'Le Kebab du Stade',
     trigger: 'anytime',
-    text: 'Le Kebab du Stade propose de sponsoriser le maillot : 2 000 € la saison, à condition d’imprimer « Sauce blanche ou rien » dans le dos.',
+    text: 'Le Kebab du Stade propose de sponsoriser le maillot : {€2000} la saison, à condition d’imprimer « Sauce blanche ou rien » dans le dos.',
     choices: [
       {
         id: 'sign',
@@ -375,7 +405,7 @@ export const DIALOGUES: readonly Dialogue[] = [
     speaker: 'groundsman',
     speakerName: 'Le jardinier',
     trigger: 'anytime',
-    text: "La pelouse ressemble à un champ de patates, ce qui épuise les jambes : il manque 400 € de semences. Sinon, le jardinier propose de « fertiliser à l'ancienne », avec le fumier de son beau-frère.",
+    text: "La pelouse ressemble à un champ de patates, ce qui épuise les jambes : il manque {€400} de semences. Sinon, le jardinier propose de « fertiliser à l'ancienne », avec le fumier de son beau-frère.",
     choices: [
       {
         id: 'seeds',
@@ -396,7 +426,7 @@ export const DIALOGUES: readonly Dialogue[] = [
     speaker: 'mayor',
     speakerName: 'Le maire',
     trigger: 'anytime',
-    text: "Le maire, en campagne, offre 1 500 € de subvention si l'équipe pose en photo avec lui. Il aimerait aussi que tu dises du mal de son adversaire, le pharmacien.",
+    text: "Le maire, en campagne, offre {€1500} de subvention si l'équipe pose en photo avec lui. Il aimerait aussi que tu dises du mal de son adversaire, le pharmacien.",
     choices: [
       {
         id: 'photo',
@@ -423,7 +453,7 @@ export const DIALOGUES: readonly Dialogue[] = [
     speaker: 'physio',
     speakerName: 'Le kiné bénévole',
     trigger: 'anytime',
-    text: 'Le kiné bénévole (ancien vétérinaire) a une méthode de récupération express : bain de glace, puis bain de pastis. Coût : 200 € de glaçons.',
+    text: 'Le kiné bénévole (ancien vétérinaire) a une méthode de récupération express : bain de glace, puis bain de pastis. Coût : {€200} de glaçons.',
     choices: [
       {
         id: 'full-method',
@@ -495,7 +525,11 @@ export const DIALOGUES: readonly Dialogue[] = [
   },
 ];
 
+export const DIALOGUES: readonly Dialogue[] = [...BASE_DIALOGUES, ...LEAGUE_DIALOGUES];
+
 export interface DialogueContext {
+  /** Division du coach (1 = élite) : choisit les dialogues et la taille des montants. */
+  divisionTier?: number;
   losingStreak: number;
   winningStreak: number;
   budget: number;
@@ -510,7 +544,7 @@ function activeTriggers(context: DialogueContext): Set<DialogueTrigger> {
   const triggers = new Set<DialogueTrigger>(['anytime']);
   if (context.losingStreak >= LOSING_STREAK_TRIGGER) triggers.add('losingStreak');
   if (context.winningStreak >= WINNING_STREAK_TRIGGER) triggers.add('winningStreak');
-  if (context.budget < LOW_BUDGET_TRIGGER) triggers.add('lowBudget');
+  if (context.budget < dialogueAmount(LOW_BUDGET_TRIGGER, context.divisionTier ?? DIALOGUE_BASE_TIER)) triggers.add('lowBudget');
   if (context.presidentConfidence <= LOW_CONFIDENCE_TRIGGER) triggers.add('lowConfidence');
   if (context.upcomingDerby) triggers.add('derby');
   return triggers;
@@ -523,7 +557,8 @@ function activeTriggers(context: DialogueContext): Set<DialogueTrigger> {
 export function pickWeeklyDialogue(context: DialogueContext, rng: Rng): Dialogue {
   const triggers = activeTriggers(context);
   const recent = new Set(context.recentDialogueIds);
-  const possible = DIALOGUES.filter((dialogue) => triggers.has(dialogue.trigger));
+  const tier = context.divisionTier ?? DIALOGUE_BASE_TIER;
+  const possible = DIALOGUES.filter((dialogue) => triggers.has(dialogue.trigger) && (!dialogue.tiers || dialogue.tiers.includes(tier)));
   const fresh = possible.filter((dialogue) => !recent.has(dialogue.id));
   const pool = fresh.length > 0 ? fresh : possible;
   const topical = pool.filter((dialogue) => dialogue.trigger !== 'anytime');

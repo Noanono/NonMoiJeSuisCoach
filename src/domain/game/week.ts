@@ -3,7 +3,7 @@ import { pickWeeklyDialogue } from '../club/dialogues';
 import { facilitiesOf, facilityBonus } from '../club/facilities';
 import { applyBalance, wageBill, weeklyBalance } from '../club/finance';
 import { clampGauge, type MatchOutcome } from '../club/model';
-import { confidenceAfterMatch, confidenceTrend, isFired, matchExpectation, sponsorMoodAfterMatch } from '../club/president';
+import { confidenceAfterMatch, confidenceTrend, isFired, matchExpectation, sponsorMoodAfterMatch, streakEffect } from '../club/president';
 import { weeklySquadUpdate } from '../club/squadLife';
 import { trainPlayer } from '../club/training';
 import { activeOffers, generateIncomingOffers } from '../club/transfers';
@@ -182,20 +182,32 @@ function updatePresident(state: GameState, fixture: Fixture | null, outcome: Mat
     });
     const derby = isDerby(state, fixture);
     const factor = derby ? DERBY_FACTOR : 1;
-    state.outlook.presidentConfidence = clampGauge(before + scaleConfidenceDelta(change.delta * factor, state.difficulty));
-    for (let i = 0; i < factor; i++) state.outlook.sponsorMood = sponsorMoodAfterMatch(state.outlook.sponsorMood, outcome);
-    state.news.push(`Le président : « ${change.message} »`);
-    if (derby) state.news.push(outcome === 'win' ? 'Derby gagné ! Toute la ville en parle, les sponsors adorent.' : outcome === 'loss' ? 'Derby perdu. Le président ne sort plus faire ses courses.' : 'Derby nul. Tout le monde rentre frustré.');
+    const sponsorsBefore = state.outlook.sponsorMood;
     state.streak = {
       wins: outcome === 'win' ? state.streak.wins + 1 : 0,
       losses: outcome === 'loss' ? state.streak.losses + 1 : 0,
     };
+    // Une série de victoires (ou de défaites) pèse plus lourd à chaque match (CLUB-05).
+    const streak = streakEffect(state.streak);
+    state.outlook.presidentConfidence = clampGauge(before + scaleConfidenceDelta((change.delta + streak.confidence) * factor, state.difficulty));
+    for (let i = 0; i < factor; i++) state.outlook.sponsorMood = clampGauge(sponsorMoodAfterMatch(state.outlook.sponsorMood, outcome) + streak.sponsorMood);
+    state.news.push(`Le président : « ${change.message} »`);
+    state.news.push(`Après le match : confiance du président ${gaugeMove(before, state.outlook.presidentConfidence)}, humeur des sponsors ${gaugeMove(sponsorsBefore, state.outlook.sponsorMood)}.`);
+    if (streak.confidence > 0) state.news.push(`${state.streak.wins} victoires de suite : le président et les sponsors en redemandent.`);
+    if (streak.confidence < 0) state.news.push(`${state.streak.losses} défaites de suite : le président compte les jours, les sponsors relisent leurs contrats.`);
+    if (derby) state.news.push(outcome === 'win' ? 'Derby gagné ! Toute la ville en parle, les sponsors adorent.' : outcome === 'loss' ? 'Derby perdu. Le président ne sort plus faire ses courses.' : 'Derby nul. Tout le monde rentre frustré.');
   }
   if (fixture?.competition === 'league') applyStandingTrend(state);
   if (isFired(state.outlook.presidentConfidence)) {
     state.status = 'fired';
     state.news.push('Le président a appelé. Il n’a rien dit. Puis il a raccroché. Tu es licencié.');
   }
+}
+
+/** « 62 → 66 (+4) » : une jauge avant et après. */
+function gaugeMove(before: number, after: number): string {
+  const delta = after - before;
+  return `${before} → ${after} (${delta > 0 ? '+' : delta < 0 ? '−' : '±'}${Math.abs(delta)})`;
 }
 
 function applyStandingTrend(state: GameState): void {
@@ -232,6 +244,7 @@ function maybeOpenDialogue(state: GameState, rng: Rng): void {
   const next = humanFixtureAt(state, state.week + 1);
   const dialogue = pickWeeklyDialogue(
     {
+      divisionTier: humanDivision(state).tier,
       losingStreak: state.streak.losses,
       winningStreak: state.streak.wins,
       budget: humanClub(state).budget,

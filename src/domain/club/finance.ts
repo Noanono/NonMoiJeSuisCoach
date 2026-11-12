@@ -50,6 +50,11 @@ export function leaguePrize(divisionTier: number, position: number, clubCount: n
   return Math.round((ELITE_CHAMPION_PRIZE * tierFactor(divisionTier) * share) / PRIZE_ROUNDING) * PRIZE_ROUNDING;
 }
 
+/** Rapport entre les montants de deux divisions : 2,5 fois plus à chaque division plus haut. */
+export function moneyFactorBetween(fromTier: number, toTier: number): number {
+  return tierFactor(toTier) / tierFactor(fromTier);
+}
+
 function tierFactor(divisionTier: number): number {
   return TIER_DECAY ** Math.max(0, divisionTier - 1);
 }

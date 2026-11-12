@@ -8,6 +8,7 @@ import {
   reviewSeason,
   seasonObjective,
   sponsorMoodAfterMatch,
+  streakEffect,
 } from './president';
 
 const division: Division = {
@@ -71,5 +72,19 @@ describe('confiance du président (CLUB-05)', () => {
     expect(sponsorMoodAfterMatch(50, 'win')).toBeGreaterThan(50);
     expect(sponsorMoodAfterMatch(50, 'loss')).toBeLessThan(50);
     expect(sponsorMoodAfterMatch(50, 'draw')).toBe(50);
+  });
+});
+
+describe('séries de résultats (CLUB-05)', () => {
+  test('à partir de 3 victoires ou défaites de suite, chaque match pèse plus lourd', () => {
+    expect(streakEffect({ wins: 2, losses: 0 })).toEqual({ confidence: 0, sponsorMood: 0 });
+    expect(streakEffect({ wins: 3, losses: 0 })).toEqual({ confidence: 2, sponsorMood: 2 });
+    expect(streakEffect({ wins: 0, losses: 4 })).toEqual({ confidence: -2, sponsorMood: -2 });
+  });
+
+  test('les sponsors suivent les résultats', () => {
+    expect(sponsorMoodAfterMatch(50, 'win')).toBe(54);
+    expect(sponsorMoodAfterMatch(50, 'draw')).toBe(50);
+    expect(sponsorMoodAfterMatch(50, 'loss')).toBe(46);
   });
 });

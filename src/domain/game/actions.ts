@@ -3,7 +3,7 @@
  * et renvoie un message lisible pour l'interface.
  */
 import { getAbility } from '../abilities/catalog';
-import { applyDialogueChoice, DIALOGUES } from '../club/dialogues';
+import { applyDialogueChoice, DIALOGUES, localizeDialogue } from '../club/dialogues';
 import { acceptOffer, askingPrice, buyPlayer, marketListings, sellPlayer, type MarketListing, type TransferResult } from '../club/transfers';
 import { askingSalary } from '../club/valuation';
 import { isTransferWindowOpen } from '../league/calendar';
@@ -12,7 +12,7 @@ import { FORMATION_SLOTS, isAvailable, overall, ratingAtPosition } from '../play
 import { defaultTrainingFocus } from '../club/training';
 import { FACILITIES, facilitiesOf, upgradeCost } from '../club/facilities';
 import type { FacilityId, Instructions, Lineup, TrainingFocus } from '../types';
-import { humanClub, humanSquad, outlookOf, replacePlayers, writeOutlook } from './selectors';
+import { humanClub, humanDivision, humanSquad, outlookOf, replacePlayers, writeOutlook } from './selectors';
 import type { GameState } from './state';
 import { withRng } from './week';
 
@@ -150,8 +150,9 @@ function refillLineup(state: GameState, previous: Lineup | null, departedId: str
 /** Réponse au dialogue de la semaine (CLUB-06). */
 export function answerDialogue(state: GameState, choiceId: string): ActionResult {
   const pending = state.dialogue;
-  const dialogue = pending && DIALOGUES.find((candidate) => candidate.id === pending.dialogueId);
-  if (!pending || !dialogue) return refused('Personne ne t’attend. Profites-en.');
+  const found = pending && DIALOGUES.find((candidate) => candidate.id === pending.dialogueId);
+  if (!pending || !found) return refused('Personne ne t’attend. Profites-en.');
+  const dialogue = localizeDialogue(found, humanDivision(state).tier);
   const result = applyDialogueChoice({ outlook: outlookOf(state), squad: humanSquad(state) }, dialogue, choiceId);
   writeOutlook(state, result.outlook);
   replacePlayers(state, result.squad);

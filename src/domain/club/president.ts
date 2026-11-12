@@ -157,7 +157,19 @@ export function confidenceAfterMatch(confidence: number, review: MatchReview): C
 }
 
 /** Humeur des sponsors après un match : ils aiment gagner, et le faire savoir. */
-const SPONSOR_MOOD_DELTA: Record<MatchOutcome, number> = { win: 2, draw: 0, loss: -2 };
+const SPONSOR_MOOD_DELTA: Record<MatchOutcome, number> = { win: 4, draw: 0, loss: -4 };
+
+/** À partir de 3 victoires (ou défaites) de suite, chaque match pèse plus lourd. */
+export const STREAK_THRESHOLD = 3;
+export const STREAK_CONFIDENCE = 2;
+export const STREAK_SPONSOR_MOOD = 2;
+
+/** Bonus ou malus de série, après mise à jour de la série avec le match du jour. */
+export function streakEffect(streak: { wins: number; losses: number }): { confidence: number; sponsorMood: number } {
+  if (streak.wins >= STREAK_THRESHOLD) return { confidence: STREAK_CONFIDENCE, sponsorMood: STREAK_SPONSOR_MOOD };
+  if (streak.losses >= STREAK_THRESHOLD) return { confidence: -STREAK_CONFIDENCE, sponsorMood: -STREAK_SPONSOR_MOOD };
+  return { confidence: 0, sponsorMood: 0 };
+}
 
 export function sponsorMoodAfterMatch(mood: number, outcome: MatchOutcome): number {
   return clampGauge(mood + SPONSOR_MOOD_DELTA[outcome]);

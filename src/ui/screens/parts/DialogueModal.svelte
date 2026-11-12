@@ -2,9 +2,9 @@
   import Button from '../../kit/Button.svelte';
   import Modal from './Modal.svelte';
   import { store } from '../../store.svelte';
-  import { DIALOGUES } from '../../../domain/club/dialogues';
+  import { DIALOGUES, localizeDialogue } from '../../../domain/club/dialogues';
   import { describeConsequence } from '../../../domain/club/model';
-  import { answerDialogue } from '../../../domain/game';
+  import { answerDialogue, humanDivision } from '../../../domain/game';
 
   /** Dialogue de la semaine (CLUB-06) : la question et ses réponses, chacune avec ses conséquences chiffrées. */
   interface Props {
@@ -18,8 +18,10 @@
   const dialogue = $derived(
     store.select((game) => {
       const pending = game.dialogue;
-      const definition = pending && DIALOGUES.find((candidate) => candidate.id === pending.dialogueId);
-      if (!pending || !definition) return null;
+      const found = pending && DIALOGUES.find((candidate) => candidate.id === pending.dialogueId);
+      if (!pending || !found) return null;
+      // Montants ajustés à la division du coach (CLUB-06).
+      const definition = localizeDialogue(found, humanDivision(game).tier);
       return {
         speaker: definition.speakerName,
         text: definition.text,
