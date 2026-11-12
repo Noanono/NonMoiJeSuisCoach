@@ -146,7 +146,7 @@ CAT-01 : le jeu contient les 55 capacités ci-dessous. Les chiffres des tableaux
 | Short trop court | Tous | 2 adversaires | −25 % de concentration, 8 min |
 | Le Porteur d'eau | Banc | 1 coéquipier | Efface 50 % de sa fatigue |
 | Le DJ du vestiaire | Banc | Équipe | +15 % de vitesse, 15 min |
-| Le Kiné douteux | Banc | 1 coéquipier au sol | Le relève immédiatement |
+| Le Kiné douteux | Banc | 1 coéquipier au sol ou blessé (encore sur le terrain) | Le relève immédiatement ; un blessé reprend le match, sans suite après |
 | Le Regard qui tue | ATT | Penalty pour toi | +réussite du penalty, puis bonus de tir pour le porteur |
 | Le Gardien qui parle | GB | Penalty adverse | Gros bonus d'arrêts pour le gardien, quelques minutes |
 | Le Pied de velours | MIL | Coup franc pour toi | +réussite, seulement en frappe directe |

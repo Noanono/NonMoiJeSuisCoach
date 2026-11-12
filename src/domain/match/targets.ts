@@ -12,7 +12,7 @@ export function chosenTargetCount(ability: PreparedAbility): number {
   return kind === 'teammate' || kind === 'opponent' ? (count ?? 1) : 0;
 }
 
-/** Cibles valides (CAP-17) : sur le terrain, du bon camp et de la bonne ligne, debout (ou au sol pour le kiné). */
+/** Cibles valides (CAP-17) : sur le terrain, du bon camp et de la bonne ligne, debout (ou au sol ou blessé pour le kiné). */
 export function validTargets(state: MatchState, source: MatchPlayer, ability: PreparedAbility): MatchPlayer[] {
   const { kind, line, downed } = ability.targeting;
   if (kind !== 'teammate' && kind !== 'opponent' && kind !== 'randomOpponent') return [];
@@ -22,8 +22,13 @@ export function validTargets(state: MatchState, source: MatchPlayer, ability: Pr
       candidate !== source &&
       candidate.line !== null &&
       (line === undefined || candidate.line === line) &&
-      (downed ? isOnPitch(candidate) && !isActive(candidate, state.elapsed) : isActive(candidate, state.elapsed)),
+      (downed ? isDowned(state, candidate) : isActive(candidate, state.elapsed)),
   );
+}
+
+/** Au sol ou blessé, mais toujours sur la feuille de match : le kiné peut le relever. Pas les exclus. */
+function isDowned(state: MatchState, player: MatchPlayer): boolean {
+  return !player.sentOff && (player.injured || !isActive(player, state.elapsed));
 }
 
 export interface ScopeContext {

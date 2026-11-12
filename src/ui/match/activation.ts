@@ -135,7 +135,7 @@ export function targetingText(preview: ActivationPreview): string {
     case 'zone':
       return 'Sa zone du terrain : tu choisis le moment, pas la cible';
     case 'teammate':
-      return `${plural(count, 'coéquipier')}${preview.targetDowned ? ' au sol' : ''}, à choisir sur le terrain`;
+      return `${plural(count, 'coéquipier')}${preview.targetDowned ? ' au sol ou blessé' : ''}, à choisir sur le terrain`;
     case 'opponent':
       return `${plural(count, preview.targetLine ? LINE_WORD[preview.targetLine] : 'adversaire')}, à choisir sur le terrain`;
     case 'randomOpponent':

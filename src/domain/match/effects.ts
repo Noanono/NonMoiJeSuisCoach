@@ -195,10 +195,22 @@ function applyKnockout(context: EffectContext, effect: Extract<Effect, { type: '
   }
 }
 
+/** Relève un joueur au sol, et soigne un blessé encore sur le terrain : il rejoue, sans suite après le match. */
 function revive(context: EffectContext, player: MatchPlayer): void {
   player.knockedOutUntil = NEVER;
   player.effects = player.effects.filter((effect) => effect.stat !== 'knockout');
-  float(context, player, 'RELEVÉ', 'bonus');
+  if (!player.injured) {
+    float(context, player, 'RELEVÉ', 'bonus');
+    return;
+  }
+  const { state } = context.run;
+  const team = teamOf(state, player.side);
+  player.injured = false;
+  team.consequences = team.consequences.filter((consequence) => consequence.type !== 'injury' || consequence.playerId !== player.id);
+  state.injuries = state.injuries.filter((injury) => injury.playerId !== player.id);
+  refreshRating(player);
+  float(context, player, 'SOIGNÉ', 'bonus');
+  pushEvent(context.run, 'effect', player.side, `Le kiné a fait des merveilles : ${player.name} reprend sa place sur le terrain.`, { playerId: player.id });
 }
 
 /** Efface une fraction de la fatigue, le temps du match : `fatigueRestored` la rend après. */

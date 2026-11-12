@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { getAbility } from '../abilities/catalog';
 import type { Effect } from '../types';
-import { recordGoal } from './actions';
+import { injurePlayer, recordGoal } from './actions';
 import { confirmActivation, previewActivation, selectTarget, startActivation } from './activation';
 import { makeSheet } from './fixtures';
 import { activeEffects } from './queries';
@@ -314,6 +314,22 @@ describe('les capacités restent dans le match', () => {
     expect(previewActivation(state, 'home', 'h-b0').validTargetIds).toEqual(['h-5']);
     shout(state, 'h-b0', ['h-5']);
     expect(requirePlayer(state, 'h-5').knockedOutUntil).toBe(-1);
+  });
+
+  test('Le Kiné douteux soigne aussi un blessé resté sur le terrain, sans suite après le match', () => {
+    const state = match({}, ['le-kine-douteux']);
+    const run = beginRun(state);
+    const injured = requirePlayer(state, 'h-5');
+    injurePlayer(run, injured);
+    endRun(run);
+    state.home.consequences.push({ type: 'injury', playerId: 'h-5', weeks: 3, reason: 'Grosse blessure en match' });
+    requirePlayer(state, 'h-6').sentOff = true;
+    expect(previewActivation(state, 'home', 'h-b0').validTargetIds).toEqual(['h-5']);
+    shout(state, 'h-b0', ['h-5']);
+    expect(injured.injured).toBe(false);
+    expect(state.injuries).toEqual([]);
+    expect(state.home.consequences.some((consequence) => consequence.playerId === 'h-5')).toBe(false);
+    expect(summarize(state).players.find((report) => report.playerId === 'h-5')!.injured).toBe(false);
   });
 
   test('un joueur boosté tente nettement plus de tirs', () => {

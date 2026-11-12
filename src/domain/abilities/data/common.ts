@@ -229,7 +229,7 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     category: 'support',
     position: 'BENCH',
     targeting: { kind: 'teammate', count: 3, downed: true },
-    description: 'De la pommade au camphre, et ça repart.',
+    description: 'De la pommade au camphre, et ça repart. Marche aussi sur les blessés encore sur le terrain.',
     effects: [{ type: 'revive', scope: 'targets' }],
   }),
 

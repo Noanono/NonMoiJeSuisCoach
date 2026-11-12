@@ -110,7 +110,7 @@ export function describeEffect(effect: Effect): string {
       return `Hors jeu ${effect.duration}${NBSP}min : ${SCOPE_LABEL[effect.scope]}${chase}`;
     }
     case 'revive':
-      return 'Relève la cible immédiatement';
+      return 'Relève la cible immédiatement, ou soigne un blessé resté sur le terrain';
     case 'cancelAction':
       return effect.count ? `Annule les ${effect.count} prochaines actions adverses` : 'Annule la prochaine action adverse';
     case 'chanceBoost': {
@@ -189,7 +189,7 @@ export function describeTargeting(targeting: Targeting): string {
     case 'zone':
       return 'Sa zone : tu choisis le moment';
     case 'teammate':
-      return `${plural(count, 'coéquipier')}${targeting.downed ? ' au sol' : ''} au choix`;
+      return `${plural(count, 'coéquipier')}${targeting.downed ? ' au sol ou blessé' : ''} au choix`;
     case 'opponent':
       return `${plural(count, targeting.line ? LINE_WORD[targeting.line] : 'adversaire')} au choix`;
     case 'randomOpponent':
