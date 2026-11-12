@@ -74,7 +74,7 @@ Le jeu mêle une vraie couche de gestion (effectif, tactique, mercato, budget) e
 | UNIV-01 | Tous les clubs, joueurs et compétitions sont fictifs, avec des noms parodiques (ex. AS Saint-Pastis, Olympique de Biroute-sur-Loire, FC Gueule-de-Bois). |
 | UNIV-02 | Le coach commence dans un club de district : terrain boueux, buvette, vestiaires qui fuient. |
 | UNIV-03 | Le jeu comporte plusieurs divisions hiérarchisées, du district jusqu'à l'élite. |
-| UNIV-04 | En fin de saison, les premiers montent et les derniers descendent. |
+| UNIV-04 | En fin de saison, les 2 premiers montent et les 2 derniers descendent. La dernière semaine, des barrages d'accession opposent le 3e de chaque division à l'antépénultième (8e) de la division du dessus : match sec chez le club de la division supérieure, tirs au but en cas d'égalité. Si le club d'en bas gagne, les deux échangent leur division. Pour le président, monter par les barrages vaut une montée, descendre par les barrages vaut une descente. |
 | UNIV-05 | Chaque saison suit un calendrier de championnat complet avec classement mis à jour (points, différence de buts). |
 | UNIV-06 | Une coupe à élimination directe se joue en parallèle du championnat, ouverte aux clubs de toutes les divisions. |
 | UNIV-07 | Trois niveaux de difficulté au choix en début de partie (facile, normal, difficile) : budget de départ, patience du président et niveau des adversaires. |

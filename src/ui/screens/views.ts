@@ -31,6 +31,8 @@ export function weekLabel(week: SeasonWeek, cup: CupState): string {
       return `Journée ${week.round} de championnat`;
     case 'cup':
       return `Coupe : ${cupRoundName(cup, week.round)}`;
+    case 'playoff':
+      return 'Barrages d’accession';
   }
 }
 

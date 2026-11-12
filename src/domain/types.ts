@@ -242,7 +242,8 @@ export interface Division {
 
 export interface Fixture {
   id: string;
-  competition: 'league' | 'cup';
+  /** `playoff` : barrage d'accession de fin de saison. */
+  competition: 'league' | 'cup' | 'playoff';
   divisionId: string | null;
   /** Journée (championnat) ou tour (coupe). */
   round: number;

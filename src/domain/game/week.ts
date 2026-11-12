@@ -8,7 +8,8 @@ import { weeklySquadUpdate } from '../club/squadLife';
 import { trainPlayer } from '../club/training';
 import { activeOffers, generateIncomingOffers } from '../club/transfers';
 import { createRng, type Rng } from '../core/rng';
-import { isTransferWindowOpen, SEASON_WEEKS } from '../league/calendar';
+import { isTransferWindowOpen, SEASON_WEEKS, seasonWeek } from '../league/calendar';
+import { createPlayoffFixtures, playoffPairings } from '../league/playoffs';
 import { drawNextCupRound, isCupRoundComplete } from '../league/cup';
 import type { Fixture, Player } from '../types';
 import { payCupRound } from './cupPrizes';
@@ -72,8 +73,25 @@ export function advanceWeek(state: GameState): void {
 export function finishWeek(state: GameState, rng: Rng): void {
   state.week += 1;
   if (state.week > SEASON_WEEKS) endSeason(state, rng);
+  else if (seasonWeek(state.week).kind === 'playoff') schedulePlayoffs(state);
   callUpAllStandIns(state, rng);
   refreshAiLineups(state);
+}
+
+/** Barrages d'accession (UNIV-04) : tirés du classement final, une seule fois. */
+function schedulePlayoffs(state: GameState): void {
+  if (state.fixtures.some((fixture) => fixture.competition === 'playoff')) return;
+  const standings = Object.fromEntries(state.divisions.map((division) => [division.id, divisionStandings(state, division.id)]));
+  const fixtures = createPlayoffFixtures(playoffPairings(state.divisions, standings), state.season, state.week);
+  state.fixtures.push(...fixtures);
+  const mine = fixtures.find((fixture) => fixture.homeId === state.humanClubId || fixture.awayId === state.humanClubId);
+  if (!mine) return;
+  const opponent = state.clubs[mine.homeId === state.humanClubId ? mine.awayId : mine.homeId]!.name;
+  state.news.push(
+    mine.awayId === state.humanClubId
+      ? `Barrage d'accession contre ${opponent} ! Gagne et tu montes. Le président a déjà commandé les fûts.`
+      : `Barrage de maintien contre ${opponent}, qui veut ta place. Perds et tu descends.`,
+  );
 }
 
 function callUpAllStandIns(state: GameState, rng: Rng): void {

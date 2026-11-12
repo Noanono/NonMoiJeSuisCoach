@@ -22,14 +22,15 @@ describe('calendrier de saison', () => {
     expect(Math.max(...weeks)).toBeLessThanOrEqual(SEASON_WEEKS);
   });
 
-  test('journées et tours de coupe dans l’ordre, finale de coupe en fin de saison', () => {
+  test('journées et tours de coupe dans l’ordre, finale de coupe puis barrages en fin de saison', () => {
     for (let round = 2; round <= LEAGUE_ROUNDS; round++) {
       expect(leagueRoundWeek(round)).toBeGreaterThan(leagueRoundWeek(round - 1));
     }
     for (let round = 2; round <= CUP_ROUNDS; round++) {
       expect(cupRoundWeek(round)).toBeGreaterThan(cupRoundWeek(round - 1));
     }
-    expect(cupRoundWeek(CUP_ROUNDS)).toBe(SEASON_WEEKS);
+    expect(cupRoundWeek(CUP_ROUNDS)).toBe(SEASON_WEEKS - 1);
+    expect(SEASON_CALENDAR[SEASON_WEEKS - 1]!.kind).toBe('playoff');
   });
 
   test('mercato ouvert en début de saison et à mi-saison seulement (CLUB-02)', () => {

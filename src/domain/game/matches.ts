@@ -37,7 +37,7 @@ export function teamSheet(state: GameState, clubId: string): TeamSheet {
 export function playAiFixture(state: GameState, fixture: Fixture, rng: Rng): void {
   const home = teamSheet(state, fixture.homeId);
   const away = teamSheet(state, fixture.awayId);
-  fixture.result = simulateQuick(home, away, rng, fixture.competition === 'cup');
+  fixture.result = simulateQuick(home, away, rng, fixture.competition !== 'league');
   for (const player of [...home.starters, ...away.starters]) {
     player.fatigue = Math.min(100, player.fatigue + QUICK_MATCH_FATIGUE);
     player.seasonStats.matches += 1;
@@ -70,7 +70,7 @@ export function startHumanMatch(state: GameState, rng: Rng): MatchState {
     home: teamSheet(state, fixture.homeId),
     away: teamSheet(state, fixture.awayId),
     seed: rng.int(1, 2 ** 31 - 2),
-    knockout: fixture.competition === 'cup',
+    knockout: fixture.competition !== 'league',
     homeAdvantage: facilityBonus.homeAdvantage(facilitiesOf(state.clubs[fixture.homeId]!)),
     ...(boost !== 0 ? { boosts: { [aiSide]: boost } } : {}),
     derby: isDerby(state, fixture),

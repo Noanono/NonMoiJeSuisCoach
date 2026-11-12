@@ -10,7 +10,8 @@ const TRANSFER_WINDOW_WEEKS = 2;
 export type SeasonWeek =
   | { week: number; kind: 'transferWindow' }
   | { week: number; kind: 'league'; round: number }
-  | { week: number; kind: 'cup'; round: number };
+  | { week: number; kind: 'cup'; round: number }
+  | { week: number; kind: 'playoff' };
 
 export interface SeasonCalendarOptions {
   leagueRounds: number;
@@ -19,7 +20,7 @@ export interface SeasonCalendarOptions {
 
 /**
  * Calendrier de saison : mercato d'été, matchs aller, mercato d'hiver à mi-saison (CLUB-02), matchs retour.
- * Les tours de coupe sont répartis régulièrement, chacun sur sa propre semaine, la finale clôt la saison.
+ * Les tours de coupe sont répartis régulièrement, chacun sur sa propre semaine ; les barrages closent la saison.
  */
 export function buildSeasonCalendar({ leagueRounds, cupRounds }: SeasonCalendarOptions): SeasonWeek[] {
   const weeks: SeasonWeek[] = [];
@@ -38,6 +39,8 @@ export function buildSeasonCalendar({ leagueRounds, cupRounds }: SeasonCalendarO
     }
     if (round === midSeasonRound) addTransferWindow();
   }
+  // Barrages d'accession : une semaine de plus, une fois le championnat et la coupe terminés.
+  weeks.push({ week: nextWeek(), kind: 'playoff' });
   return weeks;
 }
 

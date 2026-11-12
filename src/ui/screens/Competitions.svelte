@@ -5,6 +5,7 @@
   import { store } from '../store.svelte';
   import { divisionStandings, humanDivision, isDerby, outcomeFor } from '../../domain/game';
   import { cupRoundFixtures, cupRoundName, cupWinnerId, fixtureWinnerId } from '../../domain/league/cup';
+  import { playoffZone } from '../../domain/league/playoffs';
   import { goalDifference } from '../../domain/league/standings';
   import type { Fixture } from '../../domain/types';
   import { signed } from './describe';
@@ -30,11 +31,15 @@
     store.select((game) => {
       const division = game.divisions.find((candidate) => candidate.id === divisionId)!;
       const size = division.clubIds.length;
+      const hasUpper = game.divisions.some((candidate) => candidate.tier === division.tier - 1);
+      const hasLower = game.divisions.some((candidate) => candidate.tier === division.tier + 1);
       return divisionStandings(game, division.id).map((row, index) => {
         const rank = index + 1;
         let zone: string | null = null;
+        const barrage = playoffZone(division, hasUpper, hasLower, rank);
         if (rank <= division.promoted) zone = 'Montée';
         else if (rank > size - division.relegated) zone = 'Descente';
+        else if (barrage) zone = barrage === 'up' ? 'Barrage (montée)' : 'Barrage (maintien)';
         return {
           ...row,
           rank,
@@ -66,7 +71,7 @@
             id: fixture.id,
             week: fixture.week,
             current: fixture.week === game.week,
-            competition: fixture.competition === 'league' ? `J${fixture.round}` : cupRoundName(game.cup, fixture.round),
+            competition: fixture.competition === 'league' ? `J${fixture.round}` : fixture.competition === 'playoff' ? 'Barrage' : cupRoundName(game.cup, fixture.round),
             isHome,
             opponent: game.clubs[isHome ? fixture.awayId : fixture.homeId]?.name ?? '?',
             score: scoreOf(fixture),

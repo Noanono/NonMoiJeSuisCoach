@@ -6,6 +6,7 @@ import { reviewSeason, seasonObjective } from '../club/president';
 import { createCup, fixtureWinnerId } from '../league/cup';
 import { cupPrizeFor } from './cupPrizes';
 import { autoLineup, EMPTY_SLOT } from '../league/lineup';
+import { playoffMoves } from '../league/playoffs';
 import { applyDivisionMoves, computeDivisionMoves } from '../league/promotion';
 import { generateLeagueFixtures } from '../league/schedule';
 import { computeStandings } from '../league/standings';
@@ -86,19 +87,27 @@ export function endSeason(state: GameState, rng: Rng): void {
   const standings = Object.fromEntries(state.divisions.map((entry) => [entry.id, divisionStandings(state, entry.id)]));
   const position = standings[division.id]!.findIndex((row) => row.clubId === human.id) + 1;
   const roundsWon = cupRoundsWon(state, human.id);
-  const review = reviewSeason(state.objective, { finalPosition: position, cupRoundsWon: roundsWon });
+  const fromPlayoffs = playoffMoves(state.fixtures, state.divisions);
+  const playoffMove = fromPlayoffs.find((move) => move.clubId === human.id);
+  // Monter par les barrages vaut une place de montée pour le président ; descendre, une place de relégable.
+  const judgedPosition = !playoffMove ? position : playoffMove.kind === 'promotion' ? division.promoted : division.clubIds.length - division.relegated + 1;
+  const review = reviewSeason(state.objective, { finalPosition: judgedPosition, cupRoundsWon: roundsWon });
   const awards = seasonAwards(state, division.id);
   state.outlook.presidentConfidence = Math.max(0, Math.min(100, state.outlook.presidentConfidence + review.confidenceDelta));
   state.news.push(`Fin de saison : ${position}e de ${division.name}. ${review.verdict}`, ...awards);
   const prizeMoney = payPrizes(state, standings);
   state.history.push({ season: state.season, clubName: human.name, divisionName: division.name, position, cupRoundsWon: roundsWon, verdict: review.verdict, awards, prizeMoney });
 
-  const moves = computeDivisionMoves(state.divisions, standings);
+  const moves = [...computeDivisionMoves(state.divisions, standings), ...fromPlayoffs];
   const applied = applyDivisionMoves(state.divisions, state.clubs, moves);
   state.divisions = applied.divisions;
   state.clubs = applied.clubs;
   const humanMove = moves.find((move) => move.clubId === human.id);
-  if (humanMove) state.news.push(humanMove.kind === 'promotion' ? 'MONTÉE ! La buvette est ouverte toute la nuit.' : 'Descente. Le président a vendu la tireuse.');
+  if (humanMove && playoffMove) state.news.push(humanMove.kind === 'promotion' ? 'MONTÉE PAR LES BARRAGES ! On est passés par la petite porte, mais on est passés.' : 'Barrage perdu : descente. Le président a vendu la tireuse.');
+  else if (humanMove) state.news.push(humanMove.kind === 'promotion' ? 'MONTÉE ! La buvette est ouverte toute la nuit.' : 'Descente. Le président a vendu la tireuse.');
+  else if (state.fixtures.some((fixture) => fixture.competition === 'playoff' && (fixture.homeId === human.id || fixture.awayId === human.id))) {
+    state.news.push(position <= division.promoted + 1 ? 'Barrage perdu : on reste en bas. Le président boude dans la buvette.' : 'Barrage gagné : maintien assuré. Le président respire, la tireuse reste.');
+  }
 
   // La référence est prise avant la progression d'intersaison : elle apparaît dans l'évolution de la saison suivante.
   for (const player of Object.values(state.players)) player.overallAtSeasonStart = overall(player);

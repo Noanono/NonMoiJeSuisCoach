@@ -32,7 +32,14 @@
         match = {
           opponent: game.clubs[opponentId]?.name ?? 'Adversaire inconnu',
           isHome,
-          competition: fixture.competition === 'league' ? `Championnat · ${humanDivision(game).name}` : 'Coupe',
+          competition:
+            fixture.competition === 'league'
+              ? `Championnat · ${humanDivision(game).name}`
+              : fixture.competition === 'playoff'
+                ? fixture.awayId === game.humanClubId
+                  ? 'Barrage d’accession'
+                  : 'Barrage de maintien'
+                : 'Coupe',
           score: fixture.result ? `${fixture.result.homeGoals}-${fixture.result.awayGoals}` : null,
           outcome: outcome ? (FORM_LETTER[outcome] as FormLetter) : null,
           ownForm: recentForm(allFixtures, game.humanClubId),

@@ -50,7 +50,7 @@ export function currentWeek(state: GameState): SeasonWeek {
 /** Tous les matchs (championnat et coupe) programmés cette semaine. */
 export function weekFixtures(state: GameState, weekNumber = state.week): Fixture[] {
   const week = seasonWeek(weekNumber);
-  if (week.kind === 'league') return state.fixtures.filter((fixture) => fixture.week === weekNumber);
+  if (week.kind === 'league' || week.kind === 'playoff') return state.fixtures.filter((fixture) => fixture.week === weekNumber);
   if (week.kind === 'cup') return state.cup.fixtures.filter((fixture) => fixture.round === week.round);
   return [];
 }

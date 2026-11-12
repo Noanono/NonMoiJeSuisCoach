@@ -36,6 +36,18 @@ function playWeek(state: GameState): void {
 }
 
 describe('boucle de saison', () => {
+  test('les barrages se jouent la dernière semaine et les divisions gardent 10 clubs (UNIV-04)', () => {
+    const state = newGame({ seed: 77 });
+    while (state.status === 'playing' && state.week < SEASON_WEEKS) playWeek(state);
+    if (state.status === 'fired') return;
+    const playoffs = state.fixtures.filter((fixture) => fixture.competition === 'playoff');
+    expect(playoffs).toHaveLength(3);
+    playWeek(state);
+    expect(playoffs.every((fixture) => fixture.result !== null)).toBe(true);
+    expect(state.season).toBe(2);
+    expect(state.divisions.every((division) => division.clubIds.length === 10)).toBe(true);
+  });
+
   test('une nouvelle partie démarre en district avec un calendrier complet (UNIV-02, UNIV-05)', () => {
     const state = newGame({ seed: 11, clubName: 'AS Test-sur-Comptoir' });
     expect(humanClub(state).name).toBe('AS Test-sur-Comptoir');
