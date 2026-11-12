@@ -19,8 +19,17 @@ const AGE_RATES: readonly { maxAge: number; rate: number }[] = [
 const BEYOND_POTENTIAL_RATE = 0.25;
 export const MAX_POINTS_BEYOND_POTENTIAL = 5;
 const MAX_ATTRIBUTE = 99;
-/** Un point d'attribut hebdomadaire équivaut à cette XP de capacité. */
-const XP_PER_RATE_POINT = 15;
+/**
+ * XP de capacité par semaine de travail spécifique (TRAIN-05) : bien plus qu'en match, où une activation
+ * rapporte 10 à 30 XP et coûte de la gueulante. Les jeunes apprennent plus vite, mais un vétéran progresse
+ * encore : le potentiel ne limite pas la capacité.
+ */
+const ABILITY_XP_BY_AGE: readonly { maxAge: number; xp: number }[] = [
+  { maxAge: 23, xp: 60 },
+  { maxAge: 27, xp: 50 },
+  { maxAge: 31, xp: 40 },
+  { maxAge: Number.POSITIVE_INFINITY, xp: 30 },
+];
 
 /** Bonus du prochain match : plus faible sur les stats générales, qui pèsent sur toutes les lignes. */
 const MATCH_BONUS: Partial<Record<TrainingFocus, number>> = {
@@ -53,9 +62,16 @@ export function trainingMatchBonus(focus: TrainingFocus): { stat: MatchStat; val
   return value === undefined ? null : { stat: focus as MatchStat, value };
 }
 
-function trainAbility(player: Player, rate: number): Player {
-  if (player.ability.level >= MAX_LEVEL || rate === 0) return player;
-  return { ...player, ability: gainXp(player.ability, Math.max(1, Math.round(rate * XP_PER_RATE_POINT))) };
+/** XP de capacité gagnée en une semaine de travail spécifique, centre d'entraînement compris (CLUB-09). */
+export function abilityTrainingXp(player: Player, facilityFactor = 1): number {
+  if (player.ability.level >= MAX_LEVEL) return 0;
+  const base = ABILITY_XP_BY_AGE.find((entry) => player.age <= entry.maxAge)!.xp;
+  return Math.round(base * facilityFactor);
+}
+
+function trainAbility(player: Player, facilityFactor: number): Player {
+  const xp = abilityTrainingXp(player, facilityFactor);
+  return xp === 0 ? player : { ...player, ability: gainXp(player.ability, xp) };
 }
 
 function trainAttribute(player: Player, focus: AttributeName, rate: number): Player {
@@ -72,6 +88,6 @@ function trainAttribute(player: Player, focus: AttributeName, rate: number): Pla
 export function trainPlayer(player: Player, facilityFactor = 1): Player {
   if (player.injuryWeeks > 0) return player;
   const { focus } = player.training;
-  const rate = trainingRate(player) * facilityFactor;
-  return focus === 'ability' ? trainAbility(player, rate) : trainAttribute(player, focus, rate);
+  if (focus === 'ability') return trainAbility(player, facilityFactor);
+  return trainAttribute(player, focus, trainingRate(player) * facilityFactor);
 }

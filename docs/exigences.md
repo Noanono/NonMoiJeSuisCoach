@@ -199,7 +199,7 @@ CAT-01 : le jeu contient les 55 capacités ci-dessous. Les chiffres des tableaux
 | --- | --- |
 | TRAIN-01 | Chaque semaine, chaque joueur non blessé travaille le programme que le coach lui a donné : un attribut ou sa capacité spéciale. |
 | TRAIN-02 | Le programme se règle joueur par joueur et reste actif tant qu'il n'est pas changé. |
-| TRAIN-03 | Aucun coût : le rythme dépend de l'âge. Passé son potentiel, un joueur progresse 4 fois moins vite, et de 5 points au maximum. |
+| TRAIN-03 | Aucun coût : le rythme dépend de l'âge. Passé son potentiel, un joueur progresse 4 fois moins vite, et de 5 points au maximum. Le travail de capacité va bien plus vite qu'en match (30 à 60 XP par semaine selon l'âge, contre 10 à 30 par activation) et ne dépend pas du potentiel. |
 | TRAIN-04 | Le programme donne un petit bonus au prochain match : +5 % au tir, en défense ou aux arrêts, +3 % en vitesse, technique ou physique. |
 | TRAIN-05 | L'écran Effectif affiche l'évolution de la note de chaque joueur depuis le début de la saison. |
 

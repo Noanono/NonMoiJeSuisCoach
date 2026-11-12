@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { makePlayer } from '../testing/fixtures';
-import { MAX_POINTS_BEYOND_POTENTIAL, trainingMatchBonus, trainingRate, trainPlayer } from './training';
+import { xpForActivation } from '../abilities/progression';
+import { abilityTrainingXp, MAX_POINTS_BEYOND_POTENTIAL, trainingMatchBonus, trainingRate, trainPlayer } from './training';
 
 const striker = (overrides = {}) => makePlayer({ age: 20, potential: 85, training: { focus: 'shooting', progress: 0 }, ...overrides });
 
@@ -30,9 +31,16 @@ describe('entraînement (TRAIN-01 à TRAIN-05)', () => {
   });
 
   test('un programme de capacité donne de l’expérience et fait monter de niveau', () => {
-    const after = weeks(makePlayer({ age: 20, potential: 85, training: { focus: 'ability', progress: 0 } }), 55);
-    expect(after.ability.xp).toBeGreaterThan(0);
+    const after = weeks(makePlayer({ age: 20, potential: 85, training: { focus: 'ability', progress: 0 } }), 5);
+    expect(after.ability.xp).toBe(300);
     expect(after.ability.level).toBe(2);
+  });
+
+  test('l’entraînement de capacité va bien plus vite qu’un match, à tout âge et même au-delà du potentiel', () => {
+    const typicalActivation = xpForActivation(0.5);
+    expect(abilityTrainingXp(makePlayer({ age: 20 }))).toBeGreaterThanOrEqual(2 * xpForActivation(1));
+    expect(abilityTrainingXp(makePlayer({ age: 34, potential: 30 }))).toBeGreaterThan(typicalActivation);
+    expect(abilityTrainingXp(makePlayer({ age: 20 }), 1.5)).toBe(90);
   });
 
   test('un blessé ne s’entraîne pas', () => {

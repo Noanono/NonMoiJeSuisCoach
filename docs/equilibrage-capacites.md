@@ -50,14 +50,16 @@ Monter une capacité au niveau 5 doit prendre presque une carrière. Chaque nive
 Sources d'XP au club du coach :
 
 - une activation rapporte de 10 à 30 XP selon son impact, environ 20 en moyenne (mesuré) ;
-- le programme d'entraînement « capacité » rapporte de 1 à 5 XP par semaine selon l'âge (28 semaines par saison), davantage avec le centre d'entraînement.
+- le programme d'entraînement « capacité » rapporte 60 XP par semaine jusqu'à 23 ans, 50 de 24 à 27 ans, 40 de 28 à 31 ans et 30 ensuite (28 semaines par saison), davantage avec le centre d'entraînement. C'est la voie rapide : une semaine d'entraînement vaut deux à trois activations, mais le joueur ne travaille alors aucun attribut.
 
 Rythme attendu, en saisons pour atteindre chaque niveau :
 
 | Joueur | XP par saison | Niv. 2 | Niv. 3 | Niv. 4 | Niv. 5 |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Très utilisé (une activation par match, entraînement capacité, moins de 24 ans) | ~540 | 0,5 | 1,7 | 4,4 | ~9 |
-| Utilisé un match sur deux, entraînement capacité, 24 à 27 ans | ~285 | 0,9 | 3,2 | 8,4 | ~17 |
+| Très utilisé (une activation par match, entraînement capacité, moins de 24 ans) | ~2 080 | 0,1 | 0,4 | 1,2 | ~2,4 |
+| Utilisé un match sur deux, entraînement capacité, 24 à 27 ans | ~1 600 | 0,2 | 0,6 | 1,5 | ~3,1 |
+| Entraînement capacité seul, sans activation, 28 à 31 ans | ~1 120 | 0,2 | 0,8 | 2,1 | ~4,5 |
+| Activations seules (entraînement sur un attribut), moins de 24 ans | ~400 | 0,6 | 2,3 | 6 | ~12,5 |
 
 Hors du club du coach, on ne simule pas l'XP match par match : chaque joueur gagne de 120 à 320 XP par saison (`CAREER_XP_PER_SEASON`), et un joueur généré reçoit l'XP d'une carrière commencée à 18 ans. Résultat dans un monde neuf (mesuré) :
 
@@ -118,3 +120,4 @@ Le script `scripts/ability-impact.ts` mesure chaque capacité sur 1 000 matchs (
 - **Novembre 2026** : chaque capacité ne sert plus qu'une fois par match, quelle que soit sa rareté (il n'y a plus de recharge). Le bonus de niveau 5 « recharge plus courte » devient « effet 25 % plus fort ». Les mesures par activation ne changent pas : le banc n'active qu'une fois.
 - **Novembre 2026** : les capacités d'occasion (penalty, coup franc, corner) resservent à chaque occasion dans le match, tant que la jauge le permet ; les autres restent à une utilisation par match.
 - **Novembre 2026** : penalty à choix (frappe placée, en force, Panenka ; plongeon du gardien). Le calibrage garde ~76 % de réussite quand l'IA choisit, les capacités de penalty restent dans leur fourchette (banc de la suite de tests).
+- **Novembre 2026** : l'entraînement de capacité devient la voie rapide (30 à 60 XP par semaine selon l'âge, au lieu de 1 à 5) : un joueur entraîné sur sa capacité atteint le niveau 5 en 2 à 5 saisons, contre une dizaine en ne comptant que les matchs.

@@ -8,8 +8,10 @@
   import RatingBadge from '../kit/RatingBadge.svelte';
   import { store } from '../store.svelte';
   import { getAbility } from '../../domain/abilities/catalog';
-  import { trainingMatchBonus, trainingRate } from '../../domain/club/training';
-  import { humanSquad, resetTrainingFocus, setTrainingFocus } from '../../domain/game';
+  import { abilityTrainingXp, trainingMatchBonus, trainingRate } from '../../domain/club/training';
+  import { facilitiesOf, facilityBonus } from '../../domain/club/facilities';
+  import { XP_THRESHOLDS } from '../../domain/abilities/progression';
+  import { humanClub, humanSquad, resetTrainingFocus, setTrainingFocus } from '../../domain/game';
   import { focusRaisesOverall, overall } from '../../domain/player/rating';
   import type { AttributeName, TrainingFocus } from '../../domain/types';
   import { ATTRIBUTE_LABEL, fullName, percent, POSITION_ORDER, POSITION_SHORT } from './describe';
@@ -24,6 +26,8 @@
         .map((player) => {
           const focus = player.training.focus;
           const rate = trainingRate(player);
+          const weeklyXp = abilityTrainingXp(player, facilityBonus.trainingRate(facilitiesOf(humanClub(game))));
+          const nextThreshold = XP_THRESHOLDS[player.ability.level];
           const bonus = trainingMatchBonus(focus);
           return {
             id: player.id,
@@ -40,6 +44,12 @@
             bonus: bonus ? `+${percent(bonus.value)} au prochain match` : 'XP de capacité',
             injured: player.injuryWeeks > 0,
             abilityName: player.ability.revealed ? getAbility(player.ability.abilityId).name : '???',
+            abilityXp: nextThreshold === undefined ? 'Niveau max' : `+${weeklyXp} XP/sem. · niv. ${player.ability.level}`,
+            abilityGauge:
+              nextThreshold === undefined
+                ? null
+                : { value: player.ability.xp - XP_THRESHOLDS[player.ability.level - 1]!, max: nextThreshold - XP_THRESHOLDS[player.ability.level - 1]!, label: `${player.ability.xp} / ${nextThreshold} XP vers le niveau ${player.ability.level + 1}` },
+            abilityPace: focus === 'ability' ? (weeklyXp === 0 ? 'Niveau max' : weeklyXp >= 50 ? 'Rapide' : weeklyXp >= 40 ? 'Moyen' : 'Lent') : null,
           };
         })
         .sort((a, b) => POSITION_ORDER[a.position] - POSITION_ORDER[b.position] || b.overall - a.overall),
@@ -68,7 +78,7 @@
       <Button size="s" onclick={reset}>Programme de l'adjoint</Button>
     {/snippet}
     <p class="texte-s discret intro">
-      Chaque joueur travaille un axe toutes les semaines. Les jeunes progressent vite, les vétérans peu. Passé son potentiel, un joueur progresse encore, plus lentement et de 5 points au maximum.
+      Chaque joueur travaille un axe toutes les semaines. Les jeunes progressent vite, les vétérans peu. Passé son potentiel, un joueur progresse encore, plus lentement et de 5 points au maximum. Travailler sa capacité la fait monter bien plus vite qu’en match, à tout âge, mais le joueur ne progresse alors sur aucun attribut.
     </p>
     <div class="defilant">
       <table class="tableau">
@@ -104,12 +114,13 @@
               </td>
               <td class="avancement">
                 {#if row.focus === ABILITY_FOCUS}
-                  <span class="discret texte-s">XP chaque semaine</span>
+                  {#if row.abilityGauge}<Gauge value={row.abilityGauge.value} max={row.abilityGauge.max} label={row.abilityGauge.label} tone="scotch" />{/if}
+                  <span class="discret texte-s" title={row.abilityGauge?.label}>{row.abilityXp}</span>
                 {:else}
                   <Gauge value={row.progress} max={100} label="Avancement vers le prochain point" tone="scotch" />
                 {/if}
               </td>
-              <td>{#if row.injured}<span class="malus">Blessé</span>{:else}{row.pace}{/if}</td>
+              <td>{#if row.injured}<span class="malus">Blessé</span>{:else}{row.abilityPace ?? row.pace}{/if}</td>
               <td class="texte-s">{row.bonus}</td>
             </tr>
           {/each}
