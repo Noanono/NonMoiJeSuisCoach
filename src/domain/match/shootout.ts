@@ -23,12 +23,19 @@ export function shootoutConversion(shooters: number, keeper: number): number {
   );
 }
 
+/**
+ * Séance réglementaire, tir par tir (domicile puis extérieur) : elle s'arrête dès qu'une équipe
+ * ne peut plus être rattrapée, comme en vrai (pas de 5-2).
+ */
 export function runShootout(rng: Rng, homeConversion: number, awayConversion: number): ShootoutResult {
   let home = 0;
   let away = 0;
+  const decided = (homeLeft: number, awayLeft: number) => home + homeLeft < away || away + awayLeft < home;
   for (let round = 0; round < ROUNDS; round++) {
     if (rng.chance(homeConversion)) home++;
+    if (decided(ROUNDS - round - 1, ROUNDS - round)) break;
     if (rng.chance(awayConversion)) away++;
+    if (decided(ROUNDS - round - 1, ROUNDS - round - 1)) break;
   }
   for (let round = 0; home === away && round < MAX_SUDDEN_DEATH_ROUNDS; round++) {
     if (rng.chance(homeConversion)) home++;
