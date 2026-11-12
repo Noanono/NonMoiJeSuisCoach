@@ -66,4 +66,13 @@ export interface GameState {
   jobOffers: string[];
   /** Rival de la saison (UNIV-09). */
   rivalId: string | null;
+  /** Reroll de capacité payé, en attente du choix du coach (CAP-23). Absent des anciennes sauvegardes. */
+  abilityReroll?: AbilityRerollOffer | null;
+}
+
+/** Les 3 capacités proposées après un reroll payé (CAP-23). */
+export interface AbilityRerollOffer {
+  playerId: string;
+  abilityIds: string[];
+  price: number;
 }

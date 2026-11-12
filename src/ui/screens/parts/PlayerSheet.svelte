@@ -6,6 +6,7 @@
   import RatingBadge from '../../kit/RatingBadge.svelte';
   import Modal from './Modal.svelte';
   import AbilityPanel from './AbilityPanel.svelte';
+  import AbilityReroll from './AbilityReroll.svelte';
   import { store } from '../../store.svelte';
   import { formatEuros } from '../../format';
   import { getAbility } from '../../../domain/abilities/catalog';
@@ -126,6 +127,7 @@
     {/if}
 
     {#if view.own}
+    <AbilityReroll {playerId} />
     <section class="actions" aria-label="Transfert">
       <h3 class="tampon">Vente express</h3>
       {#if !view.windowOpen}

@@ -37,6 +37,7 @@ export function newGame({ seed, clubName, difficulty = 'normal' }: NewGameOption
     offers: [],
     dialogue: null,
     recentDialogueIds: [],
+    abilityReroll: null,
     lastFinance: [],
     lastAppearances: [],
     streak: { wins: 0, losses: 0 },

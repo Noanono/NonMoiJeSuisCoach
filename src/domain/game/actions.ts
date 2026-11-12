@@ -2,7 +2,8 @@
  * Commandes du coach entre deux matchs. Chacune modifie la partie en place
  * et renvoie un message lisible pour l'interface.
  */
-import { getAbility } from '../abilities/catalog';
+import { ABILITIES, getAbility } from '../abilities/catalog';
+import { drawRerollOptions, rerollPrice } from '../club/abilityReroll';
 import { applyDialogueChoice, DIALOGUES, localizeDialogue } from '../club/dialogues';
 import { acceptOffer, askingPrice, buyPlayer, marketListings, sellPlayer, type MarketListing, type TransferResult } from '../club/transfers';
 import { askingSalary } from '../club/valuation';
@@ -158,6 +159,58 @@ export function answerDialogue(state: GameState, choiceId: string): ActionResult
   replacePlayers(state, result.squad);
   state.dialogue = null;
   return done(result.outcome);
+}
+
+/** Reroll en attente, oublié si le joueur a quitté le club entre-temps. */
+export function pendingReroll(state: GameState): GameState['abilityReroll'] {
+  const offer = state.abilityReroll ?? null;
+  if (offer && state.players[offer.playerId]?.clubId !== state.humanClubId) {
+    state.abilityReroll = null;
+    return null;
+  }
+  return offer;
+}
+
+/** Prix du reroll de la capacité d'un joueur du coach, `null` si sa capacité est encore cachée. */
+export function abilityRerollPrice(state: GameState, playerId: string): number | null {
+  const player = state.players[playerId];
+  if (!player || !player.ability.revealed) return null;
+  return rerollPrice(player, getAbility(player.ability.abilityId).rarity, humanDivision(state).tier);
+}
+
+/** Paie le reroll (CAP-23) : 3 capacités sont tirées, le coach choisit ensuite avec `chooseRerolledAbility`. */
+export function rerollAbility(state: GameState, playerId: string): ActionResult {
+  const player = state.players[playerId];
+  if (!player || player.clubId !== state.humanClubId) return refused('Ce joueur n’est pas chez toi.');
+  const pending = pendingReroll(state);
+  if (pending) {
+    const name = state.players[pending.playerId]!.lastName;
+    return refused(pending.playerId === playerId ? 'Déjà payé : choisis parmi les 3 capacités proposées.' : `Choisis d'abord la nouvelle capacité de ${name}.`);
+  }
+  const price = abilityRerollPrice(state, playerId);
+  if (price === null) return refused('Capacité encore cachée : fais-le jouer pour la découvrir avant de la changer.');
+  const club = humanClub(state);
+  if (club.budget < price) return refused(`Pas assez d'argent : il manque ${(price - club.budget).toLocaleString('fr-FR')} €.`);
+  const rarity = getAbility(player.ability.abilityId).rarity;
+  const excluded = new Set(humanSquad(state).map((member) => member.ability.abilityId));
+  const options = withRng(state, (rng) => drawRerollOptions(rng, player, rarity, ABILITIES, excluded));
+  if (options.length === 0) return refused('Aucune autre capacité disponible pour ce poste.');
+  club.budget -= price;
+  state.abilityReroll = { playerId, abilityIds: options.map((ability) => ability.id), price };
+  const bonus = options.some((ability) => ability.rarity !== rarity) ? ' Coup de chance : une rareté au-dessus dans le lot !' : '';
+  return done(`${price.toLocaleString('fr-FR')} € payés. Le préparateur mental propose ${options.length} capacités à ${player.lastName}.${bonus}`);
+}
+
+/** Choix après un reroll payé : une des capacités proposées, au niveau 1, ou `null` pour garder l'ancienne. */
+export function chooseRerolledAbility(state: GameState, abilityId: string | null): ActionResult {
+  const offer = pendingReroll(state);
+  if (!offer) return refused('Aucun reroll en attente.');
+  const player = state.players[offer.playerId]!;
+  if (abilityId !== null && !offer.abilityIds.includes(abilityId)) return refused('Cette capacité ne faisait pas partie des propositions.');
+  state.abilityReroll = null;
+  if (abilityId === null) return done(`${player.lastName} garde sa capacité. L'argent, lui, ne revient pas.`);
+  state.players[player.id] = { ...player, ability: { abilityId, level: 1, xp: 0, revealed: true } };
+  return done(`${player.lastName} apprend « ${getAbility(abilityId).name} ». Il repart au niveau 1.`);
 }
 
 /** Améliore une installation du club (CLUB-09), payée sur le budget. */
