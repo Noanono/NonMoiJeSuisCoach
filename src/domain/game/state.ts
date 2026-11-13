@@ -73,6 +73,19 @@ export interface GameState {
   coaches?: CoachState[];
   /** Coach dont les champs sont actuellement à la racine de la partie. */
   focusedCoachId?: string;
+  /** Offres entre coachs sur leurs joueurs (MULTI-08), visibles des deux. */
+  coachOffers?: CoachOffer[];
+}
+
+/** Offre d'un coach sur le joueur d'un autre coach (MULTI-08) : l'autre accepte ou refuse. */
+export interface CoachOffer {
+  id: string;
+  playerId: string;
+  fromClubId: string;
+  toClubId: string;
+  amount: number;
+  /** Dernière semaine où l'offre peut être acceptée. */
+  expiresWeek: number;
 }
 
 /** Les 3 capacités proposées après un reroll payé (CAP-23). */

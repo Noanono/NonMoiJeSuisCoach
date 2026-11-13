@@ -14,7 +14,8 @@ import { defaultTrainingFocus } from '../club/training';
 import { FACILITIES, facilitiesOf, upgradeCost } from '../club/facilities';
 import type { FacilityId, Instructions, Lineup, TrainingFocus } from '../types';
 import { humanClub, humanDivision, humanSquad, outlookOf, replacePlayers, writeOutlook } from './selectors';
-import type { GameState } from './state';
+import type { CoachOffer, GameState } from './state';
+import { asCoachOfClub, coachOfClub, isMultiplayer } from './coaches';
 import { withRng } from './week';
 
 /** Une vente express rapporte moins que la valeur du joueur. */
@@ -74,6 +75,7 @@ function applyTransfer(state: GameState, result: TransferResult): ActionResult {
 export function buy(state: GameState, playerId: string): ActionResult {
   const player = state.players[playerId];
   if (!player) return refused('Ce joueur n’existe pas. Ton adjoint a encore inventé un nom.');
+  if (isCoachPlayer(state, playerId)) return refused('Ce joueur appartient à un autre coach : fais-lui une offre.');
   const rarity = getAbility(player.ability.abilityId).rarity;
   return applyTransfer(
     state,
@@ -146,6 +148,109 @@ function refillLineup(state: GameState, previous: Lineup | null, departedId: str
   const stands = squad.filter((player) => !used.has(player.id) && isAvailable(player)).sort((a, b) => overall(b) - overall(a));
   while (bench.length < Math.min(previous.bench.length, MAX_BENCH_SIZE) && stands.length > 0) bench.push(stands.shift()!.id);
   setLineup(state, { ...previous, starters, bench });
+}
+
+// --- Offres entre coachs (MULTI-08) --------------------------------------------------
+
+/** Validité d'une offre entre coachs, comme celles des clubs IA. */
+export const COACH_OFFER_WEEKS = 2;
+
+/** Joueur d'un autre coach de la ligue : on ne l'achète pas, on fait une offre. */
+export function isCoachPlayer(state: GameState, playerId: string): boolean {
+  const clubId = state.players[playerId]?.clubId;
+  return isMultiplayer(state) && clubId !== null && clubId !== undefined && clubId !== state.humanClubId && state.clubs[clubId]?.isHuman === true;
+}
+
+function coachName(state: GameState, clubId: string): string {
+  const coachId = coachOfClub(state, clubId);
+  return state.coaches?.find((coach) => coach.id === coachId)?.name ?? state.clubs[clubId]?.name ?? 'un coach';
+}
+
+function playerLabel(state: GameState, playerId: string): string {
+  const player = state.players[playerId];
+  return player ? `${player.firstName} ${player.lastName}` : 'un joueur';
+}
+
+const euros = (amount: number) => `${amount.toLocaleString('fr-FR')} €`;
+
+/** Offres reçues par le coach au focus, et celles qu'il a envoyées. */
+export function coachOffersReceived(state: GameState): CoachOffer[] {
+  return (state.coachOffers ?? []).filter((offer) => offer.toClubId === state.humanClubId);
+}
+
+export function coachOffersSent(state: GameState): CoachOffer[] {
+  return (state.coachOffers ?? []).filter((offer) => offer.fromClubId === state.humanClubId);
+}
+
+/** Le coach propose un montant libre pour le joueur d'un autre coach ; l'offre arrive chez lui. */
+export function makeCoachOffer(state: GameState, playerId: string, amount: number): ActionResult {
+  if (!isCoachPlayer(state, playerId)) return refused('On ne fait une offre que sur le joueur d’un autre coach.');
+  if (!transferWindowOpen(state)) return refused('Le mercato est fermé : reviens pendant la fenêtre des transferts.');
+  const price = Math.round(amount);
+  if (!Number.isFinite(price) || price <= 0) return refused('Propose un montant, même symbolique.');
+  if (humanClub(state).budget < price) return refused(`Pas assez d'argent : il manque ${euros(price - humanClub(state).budget)}.`);
+  const sellerId = state.players[playerId]!.clubId!;
+  const offer: CoachOffer = {
+    id: `coach-offer-${state.season}-${state.week}-${playerId}-${state.humanClubId}`,
+    playerId,
+    fromClubId: state.humanClubId,
+    toClubId: sellerId,
+    amount: price,
+    expiresWeek: state.week + COACH_OFFER_WEEKS,
+  };
+  // Une nouvelle offre sur le même joueur remplace la précédente.
+  state.coachOffers = [...(state.coachOffers ?? []).filter((other) => !(other.playerId === playerId && other.fromClubId === state.humanClubId)), offer];
+  const buyer = coachName(state, state.humanClubId);
+  const target = playerLabel(state, playerId);
+  asCoachOfClub(state, sellerId, () => state.news.push(`Offre de ${buyer} : ${euros(price)} pour ${target}. À toi de voir.`));
+  return done(`Offre envoyée à ${coachName(state, sellerId)} : ${euros(price)} pour ${target}. Elle tient ${COACH_OFFER_WEEKS} semaines.`);
+}
+
+/** L'acheteur retire son offre. */
+export function cancelCoachOffer(state: GameState, offerId: string): ActionResult {
+  const offer = (state.coachOffers ?? []).find((candidate) => candidate.id === offerId);
+  if (!offer || offer.fromClubId !== state.humanClubId) return refused('Cette offre n’est pas à toi.');
+  state.coachOffers = state.coachOffers!.filter((candidate) => candidate.id !== offerId);
+  return done('Offre retirée.');
+}
+
+/** Le vendeur accepte ou refuse : accepté, le joueur part et l'argent change de club. */
+export function answerCoachOffer(state: GameState, offerId: string, accept: boolean): ActionResult {
+  const offer = (state.coachOffers ?? []).find((candidate) => candidate.id === offerId);
+  if (!offer || offer.toClubId !== state.humanClubId) return refused('Cette offre a expiré ou ne t’est pas adressée.');
+  const buyer = coachName(state, offer.fromClubId);
+  const seller = coachName(state, offer.toClubId);
+  const target = playerLabel(state, offer.playerId);
+  state.coachOffers = state.coachOffers!.filter((candidate) => candidate.id !== offerId);
+  if (!accept) {
+    asCoachOfClub(state, offer.fromClubId, () => state.news.push(`${seller} refuse ton offre de ${euros(offer.amount)} pour ${target}.`));
+    return done(`Offre de ${buyer} refusée.`);
+  }
+  if (state.players[offer.playerId]?.clubId !== state.humanClubId) return refused('Ce joueur n’est plus chez toi.');
+  const lineup = humanClub(state).lineup;
+  const result = applyTransfer(
+    state,
+    buyPlayer({ clubs: state.clubs, players: state.players }, { buyerId: offer.fromClubId, playerId: offer.playerId, price: offer.amount, windowOpen: transferWindowOpen(state) }),
+  );
+  if (!result.ok) {
+    // Offre impossible (budget de l'acheteur, effectif) : elle reste en place.
+    state.coachOffers = [...state.coachOffers!, offer];
+    return result;
+  }
+  // Les autres offres sur ce joueur tombent.
+  state.coachOffers = state.coachOffers!.filter((candidate) => candidate.playerId !== offer.playerId);
+  state.offers = state.offers.filter((candidate) => candidate.playerId !== offer.playerId);
+  refillLineup(state, lineup, offer.playerId);
+  asCoachOfClub(state, offer.fromClubId, () => state.news.push(`${seller} accepte ! ${target} te rejoint pour ${euros(offer.amount)}.`));
+  return done(`${target} part chez ${buyer} pour ${euros(offer.amount)}.`);
+}
+
+/** Offres entre coachs encore valables la semaine qui vient (mercato ouvert, joueur toujours là). */
+export function pruneCoachOffers(state: GameState, nextWeek: number, windowOpen: boolean): void {
+  if (!state.coachOffers) return;
+  state.coachOffers = windowOpen
+    ? state.coachOffers.filter((offer) => offer.expiresWeek >= nextWeek && state.players[offer.playerId]?.clubId === offer.toClubId)
+    : [];
 }
 
 /** Réponse au dialogue de la semaine (CLUB-06). */

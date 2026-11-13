@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { MatchController } from './controller.svelte';
   import { minuteLabel, periodLabel, SPEEDS } from './live';
-  import { store } from '../store.svelte';
 
   interface Props {
     controller: MatchController;
@@ -9,17 +8,10 @@
 
   let { controller }: Props = $props();
 
-  // Match en direct contre un autre coach (MULTI-07) : comptes à rebours envoyés par le serveur, décomptés ici.
-  let now = $state(Date.now());
-  $effect(() => {
-    if (!controller.remote) return;
-    const timer = setInterval(() => (now = Date.now()), 250);
-    return () => clearInterval(timer);
-  });
-  const duel = $derived(controller.remote ? (store.multi?.duel ?? null) : null);
-  const sinceReceived = $derived(duel ? Math.max(0, now - (store.multi?.duelReceivedAt ?? now)) : 0);
+  // Match en direct contre un autre coach (MULTI-07) : comptes à rebours envoyés par le serveur, décomptés par le contrôleur.
+  const duel = $derived(controller.duel);
   function seconds(ms: number): string {
-    return `${Math.ceil(Math.max(0, ms - sinceReceived) / 1000)} s`;
+    return `${Math.ceil(controller.remaining(ms) / 1000)} s`;
   }
   const duelStatus = $derived.by(() => {
     void controller.version;

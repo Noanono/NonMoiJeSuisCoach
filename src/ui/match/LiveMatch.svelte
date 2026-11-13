@@ -5,6 +5,7 @@
   import { minuteIntervalMs } from './live';
   import ActivationPanel from './ActivationPanel.svelte';
   import CoachBand from './CoachBand.svelte';
+  import DuelBand from './DuelBand.svelte';
   import GaugePanel from './GaugePanel.svelte';
   import InstructionsPanel from './InstructionsPanel.svelte';
   import EffectsHelp from './EffectsHelp.svelte';
@@ -30,6 +31,13 @@
   $effect(() => {
     void controller.version;
     if (controller.remote) controller.sync();
+  });
+
+  // Match en direct : horloge locale pour les barres de temps et les comptes à rebours.
+  $effect(() => {
+    if (!controller.remote) return;
+    const timer = setInterval(() => (controller.now = Date.now()), 200);
+    return () => clearInterval(timer);
   });
 
   // Horloge (MATCH-02) : un seul intervalle, recréé seulement quand la vitesse change,
@@ -60,10 +68,11 @@
   {/if}
 
   <div class="attente">
+    <DuelBand {controller} />
     <CoachBand {controller} />
   </div>
 
-  <div class="disposition">
+  <div class="disposition" class:grise={controller.opponentDeciding}>
     <Pitch {controller} />
     <aside class="cote">
       <MiniMap {controller} />
@@ -107,6 +116,11 @@
   }
   .attente:empty {
     display: none;
+  }
+  .disposition.grise {
+    opacity: 0.55;
+    filter: grayscale(0.6);
+    transition: opacity 200ms, filter 200ms;
   }
   .disposition {
     display: grid;

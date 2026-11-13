@@ -12,7 +12,7 @@
   import { getAbility } from '../../domain/abilities/catalog';
   import { RARITY_LABEL } from '../../domain/abilities/progression';
   import { MAX_SQUAD_SIZE } from '../../domain/club/transfers';
-  import { humanClub, market, transferWindowOpen } from '../../domain/game';
+  import { coachOffersSent, humanClub, isCoachPlayer, market, transferWindowOpen } from '../../domain/game';
   import type { Position, Rarity } from '../../domain/types';
   import { fullName, POSITION_LABEL, POSITION_ORDER, POSITION_SHORT } from './describe';
   import { AGE_BANDS, inAgeBand, nextTransferWindowWeek, sortRows, transferWindowLastWeek, type AgeBandId, type SortDirection } from './views';
@@ -56,6 +56,9 @@
           rarity: listing.ability?.rarity ?? null,
           price: listing.price,
           salary: listing.askingSalary,
+          // Joueur d'un autre coach de la ligue : pas d'achat, une offre (MULTI-08).
+          coachOwned: isCoachPlayer(game, listing.playerId),
+          offerSent: coachOffersSent(game).find((offer) => offer.playerId === listing.playerId)?.amount ?? null,
         };
       }),
     ),
@@ -128,6 +131,22 @@
   function purchase(playerId: string): void {
     const result = store.command('buy', playerId);
     store.notify(result.message);
+  }
+
+  /** Offre en cours de saisie sur le joueur d'un autre coach. */
+  let offerFor = $state<string | null>(null);
+  let offerAmount = $state(0);
+
+  function openOffer(listing: Listing): void {
+    offerFor = listing.id;
+    offerAmount = listing.offerSent ?? listing.price;
+  }
+
+  function sendOffer(event: SubmitEvent, playerId: string): void {
+    event.preventDefault();
+    const result = store.command('makeCoachOffer', playerId, offerAmount);
+    store.notify(result.message);
+    if (result.ok) offerFor = null;
   }
 </script>
 
@@ -225,14 +244,28 @@
                 <td class="num">{formatEuros(listing.price)}</td>
                 <td class="num">{formatEuros(listing.salary)}</td>
                 <td>
-                  <Button
-                    size="s"
-                    disabled={!transferWindow.open || !affordable || squadFull}
-                    aria-label={`Acheter ${listing.name} pour ${formatEuros(listing.price)}`}
-                    onclick={() => purchase(listing.id)}
-                  >
-                    {affordable ? 'Acheter' : 'Trop cher'}
-                  </Button>
+                  {#if listing.coachOwned}
+                    {#if offerFor === listing.id}
+                      <form class="offre-coach" onsubmit={(event) => sendOffer(event, listing.id)}>
+                        <input type="number" min="1" step="1" bind:value={offerAmount} aria-label="Montant de l'offre" />
+                        <Button size="s" type="submit">Envoyer</Button>
+                        <Button size="s" variant="ghost" onclick={() => (offerFor = null)}>Annuler</Button>
+                      </form>
+                    {:else}
+                      <Button size="s" variant="ghost" disabled={!transferWindow.open || squadFull} onclick={() => openOffer(listing)}>
+                        {listing.offerSent !== null ? `Offre : ${formatEuros(listing.offerSent)}` : 'Faire une offre'}
+                      </Button>
+                    {/if}
+                  {:else}
+                    <Button
+                      size="s"
+                      disabled={!transferWindow.open || !affordable || squadFull}
+                      aria-label={`Acheter ${listing.name} pour ${formatEuros(listing.price)}`}
+                      onclick={() => purchase(listing.id)}
+                    >
+                      {affordable ? 'Acheter' : 'Trop cher'}
+                    </Button>
+                  {/if}
                 </td>
               </tr>
             {/each}
@@ -255,6 +288,20 @@
 {/if}
 
 <style>
+  .offre-coach {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    align-items: center;
+  }
+  .offre-coach input {
+    width: 9ch;
+    font: inherit;
+    padding: 2px var(--space-1);
+    border: var(--trait-fin) solid var(--encre);
+    background: var(--craie);
+    color: var(--encre);
+  }
   p {
     margin: 0 0 var(--space-2);
   }

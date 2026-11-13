@@ -16,6 +16,7 @@ import { payCupRound } from './cupPrizes';
 import { scaleConfidenceDelta } from './difficulty';
 import { pickJobOffers } from './jobs';
 import { playAiFixture } from './matches';
+import { pruneCoachOffers } from './actions';
 import { callUpStandIns } from './standIns';
 import { divisionStandings, endSeason, refreshAiLineups } from './season';
 import { clubPlayers, humanClub, humanDivision, humanFixture, humanFixtureAt, humanSquad, isDerby, replacePlayers, weekFixtures } from './selectors';
@@ -65,6 +66,7 @@ export function advanceWeek(state: GameState): void {
       updateOffers(state, rng);
     });
     advanceCup(state, rng);
+    pruneCoachOffers(state, state.week + 1, isTransferWindowOpen(state.week + 1));
     forEachCoach(state, () => {
       // Licencié : il choisit un nouveau club ; en solo, la semaine reprendra après ce choix (CLUB-05).
       if (state.status === 'fired' && state.jobOffers.length === 0) state.jobOffers = pickJobOffers(state, rng);

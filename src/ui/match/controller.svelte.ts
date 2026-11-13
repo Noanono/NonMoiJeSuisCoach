@@ -37,11 +37,14 @@ import { substitutionFromDrag } from './activation';
 import { goalAlert, type GoalAlert } from './verdict';
 import { store } from '../store.svelte';
 import type { Speed } from './live';
+import type { DuelView } from '../../server/duel';
 
 /** Temps d'affichage d'une capacité : le match attend qu'on ait lu. */
 export const FX_DURATION_MS = 5000;
 /** Au-delà, les annonces les plus anciennes sont sautées pour rester au rythme du match. */
 const FX_QUEUE_LIMIT = 3;
+/** Match en direct : durée de l'annonce d'un but, le match continuant sur le serveur. */
+const REMOTE_GOAL_MS = 3000;
 
 /** Capacité en cours de mise en scène sur le terrain. */
 export interface ActivationFx {
@@ -78,6 +81,7 @@ export class MatchController {
   #fxQueue: ActivationRecord[] = [];
   #fxSeen = 0;
   #fxTimer: ReturnType<typeof setTimeout> | undefined;
+  #goalTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(match: MatchState, coachSide: Side, remote: RemoteCommand | null = null) {
     this.match = match;
@@ -125,6 +129,28 @@ export class MatchController {
     }
     this.paused = !this.paused;
   }
+
+  /** Horloge locale d'un match en direct : décompte les délais envoyés par le serveur (MULTI-07). */
+  now = $state(Date.now());
+
+  /** État du match en direct (pauses, délais), `null` hors match entre coachs. */
+  get duel(): DuelView | null {
+    return this.isLocal() ? null : (store.multi?.duel ?? null);
+  }
+
+  /** Temps restant d'un délai envoyé par le serveur, décompté depuis sa réception. */
+  remaining(ms: number): number {
+    const since = this.now - (store.multi?.duelReceivedAt ?? this.now);
+    return Math.max(0, ms - since);
+  }
+
+  /** L'adversaire est en train de choisir : le terrain est grisé chez soi. */
+  readonly opponentDeciding = $derived.by(() => {
+    void this.version;
+    if (this.isLocal()) return false;
+    const deciding = this.match.pending?.side ?? this.match.awaiting?.side;
+    return deciding !== undefined && deciding !== this.coachSide;
+  });
 
   /** Match joué dans ce navigateur (solo, ou contre l'IA) ; un match en direct tourne sur le serveur. */
   private isLocal(): boolean {
@@ -278,7 +304,13 @@ export class MatchController {
     const latest = this.match.goals.at(-1);
     const scored = this.match.goals.length > this.#goalsSeen;
     this.#goalsSeen = this.match.goals.length;
-    if (scored && latest && !latest.cancelled) this.goal = goalAlert(this.match, latest, this.coachSide);
+    if (!scored || !latest || latest.cancelled) return;
+    this.goal = goalAlert(this.match, latest, this.coachSide);
+    // Match en direct : le serveur ne s'arrête pas sur un but, l'annonce se referme seule.
+    if (this.remote) {
+      clearTimeout(this.#goalTimer);
+      this.#goalTimer = setTimeout(() => (this.goal = null), REMOTE_GOAL_MS);
+    }
   }
 
   resumeAfterGoal(): void {
@@ -322,6 +354,7 @@ export class MatchController {
   /** À appeler quand l'écran disparaît. */
   dispose(): void {
     clearTimeout(this.#fxTimer);
+    clearTimeout(this.#goalTimer);
   }
 
   /** Coup de sifflet final : reporte le match sur la partie (MATCH-06). */

@@ -1,7 +1,7 @@
 /**
  * Match en direct entre deux coachs de la ligue (MULTI-07), joué sur le serveur de l'hôte.
  * Horloge imposée à ×1 ; chaque coach a 3 pauses de 10 s ; une fenêtre de choix (penalty, coup franc,
- * capacité d'occasion) ou un ciblage dure 15 s au plus, puis le jeu choisit seul. La mi-temps dure 20 s,
+ * capacité d'occasion) ou un ciblage dure 10 s au plus, puis le jeu choisit seul. La mi-temps dure 20 s,
  * moins si les deux coachs sont prêts. Une capacité s'annonce 5 s, match arrêté, comme en solo.
  */
 import {
@@ -27,7 +27,7 @@ import type { Instructions, Position } from '../domain/types';
 export const DUEL_MINUTE_MS = 1000;
 export const DUEL_PAUSES = 3;
 export const DUEL_PAUSE_MS = 10_000;
-export const DUEL_DECISION_MS = 15_000;
+export const DUEL_DECISION_MS = 10_000;
 export const DUEL_HALFTIME_MS = 20_000;
 export const DUEL_ANNOUNCE_MS = 5_000;
 
@@ -134,7 +134,7 @@ export class LiveDuel {
     return true;
   }
 
-  /** Fenêtre de choix ou ciblage : 15 s, puis le jeu décide (la fenêtre se ferme, le ciblage est annulé). */
+  /** Fenêtre de choix ou ciblage : 10 s, puis le jeu décide (la fenêtre se ferme, le ciblage est annulé). */
   private advanceDecision(now: number): boolean {
     const key = this.currentDecisionKey();
     if (key !== this.decisionKey) {

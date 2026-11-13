@@ -211,7 +211,7 @@
                   {#if opponentWaiting}<span class="texte-s texte-fort">Ton adversaire t’attend sur le terrain !</span>{/if}
                 {/if}
               </div>
-              <p class="texte-s">Match contre un autre coach : en direct à ×1, 3 pauses de 10 s chacun, 15 s pour chaque décision. Si vous passez la semaine sans le jouer, il sera simulé.</p>
+              <p class="texte-s">Match contre un autre coach : en direct à ×1, 3 pauses de 10 s chacun, 10 s pour chaque décision. Si vous passez la semaine sans le jouer, il sera simulé.</p>
             {/if}
             <div class="ligne-actions">
               {#if multi}

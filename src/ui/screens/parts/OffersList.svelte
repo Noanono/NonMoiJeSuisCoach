@@ -4,6 +4,7 @@
   import RarityTag from '../../kit/RarityTag.svelte';
   import RatingBadge from '../../kit/RatingBadge.svelte';
   import PlayerSheet from './PlayerSheet.svelte';
+  import CoachOffers from './CoachOffers.svelte';
   import { store } from '../../store.svelte';
   import { formatEuros } from '../../format';
   import { getAbility } from '../../../domain/abilities/catalog';
@@ -54,6 +55,7 @@
   );
 
   let openPlayerId = $state<string | null>(null);
+  const coachOfferCount = $derived(store.select((game) => (game.coachOffers ?? []).filter((offer) => offer.toClubId === game.humanClubId || offer.fromClubId === game.humanClubId).length));
 
   function answer(offerId: string, accept: boolean): void {
     const result = store.command('answerOffer', offerId, accept);
@@ -61,9 +63,11 @@
   }
 </script>
 
-{#if offers.length === 0}
+<CoachOffers />
+
+{#if offers.length === 0 && coachOfferCount === 0}
   <p class="vide">Aucune offre. Personne ne veut de tes gars. Pour l'instant.</p>
-{:else}
+{:else if offers.length > 0}
   {#if !windowOpen}
     <p class="texte-s malus">Mercato fermé : impossible d'accepter avant la réouverture. Refuser reste possible.</p>
   {/if}

@@ -6,8 +6,11 @@
 import type { MatchSummary } from '../match/types';
 import type { FacilityId, Instructions, Lineup, TrainingFocus } from '../types';
 import {
+  answerCoachOffer,
   answerDialogue,
   answerOffer,
+  cancelCoachOffer,
+  makeCoachOffer,
   autoPickLineup,
   buy,
   chooseRerolledAbility,
@@ -38,6 +41,9 @@ export const GAME_COMMANDS = {
   chooseRerolledAbility: (state: GameState, abilityId: string | null) => chooseRerolledAbility(state, abilityId),
   acceptJob: (state: GameState, clubId: string) => acceptJob(state, clubId),
   submitMatch: (state: GameState, summary: MatchSummary) => applyHumanMatchSummary(state, summary),
+  makeCoachOffer: (state: GameState, playerId: string, amount: number) => makeCoachOffer(state, playerId, amount),
+  cancelCoachOffer: (state: GameState, offerId: string) => cancelCoachOffer(state, offerId),
+  answerCoachOffer: (state: GameState, offerId: string, accept: boolean) => answerCoachOffer(state, offerId, accept),
 } as const;
 
 export type GameCommands = typeof GAME_COMMANDS;
