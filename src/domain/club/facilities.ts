@@ -1,13 +1,13 @@
 import type { Club, Facilities, FacilityId } from '../types';
 
 /**
- * Installations du club (CLUB-09) : cinq bâtiments à améliorer avec le budget, cinq niveaux chacun.
+ * Installations du club (CLUB-09) : six bâtiments à améliorer avec le budget, cinq niveaux chacun.
  * Chaque niveau rapporte un bonus chiffré ; aucun entretien à payer.
  */
 
 export const MAX_FACILITY_LEVEL = 5;
-export const FACILITY_IDS: readonly FacilityId[] = ['buvette', 'tribunes', 'vestiaires', 'entrainement', 'formation'];
-export const NO_FACILITIES: Facilities = { buvette: 0, tribunes: 0, vestiaires: 0, entrainement: 0, formation: 0 };
+export const FACILITY_IDS: readonly FacilityId[] = ['buvette', 'tribunes', 'vestiaires', 'entrainement', 'formation', 'scouts'];
+export const NO_FACILITIES: Facilities = { buvette: 0, tribunes: 0, vestiaires: 0, entrainement: 0, formation: 0, scouts: 0 };
 
 /** Prix du premier niveau ; chaque niveau suivant coûte deux fois plus. */
 const BASE_COST = 10_000;
@@ -22,6 +22,14 @@ const RECOVERY_PER_LEVEL = 5;
 const TRAINING_PER_LEVEL = 0.2;
 const YOUTH_RATING_PER_LEVEL = 3;
 const YOUTH_POTENTIAL_PER_LEVEL = 5;
+/** Cellule de scouts (CLUB-10) : rapports par semaine, part des joueurs découverts d'office, précision du potentiel. */
+const SCOUT_REPORTS_BASE = 2;
+const SCOUT_REPORTS_PER_LEVEL = 2;
+const SCOUT_AUTO_BASE = 0.05;
+const SCOUT_AUTO_PER_LEVEL = 0.05;
+const SCOUT_RANGE_BASE = 10;
+const SCOUT_RANGE_PER_LEVEL = 2;
+const SCOUT_RANGE_MIN = 2;
 
 export interface FacilityInfo {
   label: string;
@@ -53,6 +61,14 @@ export const FACILITIES: Record<FacilityId, FacilityInfo> = {
     description: 'Des plots neufs, des filets sans trous et un terrain sans taupes.',
     effect: (level) => `${percent(level * TRAINING_PER_LEVEL)} de vitesse de progression à l’entraînement`,
   },
+  scouts: {
+    label: 'Cellule de scouts',
+    description: 'Des bénévoles en K-way qui notent tout dans un carnet à spirale, au bord de tous les terrains du département.',
+    effect: (level) => {
+      const scouting = facilityBonus.scouting({ ...NO_FACILITIES, scouts: level });
+      return `${scouting.weeklyReports} rapports par semaine, ${Math.round(scouting.autoShare * 100)} % des joueurs connus d'office, potentiel à ±${scouting.rangeHalfWidth}`;
+    },
+  },
   formation: {
     label: 'Centre de formation',
     description: 'Chaque été, un jeune du club est promu en équipe première.',
@@ -76,4 +92,9 @@ export const facilityBonus = {
   extraRecovery: (facilities: Facilities) => facilities.vestiaires * RECOVERY_PER_LEVEL,
   trainingRate: (facilities: Facilities) => 1 + facilities.entrainement * TRAINING_PER_LEVEL,
   youth: (facilities: Facilities) => ({ rating: facilities.formation * YOUTH_RATING_PER_LEVEL, potential: facilities.formation * YOUTH_POTENTIAL_PER_LEVEL }),
+  scouting: (facilities: Facilities) => ({
+    weeklyReports: SCOUT_REPORTS_BASE + facilities.scouts * SCOUT_REPORTS_PER_LEVEL,
+    autoShare: SCOUT_AUTO_BASE + facilities.scouts * SCOUT_AUTO_PER_LEVEL,
+    rangeHalfWidth: Math.max(SCOUT_RANGE_MIN, SCOUT_RANGE_BASE - facilities.scouts * SCOUT_RANGE_PER_LEVEL),
+  }),
 };

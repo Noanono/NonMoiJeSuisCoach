@@ -17,6 +17,7 @@ import { scaleConfidenceDelta } from './difficulty';
 import { pickJobOffers } from './jobs';
 import { playAiFixture } from './matches';
 import { pruneCoachOffers } from './actions';
+import { refillScoutReports } from './scouting';
 import { callUpStandIns } from './standIns';
 import { divisionStandings, endSeason, refreshAiLineups } from './season';
 import { clubPlayers, humanClub, humanDivision, humanFixture, humanFixtureAt, humanSquad, isDerby, replacePlayers, weekFixtures } from './selectors';
@@ -64,6 +65,7 @@ export function advanceWeek(state: GameState): void {
       settleFinances(state, fixture, outcome);
       updatePresident(state, fixture, outcome);
       updateOffers(state, rng);
+      refillScoutReports(state);
     });
     advanceCup(state, rng);
     pruneCoachOffers(state, state.week + 1, isTransferWindowOpen(state.week + 1));

@@ -103,10 +103,10 @@ describe('achats et ventes (CLUB-02)', () => {
 });
 
 describe('liste du mercato', () => {
-  test('la capacité d’un joueur n’est affichée que si elle est révélée', () => {
+  test('la rareté de la capacité est toujours listée ; son nom dépend de la cellule de scouts (CLUB-10)', () => {
     const listings = marketListings(makeWorld(), 'coach', abilityOf);
     expect(listings.some((listing) => listing.clubId === 'coach')).toBe(false);
-    expect(listings.find((listing) => listing.playerId === 'ai-0')?.ability).toBeNull();
+    expect(listings.find((listing) => listing.playerId === 'ai-0')?.ability).toEqual({ abilityId: 'legende', rarity: 'legendary' });
     expect(listings.find((listing) => listing.playerId === 'ai-1')?.ability).toEqual({ abilityId: 'la-mobylette', rarity: 'common' });
   });
 });

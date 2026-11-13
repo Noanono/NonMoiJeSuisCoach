@@ -24,6 +24,7 @@ import {
 } from './actions';
 import { acceptJob } from './career';
 import { applyHumanMatchSummary } from './matches';
+import { scoutPlayer } from './scouting';
 import type { GameState } from './state';
 
 export const GAME_COMMANDS = {
@@ -44,6 +45,7 @@ export const GAME_COMMANDS = {
   makeCoachOffer: (state: GameState, playerId: string, amount: number) => makeCoachOffer(state, playerId, amount),
   cancelCoachOffer: (state: GameState, offerId: string) => cancelCoachOffer(state, offerId),
   answerCoachOffer: (state: GameState, offerId: string, accept: boolean) => answerCoachOffer(state, offerId, accept),
+  scoutPlayer: (state: GameState, playerId: string) => scoutPlayer(state, playerId),
 } as const;
 
 export type GameCommands = typeof GAME_COMMANDS;

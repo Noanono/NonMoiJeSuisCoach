@@ -12,7 +12,8 @@
   import { getAbility } from '../../domain/abilities/catalog';
   import { RARITY_LABEL } from '../../domain/abilities/progression';
   import { MAX_SQUAD_SIZE } from '../../domain/club/transfers';
-  import { coachOffersSent, humanClub, isCoachPlayer, market, transferWindowOpen } from '../../domain/game';
+  import { abilityKnown, coachOffersSent, humanClub, isCoachPlayer, knowledgeOf, market, potentialView, scoutingOf, transferWindowOpen } from '../../domain/game';
+  import { potentialLabel, potentialSortValue } from './views';
   import type { Position, Rarity } from '../../domain/types';
   import { fullName, POSITION_LABEL, POSITION_ORDER, POSITION_SHORT } from './describe';
   import { AGE_BANDS, inAgeBand, nextTransferWindowWeek, sortRows, transferWindowLastWeek, type AgeBandId, type SortDirection } from './views';
@@ -33,6 +34,7 @@
         closing: open ? transferWindowLastWeek(game.week) : null,
         budget: club.budget,
         squadSize: club.playerIds.length,
+        reports: scoutingOf(game).reports,
       };
     }),
   );
@@ -51,9 +53,12 @@
           overall: listing.overall,
           club: listing.clubId ? (game.clubs[listing.clubId]?.shortName ?? '?') : 'Libre',
           clubName: listing.clubId ? (game.clubs[listing.clubId]?.name ?? 'Club inconnu') : 'Sans club',
-          ability: listing.ability ? `${getAbility(listing.ability.abilityId).name} · ${RARITY_LABEL[listing.ability.rarity]} · niv. ${player.ability.level}` : null,
-          abilityLevel: listing.ability ? player.ability.level : 0,
+          // Rareté toujours visible ; nom de la capacité et potentiel selon la cellule de scouts (CLUB-10).
+          ability: listing.ability && abilityKnown(game, player) ? `${getAbility(listing.ability.abilityId).name} · ${RARITY_LABEL[listing.ability.rarity]} · niv. ${player.ability.level}` : `??? · ${RARITY_LABEL[listing.ability!.rarity]}`,
+          abilityLevel: player.ability.level,
           rarity: listing.ability?.rarity ?? null,
+          potential: potentialView(game, player),
+          scouted: knowledgeOf(game, player),
           price: listing.price,
           salary: listing.askingSalary,
           // Joueur d'un autre coach de la ligue : pas d'achat, une offre (MULTI-08).
@@ -65,7 +70,7 @@
   );
 
   type Listing = (typeof listings)[number];
-  type SortKey = 'name' | 'position' | 'age' | 'overall' | 'club' | 'ability' | 'price' | 'salary';
+  type SortKey = 'name' | 'position' | 'age' | 'overall' | 'potential' | 'club' | 'ability' | 'price' | 'salary';
 
   interface Column {
     key: SortKey;
@@ -80,6 +85,7 @@
     { key: 'position', label: 'Poste', numeric: false, sortValue: (row) => POSITION_ORDER[row.position], firstDirection: 'asc' },
     { key: 'age', label: 'Âge', numeric: true, sortValue: (row) => row.age, firstDirection: 'asc' },
     { key: 'overall', label: 'Note', numeric: true, sortValue: (row) => row.overall, firstDirection: 'desc' },
+    { key: 'potential', label: 'Potentiel', numeric: true, sortValue: (row) => potentialSortValue(row.potential), firstDirection: 'desc' },
     { key: 'club', label: 'Club', numeric: false, sortValue: (row) => row.club, firstDirection: 'asc' },
     { key: 'ability', label: 'Capacité', numeric: false, sortValue: (row) => (row.rarity ? RARITY_ORDER[row.rarity] * 10 + row.abilityLevel : 0), firstDirection: 'desc' },
     { key: 'price', label: 'Prix', numeric: true, sortValue: (row) => row.price, firstDirection: 'asc' },
@@ -128,6 +134,10 @@
     shown = PAGE_SIZE;
   }
 
+  function scout(playerId: string): void {
+    store.notify(store.command('scoutPlayer', playerId).message);
+  }
+
   function purchase(playerId: string): void {
     const result = store.command('buy', playerId);
     store.notify(result.message);
@@ -154,7 +164,7 @@
   <div class="colonnes large-gauche">
     <Card title="Mercato" scotch>
       {#snippet actions()}
-        <span class="tampon">Budget {formatEuros(transferWindow.budget)} · {transferWindow.squadSize} / {MAX_SQUAD_SIZE} joueurs</span>
+        <span class="tampon">Budget {formatEuros(transferWindow.budget)} · {transferWindow.squadSize} / {MAX_SQUAD_SIZE} joueurs · {transferWindow.reports} rapport{transferWindow.reports > 1 ? 's' : ''} de scout</span>
       {/snippet}
       {#if transferWindow.open}
         <p class="texte-fort">Fenêtre ouverte jusqu'à la fin de la semaine <span class="mono">{transferWindow.closing}</span> : achète, vends, négocie.</p>
@@ -239,11 +249,23 @@
                 <td><abbr title={POSITION_LABEL[listing.position]}>{POSITION_SHORT[listing.position]}</abbr></td>
                 <td class="num">{listing.age}</td>
                 <td class="num"><RatingBadge value={listing.overall} size="s" /></td>
+                <td class="num mono" title={listing.potential.kind === 'range' ? 'Estimation de tes scouts' : undefined}>{potentialLabel(listing.potential)}</td>
                 <td><abbr title={listing.clubName}>{listing.club}</abbr></td>
                 <td><RarityTag rarity={listing.rarity} text={listing.ability ?? '???'} /></td>
                 <td class="num">{formatEuros(listing.price)}</td>
                 <td class="num">{formatEuros(listing.salary)}</td>
-                <td>
+                <td class="actions-ligne">
+                  {#if listing.scouted < 2}
+                    <Button
+                      size="s"
+                      variant="ghost"
+                      disabled={transferWindow.reports === 0}
+                      aria-label={`Envoyer un scout sur ${listing.name}`}
+                      onclick={() => scout(listing.id)}
+                    >
+                      {listing.scouted === 0 ? 'Scouter' : 'Affiner'}
+                    </Button>
+                  {/if}
                   {#if listing.coachOwned}
                     {#if offerFor === listing.id}
                       <form class="offre-coach" onsubmit={(event) => sendOffer(event, listing.id)}>
@@ -288,6 +310,9 @@
 {/if}
 
 <style>
+  .actions-ligne {
+    white-space: nowrap;
+  }
   .offre-coach {
     display: flex;
     flex-wrap: wrap;

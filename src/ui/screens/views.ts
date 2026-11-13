@@ -2,7 +2,7 @@
  * Petites vues calculées pour les écrans de gestion : forme récente, libellé de la semaine,
  * prochaine fenêtre de mercato, tri des tableaux. Fonctions pures, testées à part.
  */
-import { outcomeFor } from '../../domain/game';
+import { outcomeFor, type PotentialView } from '../../domain/game';
 import { SEASON_CALENDAR, type SeasonWeek } from '../../domain/league/calendar';
 import { cupRoundName, type CupState } from '../../domain/league/cup';
 import type { Fixture } from '../../domain/types';
@@ -86,4 +86,18 @@ export function sortRows<Row>(rows: readonly Row[], key: (row: Row) => number | 
     const order = typeof left === 'number' && typeof right === 'number' ? left - right : String(left).localeCompare(String(right), 'fr');
     return order * factor;
   });
+}
+
+/** Potentiel tel que la cellule de scouts le connaît (CLUB-10) : « 72 », « 60-75 » ou « ? ». */
+export function potentialLabel(view: PotentialView): string {
+  if (view.kind === 'exact') return String(view.value);
+  if (view.kind === 'range') return `${view.min}-${view.max}`;
+  return '?';
+}
+
+/** Tri par potentiel : la valeur, le milieu de la plage, les inconnus à la fin. */
+export function potentialSortValue(view: PotentialView): number {
+  if (view.kind === 'exact') return view.value;
+  if (view.kind === 'range') return (view.min + view.max) / 2;
+  return -1;
 }

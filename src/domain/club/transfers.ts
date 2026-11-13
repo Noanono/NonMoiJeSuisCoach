@@ -173,7 +173,8 @@ export function marketListings(world: TransferWorld, buyerId: string, abilityOf:
       overall: overall(player),
       price: askingPrice(player, rarity),
       askingSalary: askingSalary(player, rarity),
-      ability: player.ability.revealed ? { abilityId: player.ability.abilityId, rarity } : null,
+      // La rareté se voit toujours ; le nom et l'effet dépendent du scout du coach (CLUB-10).
+      ability: { abilityId: player.ability.abilityId, rarity },
     });
   }
   return listings.sort((a, b) => b.overall - a.overall);

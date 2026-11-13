@@ -12,7 +12,8 @@
   import { getAbility } from '../../../domain/abilities/catalog';
   import { RARITY_LABEL } from '../../../domain/abilities/progression';
   import { playerValue } from '../../../domain/club/valuation';
-  import { transferWindowOpen } from '../../../domain/game';
+  import { abilityKnown, knowledgeOf, potentialView, scoutingOf, transferWindowOpen } from '../../../domain/game';
+  import { potentialLabel } from '../views';
   import { overall } from '../../../domain/player/rating';
   import type { AttributeName } from '../../../domain/types';
   import { ATTRIBUTE_LABEL, availabilityLabel, fullName, POSITION_LABEL } from '../describe';
@@ -43,7 +44,11 @@
         age: player.age,
         overall: overall(player),
         evolution: overall(player) - player.overallAtSeasonStart,
-        potential: player.potential,
+        potential: potentialLabel(potentialView(game, player)),
+        /** Cellule de scouts (CLUB-10) : capacité connue, et ce qu'un rapport peut encore apprendre. */
+        abilityKnown: abilityKnown(game, player),
+        scoutable: !own && knowledgeOf(game, player) < 2,
+        reports: scoutingOf(game).reports,
         fatigue: player.fatigue,
         salary: player.salary,
         availability: availabilityLabel(player),
@@ -82,7 +87,7 @@
       <dl class="paire texte-s">
         <dt>Rareté</dt>
         <dd>
-          {#if view.progress.revealed}{RARITY_LABEL[view.ability.rarity]}{:else}???{/if}
+          {#if view.own && !view.progress.revealed}???{:else}{RARITY_LABEL[view.ability.rarity]}{/if}
         </dd>
         <dt>Salaire</dt>
         <dd class="mono">{formatEuros(view.salary)} / sem.</dd>
@@ -120,10 +125,21 @@
       </table>
     </div>
 
-    {#if view.progress.revealed}
+    {#if view.abilityKnown}
       <AbilityPanel ability={view.ability} progress={view.progress} />
     {:else}
-      <p class="texte-s"><span class="tampon">Capacité</span> ??? {view.own ? 'Elle se dévoilera à sa première activation en match.' : 'Elle se dévoilera à son arrivée au club.'}</p>
+      <p class="texte-s">
+        <span class="tampon">Capacité</span> ???
+        {view.own ? 'Elle se dévoilera à sa première activation en match.' : `Capacité ${RARITY_LABEL[view.ability.rarity].toLowerCase()}, mais tes scouts ne l'ont pas encore vue.`}
+      </p>
+    {/if}
+    {#if view.scoutable}
+      <div class="ligne-actions">
+        <Button size="s" variant="ghost" disabled={view.reports === 0} onclick={() => (feedback = store.command('scoutPlayer', playerId).message)}>
+          {view.abilityKnown ? 'Affiner le potentiel' : 'Envoyer un scout'} ({view.reports} rapport{view.reports > 1 ? 's' : ''})
+        </Button>
+      </div>
+      {#if !view.own}<p class="texte-s texte-fort" role="status">{feedback ?? ''}</p>{/if}
     {/if}
 
     {#if view.own}

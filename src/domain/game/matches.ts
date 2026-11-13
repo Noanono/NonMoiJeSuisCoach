@@ -10,6 +10,7 @@ import { DIFFICULTIES } from './difficulty';
 import { clubPlayers, humanFixture, humanSquad, isDerby } from './selectors';
 import type { GameState } from './state';
 import { asCoachOfClub } from './coaches';
+import { scoutOpponents } from './scouting';
 import { autoPickLineup } from './actions';
 
 /** Fatigue d'un match simulé rapidement (matchs IA contre IA). */
@@ -137,6 +138,8 @@ function applyCoachSide(state: GameState, fixture: Fixture, summary: MatchSummar
   state.lastAppearances = summary.players.filter((report) => report.played && state.players[report.playerId]?.clubId === state.humanClubId).map((report) => report.playerId);
   const humanSide: Side = fixture.homeId === state.humanClubId ? 'home' : 'away';
   for (const consequence of summary.consequences[humanSide]) applyConsequence(state, consequence);
+  // L'adversaire affronté est connu de la cellule de scouts (CLUB-10).
+  scoutOpponents(state, humanSide === 'home' ? fixture.awayId : fixture.homeId);
 }
 
 function toResult(summary: MatchSummary, fixture: Fixture): MatchResult {

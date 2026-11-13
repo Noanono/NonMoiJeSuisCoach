@@ -227,7 +227,7 @@ export interface Club {
   facilities?: Facilities;
 }
 
-export type FacilityId = 'buvette' | 'tribunes' | 'vestiaires' | 'entrainement' | 'formation';
+export type FacilityId = 'buvette' | 'tribunes' | 'vestiaires' | 'entrainement' | 'formation' | 'scouts';
 export type Facilities = Record<FacilityId, number>;
 
 export interface Division {
