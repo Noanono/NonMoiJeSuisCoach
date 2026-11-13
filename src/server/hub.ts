@@ -15,6 +15,7 @@ import {
   isCommandName,
   joinMidGame,
   newMultiplayerGame,
+  revealOwnSquads,
   runCommand,
   signupError,
   syncFocus,
@@ -107,6 +108,8 @@ export class MultiplayerHub {
 
   constructor(snapshot: HubSnapshot) {
     this.snapshot = snapshot;
+    // Anciennes ligues : chaque coach connaît les capacités de son effectif (CLUB-10).
+    if (snapshot.game) revealOwnSquads(snapshot.game);
   }
 
   static create(seed: number, difficulty: Difficulty = 'normal'): MultiplayerHub {

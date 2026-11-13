@@ -12,7 +12,7 @@
   import { getAbility } from '../../domain/abilities/catalog';
   import { RARITY_LABEL } from '../../domain/abilities/progression';
   import { MAX_SQUAD_SIZE } from '../../domain/club/transfers';
-  import { abilityKnown, coachOffersSent, humanClub, isCoachPlayer, knowledgeOf, market, potentialView, scoutingOf, transferWindowOpen } from '../../domain/game';
+  import { abilityKnown, coachOffersSent, humanClub, isCoachPlayer, isScouted, market, potentialView, scoutingOf, transferWindowOpen } from '../../domain/game';
   import { potentialLabel, potentialSortValue } from './views';
   import type { Position, Rarity } from '../../domain/types';
   import { fullName, POSITION_LABEL, POSITION_ORDER, POSITION_SHORT } from './describe';
@@ -58,7 +58,7 @@
           abilityLevel: player.ability.level,
           rarity: listing.ability?.rarity ?? null,
           potential: potentialView(game, player),
-          scouted: knowledgeOf(game, player),
+          scouted: isScouted(game, player),
           price: listing.price,
           salary: listing.askingSalary,
           // Joueur d'un autre coach de la ligue : pas d'achat, une offre (MULTI-08).
@@ -249,13 +249,13 @@
                 <td><abbr title={POSITION_LABEL[listing.position]}>{POSITION_SHORT[listing.position]}</abbr></td>
                 <td class="num">{listing.age}</td>
                 <td class="num"><RatingBadge value={listing.overall} size="s" /></td>
-                <td class="num mono" title={listing.potential.kind === 'range' ? 'Estimation de tes scouts' : undefined}>{potentialLabel(listing.potential)}</td>
+                <td class="num mono">{potentialLabel(listing.potential)}</td>
                 <td><abbr title={listing.clubName}>{listing.club}</abbr></td>
                 <td><RarityTag rarity={listing.rarity} text={listing.ability ?? '???'} /></td>
                 <td class="num">{formatEuros(listing.price)}</td>
                 <td class="num">{formatEuros(listing.salary)}</td>
                 <td class="actions-ligne">
-                  {#if listing.scouted < 2}
+                  {#if !listing.scouted}
                     <Button
                       size="s"
                       variant="ghost"
@@ -263,7 +263,7 @@
                       aria-label={`Envoyer un scout sur ${listing.name}`}
                       onclick={() => scout(listing.id)}
                     >
-                      {listing.scouted === 0 ? 'Scouter' : 'Affiner'}
+                      Scouter
                     </Button>
                   {/if}
                   {#if listing.coachOwned}

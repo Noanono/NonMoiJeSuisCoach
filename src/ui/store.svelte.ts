@@ -7,6 +7,7 @@ import {
   advanceWeek,
   createGameSaves,
   newGame,
+  revealOwnSquads,
   runCommand,
   saveMeta,
   startHumanMatch,
@@ -164,7 +165,10 @@ class AppStore {
   }
 
   load(slot: SaveSlot): void {
-    this.game = saves.load(slot);
+    const game = saves.load(slot);
+    // Anciennes sauvegardes : les capacités de son effectif sont désormais toujours connues (CLUB-10).
+    if (game) revealOwnSquads(game);
+    this.game = game;
     this.slot = slot;
     this.version += 1;
     this.go('dashboard');

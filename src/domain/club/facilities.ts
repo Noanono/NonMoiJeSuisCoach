@@ -22,14 +22,11 @@ const RECOVERY_PER_LEVEL = 5;
 const TRAINING_PER_LEVEL = 0.2;
 const YOUTH_RATING_PER_LEVEL = 3;
 const YOUTH_POTENTIAL_PER_LEVEL = 5;
-/** Cellule de scouts (CLUB-10) : rapports par semaine, part des joueurs découverts d'office, précision du potentiel. */
+/** Cellule de scouts (CLUB-10) : rapports par semaine et part des joueurs découverts d'office (5 à 55 %). */
 const SCOUT_REPORTS_BASE = 2;
 const SCOUT_REPORTS_PER_LEVEL = 2;
 const SCOUT_AUTO_BASE = 0.05;
-const SCOUT_AUTO_PER_LEVEL = 0.05;
-const SCOUT_RANGE_BASE = 10;
-const SCOUT_RANGE_PER_LEVEL = 2;
-const SCOUT_RANGE_MIN = 2;
+const SCOUT_AUTO_PER_LEVEL = 0.1;
 
 export interface FacilityInfo {
   label: string;
@@ -66,7 +63,7 @@ export const FACILITIES: Record<FacilityId, FacilityInfo> = {
     description: 'Des bénévoles en K-way qui notent tout dans un carnet à spirale, au bord de tous les terrains du département.',
     effect: (level) => {
       const scouting = facilityBonus.scouting({ ...NO_FACILITIES, scouts: level });
-      return `${scouting.weeklyReports} rapports par semaine, ${Math.round(scouting.autoShare * 100)} % des joueurs connus d'office, potentiel à ±${scouting.rangeHalfWidth}`;
+      return `${scouting.weeklyReports} rapports par semaine, ${Math.round(scouting.autoShare * 100)} % des joueurs connus d'office`;
     },
   },
   formation: {
@@ -95,6 +92,5 @@ export const facilityBonus = {
   scouting: (facilities: Facilities) => ({
     weeklyReports: SCOUT_REPORTS_BASE + facilities.scouts * SCOUT_REPORTS_PER_LEVEL,
     autoShare: SCOUT_AUTO_BASE + facilities.scouts * SCOUT_AUTO_PER_LEVEL,
-    rangeHalfWidth: Math.max(SCOUT_RANGE_MIN, SCOUT_RANGE_BASE - facilities.scouts * SCOUT_RANGE_PER_LEVEL),
   }),
 };

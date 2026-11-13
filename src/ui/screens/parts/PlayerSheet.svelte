@@ -12,7 +12,7 @@
   import { getAbility } from '../../../domain/abilities/catalog';
   import { RARITY_LABEL } from '../../../domain/abilities/progression';
   import { playerValue } from '../../../domain/club/valuation';
-  import { abilityKnown, knowledgeOf, potentialView, scoutingOf, transferWindowOpen } from '../../../domain/game';
+  import { abilityKnown, isScouted, potentialView, scoutingOf, transferWindowOpen } from '../../../domain/game';
   import { potentialLabel } from '../views';
   import { overall } from '../../../domain/player/rating';
   import type { AttributeName } from '../../../domain/types';
@@ -47,7 +47,7 @@
         potential: potentialLabel(potentialView(game, player)),
         /** Cellule de scouts (CLUB-10) : capacité connue, et ce qu'un rapport peut encore apprendre. */
         abilityKnown: abilityKnown(game, player),
-        scoutable: !own && knowledgeOf(game, player) < 2,
+        scoutable: !own && !isScouted(game, player),
         reports: scoutingOf(game).reports,
         fatigue: player.fatigue,
         salary: player.salary,
@@ -136,7 +136,7 @@
     {#if view.scoutable}
       <div class="ligne-actions">
         <Button size="s" variant="ghost" disabled={view.reports === 0} onclick={() => (feedback = store.command('scoutPlayer', playerId).message)}>
-          {view.abilityKnown ? 'Affiner le potentiel' : 'Envoyer un scout'} ({view.reports} rapport{view.reports > 1 ? 's' : ''})
+          Envoyer un scout ({view.reports} rapport{view.reports > 1 ? 's' : ''})
         </Button>
       </div>
       {#if !view.own}<p class="texte-s texte-fort" role="status">{feedback ?? ''}</p>{/if}

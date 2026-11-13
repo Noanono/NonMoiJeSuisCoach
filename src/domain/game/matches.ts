@@ -10,7 +10,7 @@ import { DIFFICULTIES } from './difficulty';
 import { clubPlayers, humanFixture, humanSquad, isDerby } from './selectors';
 import type { GameState } from './state';
 import { asCoachOfClub } from './coaches';
-import { scoutOpponents } from './scouting';
+import { isScouted, scoutOpponents } from './scouting';
 import { autoPickLineup } from './actions';
 
 /** Fatigue d'un match simulé rapidement (matchs IA contre IA). */
@@ -69,7 +69,7 @@ export function startHumanMatch(state: GameState, rng: Rng): MatchState {
   const humanSide: Side = fixture.homeId === state.humanClubId ? 'home' : 'away';
   const aiSide: Side = humanSide === 'home' ? 'away' : 'home';
   const boost = DIFFICULTIES[state.difficulty].opponentBoost;
-  return createMatch({
+  const match = createMatch({
     home: teamSheet(state, fixture.homeId),
     away: teamSheet(state, fixture.awayId),
     seed: rng.int(1, 2 ** 31 - 2),
@@ -78,6 +78,12 @@ export function startHumanMatch(state: GameState, rng: Rng): MatchState {
     ...(boost !== 0 ? { boosts: { [aiSide]: boost } } : {}),
     derby: isDerby(state, fixture),
   });
+  // Un adversaire scouté joue capacités connues, même celles qui se cachent d'habitude (CLUB-10).
+  for (const opponent of match[aiSide].players) {
+    const player = state.players[opponent.id];
+    if (player && isScouted(state, player)) opponent.abilityRevealed = true;
+  }
+  return match;
 }
 
 /** Reporte le match du coach sur la partie : résultat, fatigue, cartons, blessures, progression des capacités. */

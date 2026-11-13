@@ -88,16 +88,12 @@ export function sortRows<Row>(rows: readonly Row[], key: (row: Row) => number | 
   });
 }
 
-/** Potentiel tel que la cellule de scouts le connaît (CLUB-10) : « 72 », « 60-75 » ou « ? ». */
+/** Potentiel tel que la cellule de scouts le connaît (CLUB-10) : « 72 » ou « ? ». */
 export function potentialLabel(view: PotentialView): string {
-  if (view.kind === 'exact') return String(view.value);
-  if (view.kind === 'range') return `${view.min}-${view.max}`;
-  return '?';
+  return view.kind === 'exact' ? String(view.value) : '?';
 }
 
-/** Tri par potentiel : la valeur, le milieu de la plage, les inconnus à la fin. */
+/** Tri par potentiel : la valeur, les inconnus à la fin. */
 export function potentialSortValue(view: PotentialView): number {
-  if (view.kind === 'exact') return view.value;
-  if (view.kind === 'range') return (view.min + view.max) / 2;
-  return -1;
+  return view.kind === 'exact' ? view.value : -1;
 }

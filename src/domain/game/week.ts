@@ -17,7 +17,7 @@ import { scaleConfidenceDelta } from './difficulty';
 import { pickJobOffers } from './jobs';
 import { playAiFixture } from './matches';
 import { pruneCoachOffers } from './actions';
-import { refillScoutReports } from './scouting';
+import { refillScoutReports, revealOwnSquads } from './scouting';
 import { callUpStandIns } from './standIns';
 import { divisionStandings, endSeason, refreshAiLineups } from './season';
 import { clubPlayers, humanClub, humanDivision, humanFixture, humanFixtureAt, humanSquad, isDerby, replacePlayers, weekFixtures } from './selectors';
@@ -88,6 +88,8 @@ export function finishWeek(state: GameState, rng: Rng): void {
   else if (seasonWeek(state.week).kind === 'playoff') schedulePlayoffs(state);
   callUpAllStandIns(state, rng);
   refreshAiLineups(state);
+  // Jeunes promus et dépanneurs arrivent avec leur capacité connue de leur coach.
+  revealOwnSquads(state);
 }
 
 /** Barrages d'accession (UNIV-04) : tirés du classement final, une seule fois. */

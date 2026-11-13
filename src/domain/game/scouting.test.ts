@@ -3,8 +3,11 @@ import { facilityBonus, NO_FACILITIES } from '../club/facilities';
 import { asCoach } from './coaches';
 import { newMultiplayerGame } from './multiplayer';
 import { newGame } from './newGame';
-import { abilityKnown, knowledgeOf, potentialView, refillScoutReports, scoutingOf, scoutOpponents, scoutPlayer, weeklyReports } from './scouting';
-import { humanClub } from './selectors';
+import { abilityKnown, isScouted, potentialView, refillScoutReports, revealOwnSquads, scoutingOf, scoutOpponents, scoutPlayer, weeklyReports } from './scouting';
+import { autoPickLineup } from './actions';
+import { humanLineupErrors, startHumanMatch } from './matches';
+import { withRng } from './week';
+import { humanClub, humanFixture } from './selectors';
 import type { GameState } from './state';
 
 function strangers(state: GameState) {
@@ -12,43 +15,37 @@ function strangers(state: GameState) {
 }
 
 describe('cellule de scouts (CLUB-10)', () => {
-  test('progression : 2 à 12 rapports par semaine, 5 à 30 % connus d’office, plage qui se resserre', () => {
+  test('progression : 2 à 12 rapports par semaine, 5 à 55 % connus d’office', () => {
     const at = (level: number) => facilityBonus.scouting({ ...NO_FACILITIES, scouts: level });
-    expect(at(0)).toEqual({ weeklyReports: 2, autoShare: 0.05, rangeHalfWidth: 10 });
-    expect(at(5)).toEqual({ weeklyReports: 12, autoShare: 0.3, rangeHalfWidth: 2 });
+    expect(at(0).weeklyReports).toBe(2);
+    expect(at(0).autoShare).toBeCloseTo(0.05);
+    expect(at(5).weeklyReports).toBe(12);
+    expect(at(5).autoShare).toBeCloseTo(0.55);
   });
 
-  test('par défaut, environ 5 % des joueurs des autres clubs sont connus ; ses joueurs, tous', () => {
+  test('par défaut, environ 5 % des joueurs des autres clubs sont connus ; bien plus avec une cellule améliorée', () => {
     const state = newGame({ seed: 4, clubName: 'Scout FC' });
     const others = strangers(state);
-    const share = others.filter((player) => knowledgeOf(state, player) === 1).length / others.length;
-    expect(share).toBeGreaterThan(0.02);
-    expect(share).toBeLessThan(0.09);
-    for (const playerId of humanClub(state).playerIds) expect(knowledgeOf(state, state.players[playerId]!)).toBe(2);
+    const share = () => others.filter((player) => isScouted(state, player)).length / others.length;
+    expect(share()).toBeGreaterThan(0.02);
+    expect(share()).toBeLessThan(0.09);
+    for (const playerId of humanClub(state).playerIds) expect(isScouted(state, state.players[playerId]!)).toBe(true);
     humanClub(state).facilities = { ...NO_FACILITIES, scouts: 5 };
-    const bigger = others.filter((player) => knowledgeOf(state, player) === 1).length / others.length;
-    expect(bigger).toBeGreaterThan(0.24);
+    expect(share()).toBeGreaterThan(0.48);
   });
 
-  test('un rapport révèle la capacité et une plage contenant le potentiel ; le 2e, le potentiel exact', () => {
+  test('un seul rapport révèle d’un coup la capacité et le potentiel exact', () => {
     const state = newGame({ seed: 5, clubName: 'Scout FC' });
-    const target = strangers(state).find((player) => knowledgeOf(state, player) === 0)!;
+    const target = strangers(state).find((player) => !isScouted(state, player))!;
     expect(abilityKnown(state, target)).toBe(false);
     expect(potentialView(state, target)).toEqual({ kind: 'unknown' });
     expect(scoutingOf(state).reports).toBe(2);
     expect(scoutPlayer(state, target.id).ok).toBe(true);
     expect(abilityKnown(state, target)).toBe(true);
-    const range = potentialView(state, target);
-    if (range.kind !== 'range') throw new Error('plage attendue');
-    expect(range.min).toBeLessThanOrEqual(target.potential);
-    expect(range.max).toBeGreaterThanOrEqual(target.potential);
-    expect(range.max - range.min).toBeLessThanOrEqual(20);
-    expect(scoutPlayer(state, target.id).ok).toBe(true);
     expect(potentialView(state, target)).toEqual({ kind: 'exact', value: target.potential });
-    // Plus de rapport cette semaine, et rien à apprendre de plus sur lui.
+    expect(scoutingOf(state).reports).toBe(1);
+    // Rien de plus à apprendre sur lui.
     expect(scoutPlayer(state, target.id).ok).toBe(false);
-    const other = strangers(state).find((player) => knowledgeOf(state, player) === 0)!;
-    expect(scoutPlayer(state, other.id).ok).toBe(false);
   });
 
   test('les rapports reviennent chaque semaine, stockables 2 semaines', () => {
@@ -69,9 +66,32 @@ describe('cellule de scouts (CLUB-10)', () => {
     });
     const opponent = Object.values(state.clubs).find((club) => !club.isHuman)!;
     asCoach(state, 'a', () => scoutOpponents(state, opponent.id));
-    const player = state.players[opponent.playerIds[0]!]!;
-    expect(asCoach(state, 'a', () => knowledgeOf(state, player))).toBeGreaterThanOrEqual(1);
-    const bobKnows = opponent.playerIds.filter((id) => asCoach(state, 'b', () => knowledgeOf(state, state.players[id]!)) > 0).length;
+    for (const playerId of opponent.playerIds) expect(asCoach(state, 'a', () => isScouted(state, state.players[playerId]!))).toBe(true);
+    const bobKnows = opponent.playerIds.filter((id) => asCoach(state, 'b', () => isScouted(state, state.players[id]!))).length;
     expect(bobKnows).toBeLessThan(opponent.playerIds.length);
+  });
+});
+
+describe('plus de capacité inconnue chez soi (CAP-13)', () => {
+  test('les jeunes promus et les dépanneurs arrivent avec leur capacité connue', () => {
+    const state = newGame({ seed: 8, clubName: 'Scout FC' });
+    for (const playerId of humanClub(state).playerIds) state.players[playerId]!.ability.revealed = false;
+    revealOwnSquads(state);
+    for (const playerId of humanClub(state).playerIds) expect(state.players[playerId]!.ability.revealed).toBe(true);
+    // Les autres clubs ne sont pas concernés.
+    expect(strangers(state).some((player) => !player.ability.revealed)).toBe(true);
+  });
+
+  test('en match, un adversaire scouté joue capacités connues', () => {
+    const state = newGame({ seed: 9, clubName: 'Scout FC' });
+    // Première semaine où le coach a un match.
+    while (!humanFixture(state)) state.week += 1;
+    const fixture = humanFixture(state)!;
+    const opponentId = fixture.homeId === state.humanClubId ? fixture.awayId : fixture.homeId;
+    scoutOpponents(state, opponentId);
+    if (humanLineupErrors(state).length > 0) autoPickLineup(state);
+    const match = withRng(state, (rng) => startHumanMatch(state, rng));
+    const opponents = fixture.homeId === state.humanClubId ? match.away : match.home;
+    expect(opponents.players.every((player) => player.abilityRevealed)).toBe(true);
   });
 });
