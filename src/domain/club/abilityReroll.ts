@@ -16,7 +16,7 @@ const REROLL_MIN_PRICE_TIER = 4;
 const PRICE_ROUNDING = 100;
 export const REROLL_OPTIONS = 3;
 /** Chance, pour chaque proposition, d'être d'un rang de rareté au-dessus. */
-export const REROLL_UPGRADE_CHANCE = 0.06;
+export const REROLL_UPGRADE_CHANCE = 0.04;
 
 const NEXT_RARITY: Record<Rarity, Rarity | null> = { common: 'rare', rare: 'legendary', legendary: 'mythic', mythic: null };
 /** Si une rareté est épuisée pour ce poste, on descend d'un rang (il n'y a que 4 mythiques). */

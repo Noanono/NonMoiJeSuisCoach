@@ -38,9 +38,9 @@ describe('reroll de capacité (CAP-23)', () => {
         total++;
       }
     }
-    // 6 % par proposition.
-    expect(upgrades / total).toBeGreaterThan(0.045);
-    expect(upgrades / total).toBeLessThan(0.075);
+    // 4 % par proposition.
+    expect(upgrades / total).toBeGreaterThan(0.028);
+    expect(upgrades / total).toBeLessThan(0.052);
   });
 
   test('on paie avant de voir, la nouvelle capacité repart au niveau 1', () => {

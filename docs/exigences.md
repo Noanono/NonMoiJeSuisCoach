@@ -107,7 +107,7 @@ Le gameplay repose sur les capacités : chaque joueur en a une, personnelle, que
 | CAP-22 | Relancer une capacité dont l'effet est encore actif le prolonge sans le cumuler. |
 | CAP-20 | Le coach peut annuler une activation tant qu'il n'a pas validé la cible : la capacité n'est alors pas consommée. |
 | CAP-21 | Une activation, du coach comme de l'adversaire, s'annonce au centre de l'écran pendant 5 secondes avec l'avatar du joueur et la description de l'effet, match en pause. Flèches vers les cibles, zone colorée et textes s'affichent sur le terrain. |
-| CAP-23 | Reroll de capacité depuis la fiche d'un joueur du coach dont la capacité est découverte : on paie d'abord (5 % de la valeur du joueur pour une commune, 8 % rare, 15 % légendaire, 25 % mythique ; au moins 300 € au District, ×2,5 par division), puis on choisit parmi 3 capacités compatibles avec le poste et absentes de l'effectif, ou on garde l'ancienne (l'argent est perdu). Chaque proposition a 6 % de chances d'être d'une rareté au-dessus. La nouvelle capacité repart au niveau 1, XP à zéro. |
+| CAP-23 | Reroll de capacité depuis la fiche d'un joueur du coach dont la capacité est découverte : on paie d'abord (5 % de la valeur du joueur pour une commune, 8 % rare, 15 % légendaire, 25 % mythique ; au moins 300 € au District, ×2,5 par division), puis on choisit parmi 3 capacités compatibles avec le poste et absentes de l'effectif, ou on garde l'ancienne (l'argent est perdu). Chaque proposition a 4 % de chances d'être d'une rareté au-dessus. La nouvelle capacité repart au niveau 1, XP à zéro. |
 
 ## Catalogue des capacités
 
