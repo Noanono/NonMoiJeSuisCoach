@@ -3,7 +3,7 @@
  * on lui parle à la même adresse. Il pousse la partie en direct (Server-Sent Events) ; on lui envoie
  * les commandes en POST.
  */
-import type { CoachPresence, ServerMessage } from '../server/hub';
+import type { CoachPresence, ServerInfo, ServerMessage, SlotInfo } from '../server/hub';
 import type { DuelView } from '../server/duel';
 import type { GameState } from '../domain/game';
 import type { MatchState } from '../domain/match';
@@ -25,16 +25,30 @@ interface ApiResult {
 }
 
 /** Identifiant du coach dans ce navigateur : il retrouve son club en revenant. */
-function coachId(): string {
+export function localCoachId(): string {
   try {
     const existing = localStorage.getItem(COACH_ID_KEY);
     if (existing) return existing;
-    const created = `coach-${crypto.randomUUID()}`;
+    const created = `coach-${randomToken()}`;
     localStorage.setItem(COACH_ID_KEY, created);
     return created;
   } catch {
-    return `coach-${Math.random().toString(36).slice(2)}`;
+    // Pas de stockage (navigation privée) : identité le temps de la session.
+    sessionId ??= `coach-${randomToken()}`;
+    return sessionId;
   }
+}
+
+let sessionId: string | null = null;
+
+/**
+ * Jeton aléatoire. Pas de `crypto.randomUUID` : il n'existe qu'en contexte sécurisé (localhost, https),
+ * or les amis de l'hôte ouvrent le jeu par l'adresse réseau du PC, en http.
+ */
+function randomToken(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 export function savedProfile(): CoachProfile {
@@ -48,7 +62,7 @@ export function savedProfile(): CoachProfile {
 }
 
 export class MultiClient {
-  readonly id = coachId();
+  readonly id = localCoachId();
   status = $state<ConnectionStatus>('idle');
   phase = $state<'lobby' | 'playing'>('lobby');
   /** Inscrit dans la ligue (salle d'attente ou partie). */
@@ -60,23 +74,46 @@ export class MultiClient {
   #source: EventSource | null = null;
   readonly #onGame: (game: GameState) => void;
   readonly #onDuel: (match: MatchState, view: DuelView) => void;
+  readonly #onClosed: (message: string) => void;
 
-  constructor(onGame: (game: GameState) => void, onDuel: (match: MatchState, view: DuelView) => void) {
+  constructor(onGame: (game: GameState) => void, onDuel: (match: MatchState, view: DuelView) => void, onClosed: (message: string) => void) {
     this.#onGame = onGame;
     this.#onDuel = onDuel;
+    this.#onClosed = onClosed;
   }
 
   get me(): CoachPresence | undefined {
     return this.coaches.find((coach) => coach.id === this.id);
   }
 
-  /** Le serveur de la ligue répond-il à cette adresse ? */
-  static async available(): Promise<boolean> {
+  /** Serveur de ligue à cette adresse, et la ligue qu'il a ouverte ; `null` sans serveur (MULTI-09). */
+  static async serverInfo(): Promise<ServerInfo | null> {
     try {
       const response = await fetch('/api/info', { cache: 'no-store' });
-      return response.ok && (response.headers.get('content-type') ?? '').includes('json');
+      if (!response.ok || !(response.headers.get('content-type') ?? '').includes('json')) return null;
+      return (await response.json()) as ServerInfo;
     } catch {
-      return false;
+      return null;
+    }
+  }
+
+  /** Les 3 emplacements de ligue de l'hôte. */
+  static async hostSlots(): Promise<SlotInfo[]> {
+    try {
+      const response = await fetch('/api/host/slots', { cache: 'no-store' });
+      return response.ok ? ((await response.json()) as { slots: SlotInfo[] }).slots : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** L'hôte ouvre (reprend ou crée) une ligue, ou en range une à la corbeille. */
+  static async hostAction(action: 'open' | 'delete', slot: number): Promise<ApiResult> {
+    try {
+      const response = await fetch(`/api/host/${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slot }) });
+      return (await response.json()) as ApiResult;
+    } catch {
+      return { ok: false, message: 'Serveur injoignable.' };
     }
   }
 
@@ -128,6 +165,11 @@ export class MultiClient {
 
   #receive(message: ServerMessage): void {
     if (message.type === 'notice') return;
+    if (message.type === 'closed') {
+      this.disconnect();
+      this.#onClosed(message.message);
+      return;
+    }
     if (message.type === 'duel') {
       this.duel = message.view;
       this.duelReceivedAt = Date.now();

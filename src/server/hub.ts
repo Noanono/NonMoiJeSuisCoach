@@ -51,7 +51,47 @@ export type ServerMessage =
   | { type: 'lobby'; phase: 'lobby' | 'playing'; you: string | null; coaches: CoachPresence[] }
   | { type: 'game'; you: string; coaches: CoachPresence[]; game: GameState }
   | { type: 'duel'; view: DuelView; match: MatchState }
-  | { type: 'notice'; message: string };
+  | { type: 'notice'; message: string }
+  /** L'hôte a fermé la ligue ou en a ouvert une autre : retour à l'accueil. */
+  | { type: 'closed'; message: string };
+
+/** Ce que l'accueil montre d'une ligue (MULTI-09). */
+export interface LeagueSummary {
+  phase: 'lobby' | 'playing';
+  season: number | null;
+  week: number | null;
+  coaches: { id: string; name: string; clubName: string }[];
+}
+
+/** Un emplacement de ligue de l'hôte (MULTI-09). */
+export interface SlotInfo {
+  slot: number;
+  status: 'empty' | 'ok' | 'error';
+  active: boolean;
+  savedAt: number | null;
+  league: LeagueSummary | null;
+}
+
+/** Ligue ouverte sur le serveur, telle que l'accueil la montre. */
+export interface ServerInfo {
+  /** Ce navigateur est sur le PC du serveur : il choisit la ligue ouverte. */
+  host: boolean;
+  league: (LeagueSummary & { slot: number }) | null;
+}
+
+/** Résumé d'une ligue sauvegardée ou ouverte, sans la charger en entier côté client. */
+export function summarizeLeague(snapshot: HubSnapshot): LeagueSummary {
+  const game = snapshot.game;
+  return {
+    phase: game ? 'playing' : 'lobby',
+    season: game?.season ?? null,
+    week: game?.week ?? null,
+    coaches: snapshot.signups.map((signup) => {
+      const clubId = game?.coaches?.find((coach) => coach.id === signup.id)?.clubId;
+      return { id: signup.id, name: signup.name, clubName: (clubId && game?.clubs[clubId]?.name) || signup.clubName };
+    }),
+  };
+}
 
 export type HubResult<T = unknown> = { ok: true; value: T; message?: string } | { ok: false; message: string };
 

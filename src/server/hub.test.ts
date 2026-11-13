@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { DIALOGUES } from '../domain/club/dialogues';
 import { asCoach, autoPickLineup, humanFixture, humanLineupErrors, isHumanDuel, startHumanMatch, withRng, type GameState } from '../domain/game';
 import { dismissEventWindow, summarize, tick } from '../domain/match';
-import { MultiplayerHub, type HubSnapshot, type ServerMessage } from './hub';
+import { MultiplayerHub, summarizeLeague, type HubSnapshot, type ServerMessage } from './hub';
 
 const ALICE = { id: 'a', name: 'Alice', clubName: 'Les Gros Mollets' };
 const BOB = { id: 'b', name: 'Bob', clubName: 'Racing Pastis' };
@@ -123,5 +123,16 @@ describe('serveur de la ligue entre amis (MULTI-02 à MULTI-05)', () => {
     if (message.type !== 'game') throw new Error('partie attendue');
     expect(message.game.clubs[message.game.humanClubId]!.name).toBe('AS Cassoulet');
     expect(reloaded.presence().map((coach) => coach.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  test('résumé d’une ligue pour l’accueil : salle d’attente, puis saison, semaine et clubs des coachs (MULTI-09)', () => {
+    const hub = MultiplayerHub.create(3);
+    hub.join(ALICE);
+    expect(summarizeLeague(hub.save())).toEqual({ phase: 'lobby', season: null, week: null, coaches: [{ id: 'a', name: 'Alice', clubName: ALICE.clubName }] });
+    hub.connect('a');
+    hub.start('a');
+    const summary = summarizeLeague(hub.save());
+    expect(summary).toMatchObject({ phase: 'playing', season: 1, week: 1 });
+    expect(summary.coaches.map((coach) => coach.id)).toEqual(['a']);
   });
 });

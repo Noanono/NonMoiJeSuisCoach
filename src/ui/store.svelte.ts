@@ -92,6 +92,11 @@ class AppStore {
     const client = new MultiClient(
       (game) => this.receiveGame(game),
       (match, view) => this.receiveDuel(match, view),
+      (message) => {
+        // L'hôte a fermé la ligue ou en a ouvert une autre (MULTI-09).
+        this.quitToTitle();
+        this.notify(message);
+      },
     );
     this.multi = client;
     this.game = null;
