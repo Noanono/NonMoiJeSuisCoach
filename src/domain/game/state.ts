@@ -4,6 +4,7 @@ import type { SeasonObjective } from '../club/president';
 import type { IncomingOffer } from '../club/transfers';
 import type { CupState } from '../league/cup';
 import type { Club, Division, Fixture, Player } from '../types';
+import type { CoachState } from './coaches';
 import type { Difficulty } from './difficulty';
 
 /** Version du format de partie, à incrémenter à chaque changement incompatible de la sauvegarde. */
@@ -68,6 +69,10 @@ export interface GameState {
   rivalId: string | null;
   /** Reroll de capacité payé, en attente du choix du coach (CAP-23). Absent des anciennes sauvegardes. */
   abilityReroll?: AbilityRerollOffer | null;
+  /** Partie multijoueur (MULTI-01) : la fiche de chaque coach ; absent en solo. */
+  coaches?: CoachState[];
+  /** Coach dont les champs sont actuellement à la racine de la partie. */
+  focusedCoachId?: string;
 }
 
 /** Les 3 capacités proposées après un reroll payé (CAP-23). */

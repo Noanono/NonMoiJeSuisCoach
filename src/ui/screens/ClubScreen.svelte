@@ -6,7 +6,7 @@
   import { store } from '../store.svelte';
   import { formatEuros } from '../format';
   import { FACILITIES, FACILITY_IDS, facilitiesOf, MAX_FACILITY_LEVEL, upgradeCost } from '../../domain/club/facilities';
-  import { humanClub, upgradeFacility } from '../../domain/game';
+  import { humanClub } from '../../domain/game';
   import type { FacilityId } from '../../domain/types';
 
   /** Vie du club : président, installations (CLUB-09), rival (UNIV-09) et historique des saisons. */
@@ -31,7 +31,7 @@
   );
 
   function upgrade(id: FacilityId): void {
-    const result = store.run((game) => upgradeFacility(game, id));
+    const result = store.command('upgradeFacility', id);
     store.notify(result.message);
   }
 </script>

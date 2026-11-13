@@ -132,4 +132,16 @@ describe('penalty : style de frappe et plongeon (P4)', () => {
       expect(after.byDive[dive]).toBeLessThan(before.byDive[dive] * 0.52);
     }
   });
+
+  test('deux coachs humains : le tireur choisit sa frappe, puis le gardien adverse son plongeon (MULTI-07)', () => {
+    const state = createMatch({ home: makeSheet({ clubId: 'h', isHuman: true }), away: makeSheet({ clubId: 'a', isHuman: true }), seed: 5 });
+    const run = beginRun(state);
+    awardPenalty(run, 'home', null);
+    endRun(run);
+    expect(state.awaiting).toMatchObject({ side: 'home', penalty: 'attack' });
+    dismissEventWindow(state);
+    expect(state.awaiting).toMatchObject({ side: 'away', penalty: 'defense' });
+    dismissEventWindow(state);
+    expect(state.awaiting).toBeNull();
+  });
 });

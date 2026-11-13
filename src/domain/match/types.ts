@@ -323,6 +323,8 @@ export interface MatchState {
   pendingPlay: PendingPlay | null;
   /** Déclencheur ouvert pour chaque camp (CAP-19), effacé à la minute suivante. */
   triggers: Record<Side, AbilityTrigger | null>;
+  /** Deux coachs humains (multi) : la fenêtre du second camp attend que le premier ait choisi (MULTI-07). */
+  windowQueue?: Side[];
   shootout: ShootoutResult | null;
   /** Gardiens dont le staff a percé les habitudes au penalty (après en avoir affronté un). */
   scoutedKeeperIds?: string[];

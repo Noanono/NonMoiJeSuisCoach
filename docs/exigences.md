@@ -207,3 +207,15 @@ CAT-01 : le jeu contient les 55 capacités ci-dessous. Les chiffres des tableaux
 ## Progression, rejouabilité et interface
 
 Section à compléter.
+
+## Multijoueur en réseau local
+
+| ID | Exigence |
+|---|---|
+| MULTI-01 | Une partie peut réunir plusieurs coachs humains. Chacun a son club, son président, ses sponsors, ses offres, ses dialogues, son actualité, son historique et son rival ; le reste du monde est commun. |
+| MULTI-02 | À la création de la ligue, chaque joueur connecté crée son club (nom de coach et nom de club uniques). Tous commencent dans la division de départ, au maximum 10 coachs. |
+| MULTI-03 | Un joueur qui rejoint en cours de saison, ou les saisons suivantes, récupère le club IA le plus faible du monde et le renomme. |
+| MULTI-04 | La semaine n'avance que lorsque chaque coach a joué son match, répondu à son dialogue et cliqué sur « Semaine suivante ». Un coach licencié doit d'abord choisir son nouveau club. |
+| MULTI-05 | L'hôte lance le serveur sur son PC (npm run serveur) ; ses amis ouvrent son adresse dans leur navigateur. Le serveur garde et sauvegarde la ligue ; chaque action d'un coach ne touche que son club. À l'écran d'accueil, on choisit Solo ou Multijoueur. |
+| MULTI-06 | Chacun joue ses matchs contre l'IA dans son navigateur, à la vitesse qu'il veut. Un match entre deux coachs non joué en direct est simulé au passage de la semaine. |
+| MULTI-07 | Match en direct entre deux coachs, joué par le serveur : vitesse ×1 imposée, 3 pauses de 10 s par coach (seul celui qui a mis pause peut reprendre), 15 s au plus pour chaque fenêtre de choix ou ciblage puis choix automatique, l'un après l'autre (le tireur puis le gardien), mi-temps de 20 s ou moins si les deux sont prêts. Pas de semaine suivante tant qu'il n'est pas fini. |

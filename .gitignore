@@ -3,6 +3,7 @@ node_modules/
 
 # Builds et caches
 dist/
+dist-server/
 build/
 .nuxt/
 .output/
@@ -26,3 +27,6 @@ Thumbs.db
 # Outils locaux (worktrees des agents, config de prévisualisation)
 .claude/worktrees/
 .claude/launch.json
+
+# Ligues multijoueur sauvegardées par le serveur local
+parties/

@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "impact": "bun scripts/ability-impact.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "serveur": "vite build && vite build --ssr src/server/main.ts --outDir dist-server --emptyOutDir && node dist-server/main.js"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.1",

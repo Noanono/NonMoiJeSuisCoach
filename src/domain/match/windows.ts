@@ -8,7 +8,7 @@ import { checkAvailability } from './activation';
 import { aiReactToTrigger } from './ai';
 import { comment, TRIGGER_LABEL } from './commentary';
 import { opponentSide, pushEvent, teamOf, type Run } from './state';
-import type { MatchState, Side } from './types';
+import type { EventWindow, MatchState, Side } from './types';
 
 /** Ouvre un déclencheur pour chaque camp concerné par l'événement. */
 export function openTriggers(
@@ -41,6 +41,7 @@ export function isOccasion(trigger: AbilityTrigger | null): boolean {
 export function clearTriggers(state: MatchState): void {
   state.triggers.home = null;
   state.triggers.away = null;
+  delete state.windowQueue;
 }
 
 /**
@@ -66,7 +67,22 @@ export function eligiblePlayerIds(state: MatchState, side: Side): string[] {
 function offerWindow(run: Run, side: Side): void {
   const { state } = run;
   const trigger = state.triggers[side];
-  if (state.awaiting || !trigger) return;
+  if (!trigger) return;
+  if (state.awaiting) {
+    // Deux coachs humains : l'autre camp choisira juste après (MULTI-07).
+    if (state.awaiting.side !== side && !(state.windowQueue ?? []).includes(side)) state.windowQueue = [...(state.windowQueue ?? []), side];
+    return;
+  }
+  const window = buildWindow(state, side);
+  if (!window) return;
+  state.awaiting = window;
+  pushEvent(run, 'eventWindow', side, comment(run.rng, 'eventWindow', { label: TRIGGER_LABEL[window.trigger] }));
+}
+
+/** Fenêtre d'un camp : capacités disponibles, et choix du coup franc ou du penalty ; rien (null) s'il n'a rien à décider. */
+function buildWindow(state: MatchState, side: Side): EventWindow | null {
+  const trigger = state.triggers[side];
+  if (!trigger) return null;
   const eligible = eligiblePlayerIds(state, side);
   const play = state.pendingPlay;
   // Sur un coup franc, le coach a toujours un choix à faire : option en attaque, mur en défense.
@@ -74,9 +90,16 @@ function offerWindow(run: Run, side: Side): void {
   const freeKick = play?.kind === 'freeKick' ? role : undefined;
   // Sur un penalty aussi : la frappe pour le tireur, le plongeon pour le gardien.
   const penalty = play?.kind === 'penalty' ? role : undefined;
-  if (eligible.length === 0 && !freeKick && !penalty) return;
-  state.awaiting = { side, trigger, eligiblePlayerIds: eligible, ...(freeKick ? { freeKick } : {}), ...(penalty ? { penalty } : {}) };
-  pushEvent(run, 'eventWindow', side, comment(run.rng, 'eventWindow', { label: TRIGGER_LABEL[trigger] }));
+  if (eligible.length === 0 && !freeKick && !penalty) return null;
+  return { side, trigger, eligiblePlayerIds: eligible, ...(freeKick ? { freeKick } : {}), ...(penalty ? { penalty } : {}) };
+}
+
+/** Ouvre la fenêtre du camp suivant dans la file, s'il a encore quelque chose à décider. */
+function openQueuedWindow(state: MatchState): void {
+  while (!state.awaiting && state.windowQueue && state.windowQueue.length > 0) {
+    const side = state.windowQueue.shift()!;
+    state.awaiting = buildWindow(state, side);
+  }
 }
 
 /** Après une activation, ferme la fenêtre s'il ne reste personne à proposer. */
@@ -86,11 +109,15 @@ export function refreshWindow(state: MatchState): void {
   window.eligiblePlayerIds = eligiblePlayerIds(state, window.side);
   const freeKickPending = window.freeKick !== undefined && state.pendingPlay?.kind === 'freeKick';
   const penaltyPending = window.penalty !== undefined && state.pendingPlay?.kind === 'penalty';
-  if (window.eligiblePlayerIds.length === 0 && !freeKickPending && !penaltyPending) state.awaiting = null;
+  if (window.eligiblePlayerIds.length === 0 && !freeKickPending && !penaltyPending) {
+    state.awaiting = null;
+    openQueuedWindow(state);
+  }
 }
 
 /** Le coach laisse passer la fenêtre (CAP-19) : rien n'est consommé. */
 export function dismissEventWindow(state: MatchState): void {
   state.awaiting = null;
   state.pending = null;
+  openQueuedWindow(state);
 }

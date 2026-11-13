@@ -5,6 +5,7 @@
   import { store } from './store.svelte';
   import type { SaveSlot } from '../domain/save/saveSlots';
   import { DIFFICULTIES, type Difficulty } from '../domain/game/difficulty';
+  import { MultiClient } from './multiClient.svelte';
 
   const DIFFICULTY_IDS = Object.keys(DIFFICULTIES) as Difficulty[];
 
@@ -13,6 +14,18 @@
   let confirmDelete = $state<SaveSlot | null>(null);
   let clubName = $state('');
   let difficulty = $state<Difficulty>('normal');
+  /** Écran d'entrée : choisir entre solo et ligue entre amis. */
+  let mode = $state<'choice' | 'solo'>('choice');
+  let multiHelp = $state(false);
+  let checking = $state(false);
+
+  async function openMulti(): Promise<void> {
+    checking = true;
+    const available = await MultiClient.available();
+    checking = false;
+    if (available) store.openMultiplayer();
+    else multiHelp = true;
+  }
 
   function create(event: SubmitEvent): void {
     event.preventDefault();
@@ -35,6 +48,25 @@
     <Sticker tilted>District · saison 1</Sticker>
   </header>
 
+  {#if mode === 'choice'}
+  <div class="modes">
+    <Card title="Solo">
+      <p class="texte-s meta">Ton club, ta carrière, trois vestiaires de sauvegarde sur ce PC.</p>
+      <div class="row"><Button variant="primary" onclick={() => (mode = 'solo')}>Jouer en solo</Button></div>
+    </Card>
+    <Card title="Multijoueur">
+      <p class="texte-s meta">Une ligue entre amis sur le réseau local : chacun son club, la semaine avance quand tout le monde est prêt.</p>
+      <div class="row"><Button variant="primary" disabled={checking} onclick={openMulti}>{checking ? 'Recherche du serveur…' : 'Ligue entre amis'}</Button></div>
+      {#if multiHelp}
+        <div class="aide texte-s" role="alert">
+          <p class="texte-fort">Pas de serveur de ligue à cette adresse.</p>
+          <p>L'hôte lance <code>npm run serveur</code> sur son PC, puis chacun ouvre l'adresse affichée (par exemple <code>http://192.168.1.20:5300</code>) dans son navigateur.</p>
+        </div>
+      {/if}
+    </Card>
+  </div>
+  {:else}
+  <div class="row"><Button variant="ghost" onclick={() => (mode = 'choice')}>Retour au choix du mode</Button></div>
   <div class="slots">
     {#each slots as entry (entry.slot)}
       <Card title={`Vestiaire ${entry.slot}`}>
@@ -80,6 +112,7 @@
       </Card>
     {/each}
   </div>
+  {/if}
 </div>
 
 <style>
@@ -98,6 +131,19 @@
   .accroche {
     margin: 0;
     max-width: 32ch;
+  }
+  .modes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-6);
+  }
+  .aide {
+    margin-top: var(--space-4);
+    display: grid;
+    gap: var(--space-1);
+  }
+  .aide p {
+    margin: 0;
   }
   .slots {
     display: grid;

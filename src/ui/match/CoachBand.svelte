@@ -44,7 +44,8 @@
     void controller.version;
     const match = controller.match;
     const pending = match.pending;
-    if (pending) {
+    // Match en direct : le ciblage de l'adversaire ne s'affiche pas chez soi.
+    if (pending && pending.side === controller.coachSide) {
       const source = match[pending.side].players.find((player) => player.id === pending.playerId);
       return {
         kind: 'targeting' as const,

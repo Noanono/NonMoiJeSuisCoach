@@ -1,6 +1,7 @@
 import { CUP_WINNER_PRIZE } from '../club/finance';
 import { cupRoundFixtures, fixtureWinnerId, type CupState } from '../league/cup';
 import type { GameState } from './state';
+import { asCoachOfClub, forEachCoach } from './coaches';
 
 /**
  * Primes de coupe (CLUB-01) : chaque club touche une prime au moment où il est éliminé, d'autant plus
@@ -48,12 +49,17 @@ function pay(state: GameState, clubId: string, amount: number, champion: boolean
   const club = state.clubs[clubId];
   if (!club || amount <= 0) return;
   club.budget += amount;
-  if (champion && !club.isHuman) state.news.push(`La coupe est remportée par ${club.name}.`);
-  if (!club.isHuman) return;
-  state.lastFinance = [...state.lastFinance, { label: champion ? 'Coupe gagnée' : 'Prime de coupe', amount }];
-  state.news.push(
-    champion
-      ? `COUPE GAGNÉE ! Prime de ${formatPrize(amount)}, le trophée trône déjà sur le comptoir.`
-      : `Éliminé de la coupe, mais la fédération verse ${formatPrize(amount)}. Le trésorier essuie une larme.`,
-  );
+  if (champion) {
+    forEachCoach(state, () => {
+      if (state.humanClubId !== clubId) state.news.push(`La coupe est remportée par ${club.name}.`);
+    });
+  }
+  asCoachOfClub(state, clubId, () => {
+    state.lastFinance = [...state.lastFinance, { label: champion ? 'Coupe gagnée' : 'Prime de coupe', amount }];
+    state.news.push(
+      champion
+        ? `COUPE GAGNÉE ! Prime de ${formatPrize(amount)}, le trophée trône déjà sur le comptoir.`
+        : `Éliminé de la coupe, mais la fédération verse ${formatPrize(amount)}. Le trésorier essuie une larme.`,
+    );
+  });
 }

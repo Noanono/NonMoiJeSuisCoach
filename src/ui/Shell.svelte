@@ -77,6 +77,18 @@
   </nav>
   {/if}
 
+  {#if store.multi}
+  <section class="ligue" aria-label="Coachs de la ligue">
+    <span class="tampon">Ligue</span>
+    {#each store.multi.coaches as coach (coach.id)}
+      <span class="coach texte-s" class:pret={coach.ready} class:absent={!coach.online} title={coach.waitingFor ?? ''}>
+        <span class="texte-fort">{coach.name}</span>
+        {coach.ready ? '· prêt' : !coach.online ? '· hors ligne' : coach.waitingFor ? '· ' + coach.waitingFor : '· en réflexion'}
+      </span>
+    {/each}
+  </section>
+  {/if}
+
   <main>
     {#if store.screen === 'dashboard'}<Dashboard />
     {:else if store.screen === 'squad'}<Squad />
@@ -91,6 +103,25 @@
 </div>
 
 <style>
+  .ligue {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .coach {
+    padding: var(--space-1) var(--space-2);
+    border: var(--trait-fin) solid var(--encre);
+    border-radius: var(--radius-pill);
+    background: var(--craie);
+  }
+  .coach.pret {
+    background: var(--victoire);
+    color: var(--craie-fixe);
+  }
+  .coach.absent {
+    opacity: 0.6;
+  }
   .shell {
     display: grid;
     gap: var(--space-6);

@@ -11,3 +11,6 @@ export * from './difficulty';
 export * from './jobs';
 export * from './career';
 export * from './stats';
+export * from './coaches';
+export * from './multiplayer';
+export * from './commands';

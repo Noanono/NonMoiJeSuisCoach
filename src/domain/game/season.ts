@@ -18,6 +18,7 @@ import { generateYouthIntake } from '../world/youthAcademy';
 import { overall } from '../player/rating';
 import { clubPlayers, humanClub, humanDivision } from './selectors';
 import type { GameState } from './state';
+import { asCoachOfClub, forEachCoach } from './coaches';
 import { seasonAwards } from './stats';
 
 /** Âge à partir duquel un joueur peut prendre sa retraite (EFF-09). */
@@ -35,13 +36,17 @@ export function startSeason(state: GameState, rng: Rng): void {
     generateLeagueFixtures({ division, season: state.season, rng }),
   );
   state.cup = createCup({ clubIds: Object.keys(state.clubs), rng, season: state.season });
-  state.objective = seasonObjective({ club: humanClub(state), division: humanDivision(state), clubs: state.clubs, rng });
-  state.rivalId = chooseRival(state, rng);
+  forEachCoach(state, () => {
+    state.objective = seasonObjective({ club: humanClub(state), division: humanDivision(state), clubs: state.clubs, rng });
+    state.rivalId = chooseRival(state, rng);
+  });
   resetSeasonCounters(state);
   refreshAiLineups(state);
-  state.news.push(`Le président : « ${state.objective.speech} »`);
-  const rival = state.rivalId ? state.clubs[state.rivalId] : undefined;
-  if (rival) state.news.push(`Le rival de la saison : ${rival.name}. Les supporters ont déjà préparé les banderoles.`);
+  forEachCoach(state, () => {
+    state.news.push(`Le président : « ${state.objective.speech} »`);
+    const rival = state.rivalId ? state.clubs[state.rivalId] : undefined;
+    if (rival) state.news.push(`Le rival de la saison : ${rival.name}. Les supporters ont déjà préparé les banderoles.`);
+  });
 }
 
 /** Rival de la saison (UNIV-09) : un club de la division du coach, tiré au sort. */
@@ -82,32 +87,45 @@ export function cupRoundsWon(state: GameState, clubId: string): number {
  * salaires et retraites des joueurs, jeunes des centres de formation (CLUB-07), puis nouvelle saison.
  */
 export function endSeason(state: GameState, rng: Rng): void {
-  const human = humanClub(state);
-  const division = humanDivision(state);
   const standings = Object.fromEntries(state.divisions.map((entry) => [entry.id, divisionStandings(state, entry.id)]));
-  const position = standings[division.id]!.findIndex((row) => row.clubId === human.id) + 1;
-  const roundsWon = cupRoundsWon(state, human.id);
   const fromPlayoffs = playoffMoves(state.fixtures, state.divisions);
-  const playoffMove = fromPlayoffs.find((move) => move.clubId === human.id);
-  // Monter par les barrages vaut une place de montée pour le président ; descendre, une place de relégable.
-  const judgedPosition = !playoffMove ? position : playoffMove.kind === 'promotion' ? division.promoted : division.clubIds.length - division.relegated + 1;
-  const review = reviewSeason(state.objective, { finalPosition: judgedPosition, cupRoundsWon: roundsWon });
-  const awards = seasonAwards(state, division.id);
-  state.outlook.presidentConfidence = Math.max(0, Math.min(100, state.outlook.presidentConfidence + review.confidenceDelta));
-  state.news.push(`Fin de saison : ${position}e de ${division.name}. ${review.verdict}`, ...awards);
-  const prizeMoney = payPrizes(state, standings);
-  state.history.push({ season: state.season, clubName: human.name, divisionName: division.name, position, cupRoundsWon: roundsWon, verdict: review.verdict, awards, prizeMoney });
+  const reviews = new Map<string, { position: number; promoted: number; playoff: boolean }>();
+  forEachCoach(state, () => {
+    const human = humanClub(state);
+    const division = humanDivision(state);
+    const position = standings[division.id]!.findIndex((row) => row.clubId === human.id) + 1;
+    const roundsWon = cupRoundsWon(state, human.id);
+    const playoffMove = fromPlayoffs.find((move) => move.clubId === human.id);
+    // Monter par les barrages vaut une place de montée pour le président ; descendre, une place de relégable.
+    const judgedPosition = !playoffMove ? position : playoffMove.kind === 'promotion' ? division.promoted : division.clubIds.length - division.relegated + 1;
+    const review = reviewSeason(state.objective, { finalPosition: judgedPosition, cupRoundsWon: roundsWon });
+    const awards = seasonAwards(state, division.id);
+    state.outlook.presidentConfidence = Math.max(0, Math.min(100, state.outlook.presidentConfidence + review.confidenceDelta));
+    state.news.push(`Fin de saison : ${position}e de ${division.name}. ${review.verdict}`, ...awards);
+    state.history.push({ season: state.season, clubName: human.name, divisionName: division.name, position, cupRoundsWon: roundsWon, verdict: review.verdict, awards });
+    reviews.set(human.id, { position, promoted: division.promoted, playoff: playoffMove !== undefined });
+  });
+  const prizes = payPrizes(state, standings);
+  forEachCoach(state, () => {
+    const record = state.history[state.history.length - 1];
+    if (record && reviews.has(state.humanClubId)) record.prizeMoney = (prizes.get(state.humanClubId) ?? 0) + cupPrizeFor(state.cup, state.humanClubId);
+  });
 
   const moves = [...computeDivisionMoves(state.divisions, standings), ...fromPlayoffs];
   const applied = applyDivisionMoves(state.divisions, state.clubs, moves);
   state.divisions = applied.divisions;
   state.clubs = applied.clubs;
-  const humanMove = moves.find((move) => move.clubId === human.id);
-  if (humanMove && playoffMove) state.news.push(humanMove.kind === 'promotion' ? 'MONTÉE PAR LES BARRAGES ! On est passés par la petite porte, mais on est passés.' : 'Barrage perdu : descente. Le président a vendu la tireuse.');
-  else if (humanMove) state.news.push(humanMove.kind === 'promotion' ? 'MONTÉE ! La buvette est ouverte toute la nuit.' : 'Descente. Le président a vendu la tireuse.');
-  else if (state.fixtures.some((fixture) => fixture.competition === 'playoff' && (fixture.homeId === human.id || fixture.awayId === human.id))) {
-    state.news.push(position <= division.promoted + 1 ? 'Barrage perdu : on reste en bas. Le président boude dans la buvette.' : 'Barrage gagné : maintien assuré. Le président respire, la tireuse reste.');
-  }
+  forEachCoach(state, () => {
+    const clubId = state.humanClubId;
+    const review = reviews.get(clubId);
+    if (!review) return;
+    const humanMove = moves.find((move) => move.clubId === clubId);
+    if (humanMove && review.playoff) state.news.push(humanMove.kind === 'promotion' ? 'MONTÉE PAR LES BARRAGES ! On est passés par la petite porte, mais on est passés.' : 'Barrage perdu : descente. Le président a vendu la tireuse.');
+    else if (humanMove) state.news.push(humanMove.kind === 'promotion' ? 'MONTÉE ! La buvette est ouverte toute la nuit.' : 'Descente. Le président a vendu la tireuse.');
+    else if (state.fixtures.some((fixture) => fixture.competition === 'playoff' && (fixture.homeId === clubId || fixture.awayId === clubId))) {
+      state.news.push(review.position <= review.promoted + 1 ? 'Barrage perdu : on reste en bas. Le président boude dans la buvette.' : 'Barrage gagné : maintien assuré. Le président respire, la tireuse reste.');
+    }
+  });
 
   // La référence est prise avant la progression d'intersaison : elle apparaît dans l'évolution de la saison suivante.
   for (const player of Object.values(state.players)) player.overallAtSeasonStart = overall(player);
@@ -123,10 +141,10 @@ export function endSeason(state: GameState, rng: Rng): void {
 
 /**
  * Primes de fin de saison (CLUB-01) : chaque club touche sa prime de classement. Les primes de coupe
- * sont versées pendant la saison, à l'élimination. Rend le total de la saison du club du coach.
+ * sont versées pendant la saison, à l'élimination. Rend la prime de classement de chaque club.
  */
-function payPrizes(state: GameState, standings: Record<string, StandingRow[]>): number {
-  let humanPrize = 0;
+function payPrizes(state: GameState, standings: Record<string, StandingRow[]>): Map<string, number> {
+  const prizes = new Map<string, number>();
   for (const division of state.divisions) {
     const rows = standings[division.id] ?? [];
     rows.forEach((row, index) => {
@@ -134,13 +152,13 @@ function payPrizes(state: GameState, standings: Record<string, StandingRow[]>): 
       if (!club) return;
       const prize = leaguePrize(division.tier, index + 1, rows.length);
       club.budget += prize;
-      if (club.isHuman) {
-        humanPrize += prize;
+      prizes.set(club.id, prize);
+      asCoachOfClub(state, club.id, () => {
         state.news.push(`Prime de classement : ${formatPrize(prize)}. Le trésorier compte deux fois pour être sûr.`);
-      }
+      });
     });
   }
-  return humanPrize + cupPrizeFor(state.cup, state.humanClubId);
+  return prizes;
 }
 
 function formatPrize(amount: number): string {
@@ -150,7 +168,7 @@ function formatPrize(amount: number): string {
 /** Les capacités des joueurs hors du club du coach gagnent une saison d'XP (CAP-10). */
 function growAiAbilities(state: GameState, rng: Rng): void {
   for (const player of Object.values(state.players)) {
-    if (player.clubId === state.humanClubId) continue;
+    if (player.clubId && state.clubs[player.clubId]?.isHuman) continue;
     player.ability = gainXp(player.ability, rng.int(CAREER_XP_PER_SEASON.min, CAREER_XP_PER_SEASON.max));
   }
 }
@@ -163,20 +181,23 @@ export function retirementChance(age: number): number {
 
 /** Les vétérans raccrochent (EFF-09) : ils quittent leur club, les compositions sont recousues. */
 function retirePlayers(state: GameState, rng: Rng): void {
-  const retiredFromHuman: string[] = [];
+  const retired = new Map<string, string[]>();
   for (const player of Object.values(state.players)) {
     if (!rng.chance(retirementChance(player.age))) continue;
     const club = player.clubId ? state.clubs[player.clubId] : undefined;
     if (club) removeFromClub(club, player.id);
-    if (club?.isHuman) retiredFromHuman.push(`${player.firstName} ${player.lastName} (${player.age} ans)`);
+    if (club?.isHuman) retired.set(club.id, [...(retired.get(club.id) ?? []), `${player.firstName} ${player.lastName} (${player.age} ans)`]);
     delete state.players[player.id];
   }
-  state.offers = state.offers.filter((offer) => state.players[offer.playerId]);
-  const human = humanClub(state);
-  if (human.lineup && human.lineup.starters.some((id) => id === EMPTY_SLOT)) {
-    human.lineup = autoLineup(clubPlayers(state, human.id), human.lineup.formation, human.lineup.instructions);
-  }
-  if (retiredFromHuman.length > 0) state.news.push(`Retraite : ${retiredFromHuman.join(', ')} raccroche(nt) les crampons. Pot de départ à la buvette.`);
+  forEachCoach(state, () => {
+    state.offers = state.offers.filter((offer) => state.players[offer.playerId]);
+    const human = humanClub(state);
+    if (human.lineup && human.lineup.starters.some((id) => id === EMPTY_SLOT)) {
+      human.lineup = autoLineup(clubPlayers(state, human.id), human.lineup.formation, human.lineup.instructions);
+    }
+    const names = retired.get(human.id) ?? [];
+    if (names.length > 0) state.news.push(`Retraite : ${names.join(', ')} raccroche(nt) les crampons. Pot de départ à la buvette.`);
+  });
 }
 
 function removeFromClub(club: Club, playerId: string): void {
@@ -206,8 +227,8 @@ function welcomeYouth(state: GameState, rng: Rng): void {
       club.playerIds.push(youngster.id);
     }
     const promoted = youngsters[0];
-    if (club.isHuman && promoted) {
+    if (club.isHuman && promoted) asCoachOfClub(state, club.id, () => {
       state.news.push(`Le centre de formation promeut ${promoted.firstName} ${promoted.lastName}, ${promoted.age} ans, en équipe première. Il a l'air de savoir où est le ballon.`);
-    }
+    });
   }
 }

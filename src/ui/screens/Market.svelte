@@ -12,7 +12,7 @@
   import { getAbility } from '../../domain/abilities/catalog';
   import { RARITY_LABEL } from '../../domain/abilities/progression';
   import { MAX_SQUAD_SIZE } from '../../domain/club/transfers';
-  import { buy, humanClub, market, transferWindowOpen } from '../../domain/game';
+  import { humanClub, market, transferWindowOpen } from '../../domain/game';
   import type { Position, Rarity } from '../../domain/types';
   import { fullName, POSITION_LABEL, POSITION_ORDER, POSITION_SHORT } from './describe';
   import { AGE_BANDS, inAgeBand, nextTransferWindowWeek, sortRows, transferWindowLastWeek, type AgeBandId, type SortDirection } from './views';
@@ -126,7 +126,7 @@
   }
 
   function purchase(playerId: string): void {
-    const result = store.run((game) => buy(game, playerId));
+    const result = store.command('buy', playerId);
     store.notify(result.message);
   }
 </script>

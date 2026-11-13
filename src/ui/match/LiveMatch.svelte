@@ -13,6 +13,7 @@
   import MiniMap from './MiniMap.svelte';
   import Pitch from './Pitch.svelte';
   import Scoreboard from './Scoreboard.svelte';
+  import { store } from '../store.svelte';
 
   interface Props {
     match: MatchState;
@@ -23,7 +24,13 @@
 
   // Le contrôleur vit le temps du composant : `{#key}` dans MatchScreen en recrée un par match.
   // svelte-ignore state_referenced_locally
-  const controller = new MatchController(match, coachSide);
+  const controller = new MatchController(match, coachSide, store.duelKey ? (name, args) => store.duelCommand(name, args) : null);
+
+  // Match en direct (MULTI-07) : chaque état reçu du serveur peut amener un but ou une capacité à annoncer.
+  $effect(() => {
+    void controller.version;
+    if (controller.remote) controller.sync();
+  });
 
   // Horloge (MATCH-02) : un seul intervalle, recréé seulement quand la vitesse change,
   // coupé dès la pause, l'attente du coach, la fin du match ou le démontage (green code).

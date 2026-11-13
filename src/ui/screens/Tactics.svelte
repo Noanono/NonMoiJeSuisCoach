@@ -7,7 +7,7 @@
   import type { CardPlayer } from './parts/PlayerCard.svelte';
   import { store } from '../store.svelte';
   import { getAbility } from '../../domain/abilities/catalog';
-  import { autoPickLineup, humanClub, humanLineupErrors, humanSquad, setInstructions, setLineup } from '../../domain/game';
+  import { humanClub, humanLineupErrors, humanSquad } from '../../domain/game';
   import { EMPTY_SLOT, MAX_BENCH_SIZE, STARTERS_COUNT } from '../../domain/league/lineup';
   import { FORMATIONS, isAvailable, overall, ratingAtPosition } from '../../domain/player/rating';
   import type { Formation, Instructions, Mentality } from '../../domain/types';
@@ -64,7 +64,7 @@
   }
 
   function save(lineup: ReturnType<typeof currentLineup>): void {
-    store.run((game) => setLineup(game, lineup));
+    store.command('setLineup', lineup);
   }
 
   function move(playerId: string, drop: LineupDrop): void {
@@ -80,11 +80,11 @@
 
   function updateInstructions(change: Partial<Instructions>): void {
     const lineup = view.lineup;
-    if (lineup) store.run((game) => setInstructions(game, { ...lineup.instructions, ...change }));
+    if (lineup) store.command('setInstructions', { ...lineup.instructions, ...change });
   }
 
   function assistantPick(): void {
-    const errors = store.run(autoPickLineup);
+    const errors = store.command('autoPickLineup');
     store.notify(errors.length === 0 ? 'L’adjoint a fait la compo. Il a même pensé au gardien.' : errors[0]!.message);
   }
 

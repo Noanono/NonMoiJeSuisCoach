@@ -9,6 +9,8 @@ import { facilitiesOf, facilityBonus } from '../club/facilities';
 import { DIFFICULTIES } from './difficulty';
 import { clubPlayers, humanFixture, humanSquad, isDerby } from './selectors';
 import type { GameState } from './state';
+import { asCoachOfClub } from './coaches';
+import { autoPickLineup } from './actions';
 
 /** Fatigue d'un match simulé rapidement (matchs IA contre IA). */
 const QUICK_MATCH_FATIGUE = 40;
@@ -79,15 +81,62 @@ export function startHumanMatch(state: GameState, rng: Rng): MatchState {
 
 /** Reporte le match du coach sur la partie : résultat, fatigue, cartons, blessures, progression des capacités. */
 export function finishHumanMatch(state: GameState, match: MatchState): MatchSummary {
+  const summary = summarize(match);
+  applyHumanMatchSummary(state, summary);
+  return summary;
+}
+
+/** Reporte un match déjà joué (son résumé) : en multi, le client joue son match et envoie le résumé. */
+export function applyHumanMatchSummary(state: GameState, summary: MatchSummary): void {
   const fixture = humanFixture(state);
   if (!fixture) throw new Error('Pas de match du coach cette semaine');
-  const summary = summarize(match);
+  if (fixture.result) throw new Error('Ce match a déjà été joué.');
+  recordMatch(state, fixture, summary);
+  applyCoachSide(state, fixture, summary);
+}
+
+/**
+ * Match entre deux coachs de la ligue (MULTI-07) : joué en direct sur le serveur. Pas de bonus de
+ * difficulté : à armes égales. Une compo invalide est refaite par l'adjoint au coup d'envoi.
+ */
+export function startDuelMatch(state: GameState, fixture: Fixture, rng: Rng): MatchState {
+  if (fixture.result) throw new Error('Ce match a déjà été joué.');
+  for (const clubId of [fixture.homeId, fixture.awayId]) {
+    asCoachOfClub(state, clubId, () => {
+      if (humanLineupErrors(state).length > 0) autoPickLineup(state);
+    });
+  }
+  let derby = false;
+  asCoachOfClub(state, fixture.homeId, () => (derby = isDerby(state, fixture)));
+  asCoachOfClub(state, fixture.awayId, () => (derby ||= isDerby(state, fixture)));
+  return createMatch({
+    home: teamSheet(state, fixture.homeId),
+    away: teamSheet(state, fixture.awayId),
+    seed: rng.int(1, 2 ** 31 - 2),
+    knockout: fixture.competition !== 'league',
+    homeAdvantage: facilityBonus.homeAdvantage(facilitiesOf(state.clubs[fixture.homeId]!)),
+    derby,
+  });
+}
+
+/** Reporte un match entre deux coachs : un seul résultat, puis les suites de chaque côté pour chaque coach. */
+export function applyDuelSummary(state: GameState, fixture: Fixture, summary: MatchSummary): void {
+  if (fixture.result) throw new Error('Ce match a déjà été joué.');
+  recordMatch(state, fixture, summary);
+  for (const clubId of [fixture.homeId, fixture.awayId]) asCoachOfClub(state, clubId, () => applyCoachSide(state, fixture, summary));
+}
+
+/** Résultat et rapports de tous les joueurs du match. */
+function recordMatch(state: GameState, fixture: Fixture, summary: MatchSummary): void {
   fixture.result = toResult(summary, fixture);
   for (const report of summary.players) applyPlayerReport(state, report, summary);
+}
+
+/** Ce qui ne concerne que le coach au focus : ses joueurs alignés, ses blessés et suspendus. */
+function applyCoachSide(state: GameState, fixture: Fixture, summary: MatchSummary): void {
   state.lastAppearances = summary.players.filter((report) => report.played && state.players[report.playerId]?.clubId === state.humanClubId).map((report) => report.playerId);
   const humanSide: Side = fixture.homeId === state.humanClubId ? 'home' : 'away';
   for (const consequence of summary.consequences[humanSide]) applyConsequence(state, consequence);
-  return summary;
 }
 
 function toResult(summary: MatchSummary, fixture: Fixture): MatchResult {

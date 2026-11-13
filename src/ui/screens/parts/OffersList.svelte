@@ -9,7 +9,7 @@
   import { getAbility } from '../../../domain/abilities/catalog';
   import { RARITY_LABEL } from '../../../domain/abilities/progression';
   import { playerValue } from '../../../domain/club/valuation';
-  import { answerOffer, transferWindowOpen } from '../../../domain/game';
+  import { transferWindowOpen } from '../../../domain/game';
   import { overall } from '../../../domain/player/rating';
   import { fullName, POSITION_LABEL } from '../describe';
 
@@ -56,7 +56,7 @@
   let openPlayerId = $state<string | null>(null);
 
   function answer(offerId: string, accept: boolean): void {
-    const result = store.run((game) => answerOffer(game, offerId, accept));
+    const result = store.command('answerOffer', offerId, accept);
     store.notify(result.message);
   }
 </script>

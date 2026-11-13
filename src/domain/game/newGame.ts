@@ -1,6 +1,6 @@
 import { ABILITIES } from '../abilities/catalog';
 import { NEUTRAL_SPONSOR_MOOD } from '../club/model';
-import { createRng } from '../core/rng';
+import { createRng, type Rng } from '../core/rng';
 import { generateWorld } from '../world/generateWorld';
 import { DIFFICULTIES, type Difficulty } from './difficulty';
 import { startSeason } from './season';
@@ -13,7 +13,15 @@ export interface NewGameOptions {
 }
 
 /** Nouvelle partie : le coach débarque dans un club de district (UNIV-02). */
-export function newGame({ seed, clubName, difficulty = 'normal' }: NewGameOptions): GameState {
+export function newGame(options: NewGameOptions): GameState {
+  const { state, rng } = createGame(options);
+  startSeason(state, rng);
+  state.rngState = rng.state();
+  return state;
+}
+
+/** Monde et partie, avant le lancement de la saison (le multi y installe d'abord ses coachs). */
+export function createGame({ seed, clubName, difficulty = 'normal' }: NewGameOptions): { state: GameState; rng: Rng } {
   const world = generateWorld({ seed, abilityPool: ABILITIES, humanClubName: clubName });
   const human = Object.values(world.clubs).find((club) => club.isHuman);
   if (!human) throw new Error('Le monde généré n’a pas de club pour le coach');
@@ -49,7 +57,5 @@ export function newGame({ seed, clubName, difficulty = 'normal' }: NewGameOption
     rivalId: null,
   };
   for (const playerId of human.playerIds) state.players[playerId]!.ability.revealed = true;
-  startSeason(state, rng);
-  state.rngState = rng.state();
-  return state;
+  return { state, rng };
 }

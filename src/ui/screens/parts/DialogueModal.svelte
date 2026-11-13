@@ -4,7 +4,7 @@
   import { store } from '../../store.svelte';
   import { DIALOGUES, localizeDialogue } from '../../../domain/club/dialogues';
   import { describeConsequence } from '../../../domain/club/model';
-  import { answerDialogue, humanDivision } from '../../../domain/game';
+  import { humanDivision } from '../../../domain/game';
 
   /** Dialogue de la semaine (CLUB-06) : la question et ses réponses, chacune avec ses conséquences chiffrées. */
   interface Props {
@@ -35,7 +35,7 @@
   );
 
   function reply(speaker: string, choiceId: string): void {
-    const result = store.run((game) => answerDialogue(game, choiceId));
+    const result = store.command('answerDialogue', choiceId);
     onanswered({ speaker, text: result.message });
   }
 </script>

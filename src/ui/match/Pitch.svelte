@@ -102,7 +102,7 @@
       ignoreNextClick = false;
       return;
     }
-    if (controller.match.pending) controller.pickTarget(playerId);
+    if (controller.match.pending?.side === controller.coachSide) controller.pickTarget(playerId);
     else controller.inspect(playerId);
   }
 </script>

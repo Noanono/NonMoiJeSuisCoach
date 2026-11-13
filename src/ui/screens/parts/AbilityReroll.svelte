@@ -6,7 +6,7 @@
   import { getAbility } from '../../../domain/abilities/catalog';
   import { RARITY_LABEL, statsAtLevel } from '../../../domain/abilities/progression';
   import { REROLL_UPGRADE_CHANCE } from '../../../domain/club/abilityReroll';
-  import { abilityRerollPrice, chooseRerolledAbility, humanClub, pendingReroll, rerollAbility, type ActionResult, type GameState } from '../../../domain/game';
+  import { abilityRerollPrice, humanClub, pendingReroll, type ActionResult } from '../../../domain/game';
   import type { Rarity } from '../../../domain/types';
   import { ABILITY_POSITION_LABEL, describeEffect, describeTargeting, describeTrigger } from '../describe';
 
@@ -41,8 +41,8 @@
   let confirming = $state(false);
   let feedback = $state<string | null>(null);
 
-  function act(command: (game: GameState) => ActionResult): void {
-    const result = store.run(command);
+  function act(command: () => ActionResult): void {
+    const result = command();
     store.notify(result.message);
     feedback = result.message;
     confirming = false;
@@ -67,11 +67,11 @@
           <ul class="effets texte-s">
             {#each option.effects as effect, index (index)}<li>{effect}</li>{/each}
           </ul>
-          <Button size="s" onclick={() => act((game) => chooseRerolledAbility(game, option.ability.id))}>Choisir</Button>
+          <Button size="s" onclick={() => act(() => store.command('chooseRerolledAbility', option.ability.id))}>Choisir</Button>
         </li>
       {/each}
     </ul>
-    <Button size="s" variant="ghost" onclick={() => act((game) => chooseRerolledAbility(game, null))}>Garder l'ancienne capacité</Button>
+    <Button size="s" variant="ghost" onclick={() => act(() => store.command('chooseRerolledAbility', null))}>Garder l'ancienne capacité</Button>
   {:else if view.price === null}
     <p class="texte-s discret">Sa capacité est encore cachée : impossible de la changer avant de la découvrir.</p>
   {:else if view.otherPending}
@@ -83,7 +83,7 @@
     </p>
     {#if confirming}
       <div class="ligne-actions">
-        <Button size="s" onclick={() => act((game) => rerollAbility(game, playerId))}>Payer {formatEuros(view.price)}</Button>
+        <Button size="s" onclick={() => act(() => store.command('rerollAbility', playerId))}>Payer {formatEuros(view.price)}</Button>
         <Button size="s" variant="ghost" onclick={() => (confirming = false)}>Annuler</Button>
       </div>
     {:else}

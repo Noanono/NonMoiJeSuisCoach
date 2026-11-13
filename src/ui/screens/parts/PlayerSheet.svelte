@@ -12,7 +12,7 @@
   import { getAbility } from '../../../domain/abilities/catalog';
   import { RARITY_LABEL } from '../../../domain/abilities/progression';
   import { playerValue } from '../../../domain/club/valuation';
-  import { sellNow, transferWindowOpen } from '../../../domain/game';
+  import { transferWindowOpen } from '../../../domain/game';
   import { overall } from '../../../domain/player/rating';
   import type { AttributeName } from '../../../domain/types';
   import { ATTRIBUTE_LABEL, availabilityLabel, fullName, POSITION_LABEL } from '../describe';
@@ -62,7 +62,7 @@
   let feedback = $state<string | null>(null);
 
   function sell(): void {
-    const result = store.run((game) => sellNow(game, playerId));
+    const result = store.command('sellNow', playerId);
     store.notify(result.message);
     confirmSale = false;
     feedback = result.message;

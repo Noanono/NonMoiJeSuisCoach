@@ -12,7 +12,7 @@
   import { balanceTotal } from '../../domain/club/finance';
   import { DIALOGUES } from '../../domain/club/dialogues';
   import Sticker from '../kit/Sticker.svelte';
-  import { acceptJob, autoPickLineup, canAdvanceWeek, clubPlayers, currentWeek, divisionOf, humanDivision, humanFixture, humanLineupErrors, isDerby, outcomeFor } from '../../domain/game';
+  import { canAdvanceWeek, isHumanDuel, clubPlayers, currentWeek, divisionOf, humanDivision, humanFixture, humanLineupErrors, isDerby, outcomeFor } from '../../domain/game';
   import { overall } from '../../domain/player/rating';
   import { recentForm, weekLabel, type FormLetter } from './views';
 
@@ -45,6 +45,8 @@
           ownForm: recentForm(allFixtures, game.humanClubId),
           opponentForm: recentForm(allFixtures, opponentId),
           derby: isDerby(game, fixture),
+          // Contre un autre coach de la ligue (MULTI-06).
+          duel: isHumanDuel(game, fixture),
         };
       }
       return {
@@ -76,7 +78,16 @@
     }),
   );
 
-  const matchToPlay = $derived(desk.match !== null && desk.match.score === null);
+  const matchToPlay = $derived(desk.match !== null && desk.match.score === null && !desk.match.duel);
+  const duelToPlay = $derived(desk.match !== null && desk.match.score === null && desk.match.duel);
+  /** Ligue entre amis : prêt pour la semaine suivante, et combien le sont. */
+  const multi = $derived(store.multi);
+  const ready = $derived(multi?.me?.ready ?? false);
+  /** Déjà entré dans le match en direct, en attente de l'adversaire. */
+  const duelWaiting = $derived(!!multi?.duel && !multi.duel.started && multi.duel.present.includes(multi.duel.you));
+  /** L'adversaire est déjà sur le terrain et attend ce coach. */
+  const opponentWaiting = $derived(!!multi?.duel && !multi.duel.started && !duelWaiting && multi.duel.present.length > 0);
+  const readyCount = $derived(multi ? multi.coaches.filter((coach) => coach.ready).length : 0);
 
   /** Le dialogue s'ouvre de lui-même ; refermé, il attend qu'on le rouvre (clé = saison, semaine, dialogue). */
   let closedDialogueKey = $state<string | null>(null);
@@ -84,12 +95,12 @@
   const showDialogue = $derived(desk.dialogueKey !== null && desk.dialogueKey !== closedDialogueKey && !dialogueOutcome);
 
   function assistantPick(): void {
-    const errors = store.run(autoPickLineup);
+    const errors = store.command('autoPickLineup');
     store.notify(errors.length === 0 ? 'L’adjoint a fait la compo.' : errors[0]!.message);
   }
 
   function signFor(clubId: string, name: string): void {
-    if (store.run((game) => acceptJob(game, clubId))) store.notify(`Bienvenue à ${name}, coach.`);
+    if (store.command('acceptJob', clubId)) store.notify(`Bienvenue à ${name}, coach.`);
   }
 
   function kickOff(): void {
@@ -191,8 +202,26 @@
               <Button variant="ghost" onclick={() => store.go('tactics')}>Tactique</Button>
             </div>
           {:else}
+            {#if duelToPlay}
+              <div class="ligne-actions">
+                {#if duelWaiting}
+                  <span class="texte-s texte-fort">Tu es sur le terrain. On attend {desk.match?.opponent ?? 'ton adversaire'}…</span>
+                {:else}
+                  <Button variant="primary" onclick={() => store.joinDuel()}>Jouer en direct contre {desk.match?.opponent}</Button>
+                  {#if opponentWaiting}<span class="texte-s texte-fort">Ton adversaire t’attend sur le terrain !</span>{/if}
+                {/if}
+              </div>
+              <p class="texte-s">Match contre un autre coach : en direct à ×1, 3 pauses de 10 s chacun, 15 s pour chaque décision. Si vous passez la semaine sans le jouer, il sera simulé.</p>
+            {/if}
             <div class="ligne-actions">
-              <Button variant="primary" disabled={!desk.advance.ok} onclick={() => store.nextWeek()}>Semaine suivante</Button>
+              {#if multi}
+                <Button variant={ready ? 'ghost' : 'primary'} disabled={!desk.advance.ok && !ready} onclick={() => store.nextWeek()}>
+                  {ready ? 'Finalement, pas prêt' : 'Je suis prêt'}
+                </Button>
+                <span class="texte-s">{readyCount} / {multi.coaches.length} coach{multi.coaches.length > 1 ? 's' : ''} prêt{readyCount > 1 ? 's' : ''}</span>
+              {:else}
+                <Button variant="primary" disabled={!desk.advance.ok} onclick={() => store.nextWeek()}>Semaine suivante</Button>
+              {/if}
               {#if !desk.advance.ok}<span class="texte-s malus">{desk.advance.reason}</span>{/if}
             </div>
           {/if}

@@ -5,6 +5,7 @@ import { chooseRival } from './season';
 import { divisionOf, humanClub } from './selectors';
 import type { GameState } from './state';
 import { finishWeek, withRng } from './week';
+import { isMultiplayer } from './coaches';
 
 /**
  * Rebond après un licenciement (CLUB-05) : le coach signe dans un des clubs qui l'ont appelé.
@@ -34,7 +35,8 @@ export function acceptJob(state: GameState, clubId: string): boolean {
     state.objective = seasonObjective({ club: next, division: divisionOf(state, next.id), clubs: state.clubs, rng });
     state.rivalId = chooseRival(state, rng);
     state.news.push(`Le président : « ${state.objective.speech} »`);
-    finishWeek(state, rng);
+    // En multi, la semaine a déjà avancé pour tout le monde.
+    if (!isMultiplayer(state)) finishWeek(state, rng);
   });
   return true;
 }

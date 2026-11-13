@@ -20,6 +20,7 @@ import { callUpStandIns } from './standIns';
 import { divisionStandings, endSeason, refreshAiLineups } from './season';
 import { clubPlayers, humanClub, humanDivision, humanFixture, humanFixtureAt, humanSquad, isDerby, replacePlayers, weekFixtures } from './selectors';
 import type { GameState } from './state';
+import { asCoachOfClub, forEachCoach, isMultiplayer } from './coaches';
 
 /** Récupération hebdomadaire des joueurs des clubs IA, version allégée de la vie d'effectif. */
 const AI_WEEKLY_RECOVERY = 35;
@@ -39,32 +40,39 @@ export function withRng<T>(state: GameState, command: (rng: Rng) => T): T {
 export function canAdvanceWeek(state: GameState): { ok: true } | { ok: false; reason: string } {
   if (state.status === 'fired') return { ok: false, reason: 'Tu as été licencié. Choisis un nouveau club pour continuer.' };
   const fixture = humanFixture(state);
-  if (fixture && !fixture.result) return { ok: false, reason: 'Ton match t’attend. Les gars sont déjà en crampons.' };
+  if (fixture && !fixture.result && !isHumanDuel(state, fixture)) return { ok: false, reason: 'Ton match t’attend. Les gars sont déjà en crampons.' };
   if (state.dialogue) return { ok: false, reason: 'Quelqu’un attend ta réponse dans le bureau.' };
   return { ok: true };
 }
 
 /** Passe à la semaine suivante : autres matchs, vie du vestiaire, finances, président, mercato (TECH-03 : appelé entre deux journées). */
 export function advanceWeek(state: GameState): void {
-  const check = canAdvanceWeek(state);
-  if (!check.ok) throw new Error(check.reason);
+  // En multi, la semaine n'avance que si chaque coach est prêt (MULTI-04).
+  forEachCoach(state, () => {
+    const check = canAdvanceWeek(state);
+    if (!check.ok) throw new Error(check.reason);
+  });
   withRng(state, (rng) => {
-    state.news = [];
+    forEachCoach(state, () => (state.news = []));
     for (const fixture of weekFixtures(state)) if (!fixture.result) playAiFixture(state, fixture, rng);
-    const fixture = humanFixture(state);
-    const outcome = fixture ? outcomeFor(fixture, state.humanClubId) : null;
-    updateHumanSquad(state, fixture);
+    forEachCoach(state, () => updateHumanSquad(state, humanFixture(state)));
     recoverAiSquads(state);
-    settleFinances(state, fixture, outcome);
-    updatePresident(state, fixture, outcome);
-    updateOffers(state, rng);
+    forEachCoach(state, () => {
+      const fixture = humanFixture(state);
+      const outcome = fixture ? outcomeFor(fixture, state.humanClubId) : null;
+      settleFinances(state, fixture, outcome);
+      updatePresident(state, fixture, outcome);
+      updateOffers(state, rng);
+    });
     advanceCup(state, rng);
-    if (state.status === 'fired') {
-      // La semaine reprendra une fois un nouveau club choisi (CLUB-05).
-      state.jobOffers = pickJobOffers(state, rng);
-      return;
-    }
-    maybeOpenDialogue(state, rng);
+    forEachCoach(state, () => {
+      // Licencié : il choisit un nouveau club ; en solo, la semaine reprendra après ce choix (CLUB-05).
+      if (state.status === 'fired' && state.jobOffers.length === 0) state.jobOffers = pickJobOffers(state, rng);
+    });
+    if (!isMultiplayer(state) && state.status === 'fired') return;
+    forEachCoach(state, () => {
+      if (state.status !== 'fired') maybeOpenDialogue(state, rng);
+    });
     finishWeek(state, rng);
   });
 }
@@ -84,6 +92,10 @@ function schedulePlayoffs(state: GameState): void {
   const standings = Object.fromEntries(state.divisions.map((division) => [division.id, divisionStandings(state, division.id)]));
   const fixtures = createPlayoffFixtures(playoffPairings(state.divisions, standings), state.season, state.week);
   state.fixtures.push(...fixtures);
+  forEachCoach(state, () => announcePlayoff(state, fixtures));
+}
+
+function announcePlayoff(state: GameState, fixtures: readonly Fixture[]): void {
   const mine = fixtures.find((fixture) => fixture.homeId === state.humanClubId || fixture.awayId === state.humanClubId);
   if (!mine) return;
   const opponent = state.clubs[mine.homeId === state.humanClubId ? mine.awayId : mine.homeId]!.name;
@@ -97,10 +109,16 @@ function schedulePlayoffs(state: GameState): void {
 function callUpAllStandIns(state: GameState, rng: Rng): void {
   for (const clubId of Object.keys(state.clubs)) {
     const count = callUpStandIns(state, clubId, rng);
-    if (count > 0 && clubId === state.humanClubId) {
+    if (count === 0) continue;
+    asCoachOfClub(state, clubId, () => {
       state.news.push(`Effectif décimé : ${count} dépanneur(s) signent, dont le cousin du président. Il a amené ses crampons.`);
-    }
+    });
   }
+}
+
+/** Match entre deux coachs humains (multi) : il ne se joue pas contre l'IA (MULTI-06). */
+export function isHumanDuel(state: GameState, fixture: Fixture): boolean {
+  return isMultiplayer(state) && state.clubs[fixture.homeId]?.isHuman === true && state.clubs[fixture.awayId]?.isHuman === true;
 }
 
 export function outcomeFor(fixture: Fixture, clubId: string): MatchOutcome | null {

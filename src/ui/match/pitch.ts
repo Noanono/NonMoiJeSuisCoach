@@ -86,7 +86,7 @@ const IDLE: TokenFocus = { interactive: false, highlighted: false, chosen: false
 export function tokenFocus(state: MatchState, player: MatchPlayer, coachSide: Side): TokenFocus {
   if (state.status === 'finished') return IDLE;
   const pending = state.pending;
-  if (pending) {
+  if (pending && pending.side === coachSide) {
     const chosen = pending.targetIds.includes(player.id);
     const valid = !chosen && pending.targetIds.length < pending.required && pending.validTargetIds.includes(player.id);
     return { interactive: valid, highlighted: valid || chosen, chosen, dimmed: !valid && !chosen && player.id !== pending.playerId };

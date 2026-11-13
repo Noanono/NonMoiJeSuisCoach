@@ -11,7 +11,7 @@
   import { abilityTrainingXp, trainingMatchBonus, trainingRate } from '../../domain/club/training';
   import { facilitiesOf, facilityBonus } from '../../domain/club/facilities';
   import { XP_THRESHOLDS } from '../../domain/abilities/progression';
-  import { humanClub, humanSquad, resetTrainingFocus, setTrainingFocus } from '../../domain/game';
+  import { humanClub, humanSquad } from '../../domain/game';
   import { focusRaisesOverall, overall } from '../../domain/player/rating';
   import type { AttributeName, TrainingFocus } from '../../domain/types';
   import { ATTRIBUTE_LABEL, fullName, percent, POSITION_ORDER, POSITION_SHORT } from './describe';
@@ -58,11 +58,11 @@
 
   function change(playerId: string, event: Event & { currentTarget: HTMLSelectElement }): void {
     const focus = event.currentTarget.value as TrainingFocus;
-    store.run((game) => setTrainingFocus(game, playerId, focus));
+    store.command('setTrainingFocus', playerId, focus);
   }
 
   function reset(): void {
-    store.run(resetTrainingFocus);
+    store.command('resetTrainingFocus');
     store.notify('L’adjoint a remis chacun sur le programme de son poste.');
   }
 

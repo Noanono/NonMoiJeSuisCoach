@@ -54,9 +54,13 @@ export interface ActivationFx {
   effects: string[];
 }
 
+/** Match en direct contre un autre coach : les actions partent au serveur, qui fait tourner le match (MULTI-07). */
+export type RemoteCommand = (name: string, args?: unknown[]) => void;
+
 export class MatchController {
   readonly match: MatchState;
   readonly coachSide: Side;
+  readonly remote: RemoteCommand | null;
   speed = $state<Speed>(1);
   /** Pause du coach, aussi posée automatiquement à la mi-temps (MATCH-05). */
   paused = $state(false);
@@ -75,9 +79,10 @@ export class MatchController {
   #fxSeen = 0;
   #fxTimer: ReturnType<typeof setTimeout> | undefined;
 
-  constructor(match: MatchState, coachSide: Side) {
+  constructor(match: MatchState, coachSide: Side, remote: RemoteCommand | null = null) {
     this.match = match;
     this.coachSide = coachSide;
+    this.remote = remote;
     this.#fxSeen = match.activations.length;
     this.#goalsSeen = match.goals.length;
   }
@@ -99,7 +104,7 @@ export class MatchController {
   });
 
   /** L'horloge tourne : une seule boucle active, coupée dès que quelque chose attend (green code). */
-  readonly running = $derived(!this.paused && this.inspectedId === null && !this.engineWaiting && this.fx === null && !this.helpOpen && this.goal === null && !this.dragging);
+  readonly running = $derived(this.isLocal() && !this.paused && this.inspectedId === null && !this.engineWaiting && this.fx === null && !this.helpOpen && this.goal === null && !this.dragging);
 
   /** Une minute de jeu (MATCH-02). Pause automatique à la mi-temps pour les consignes (MATCH-05). */
   step(): void {
@@ -114,7 +119,26 @@ export class MatchController {
   }
 
   togglePause(): void {
+    if (this.remote) {
+      this.remote(store.multi?.duel?.pausedBy === this.coachSide ? 'resume' : 'pause');
+      return;
+    }
     this.paused = !this.paused;
+  }
+
+  /** Match joué dans ce navigateur (solo, ou contre l'IA) ; un match en direct tourne sur le serveur. */
+  private isLocal(): boolean {
+    return this.remote === null;
+  }
+
+  /** Match en direct : nouvel état reçu du serveur, on repère buts et capacités à annoncer. */
+  sync(): void {
+    this.#collectFx();
+  }
+
+  /** Mi-temps d'un match en direct : prêt pour la reprise. */
+  halftimeReady(): void {
+    this.remote?.('halftimeReady');
   }
 
   setSpeed(speed: Speed): void {
@@ -137,6 +161,10 @@ export class MatchController {
     const playerId = this.inspectedId;
     if (!playerId) return;
     this.inspectedId = null;
+    if (this.remote) {
+      this.remote('startActivation', [playerId]);
+      return;
+    }
     const preview = startActivation(this.match, this.coachSide, playerId);
     store.touchMatch();
     if (!preview.available) {
@@ -148,10 +176,12 @@ export class MatchController {
 
   /** Choix d'une cible, une à une (CAP-17). */
   pickTarget(targetId: string): void {
+    if (this.remote) return this.remote('selectTarget', [targetId]);
     if (selectTarget(this.match, targetId)) store.touchMatch();
   }
 
   confirm(): void {
+    if (this.remote) return this.remote('confirmActivation');
     confirmActivation(this.match);
     this.#collectFx();
     store.touchMatch();
@@ -159,36 +189,42 @@ export class MatchController {
 
   /** Annule avant validation : rien n'est consommé (CAP-20). */
   cancel(): void {
+    if (this.remote) return this.remote('cancelActivation');
     cancelActivation(this.match);
     store.touchMatch();
   }
 
   /** Laisse passer la fenêtre d'événement (CAP-19). */
   dismissWindow(): void {
+    if (this.remote) return this.remote('dismissWindow');
     dismissEventWindow(this.match);
     store.touchMatch();
   }
 
   /** Coup franc pour le coach : tir direct, centre ou combinaison. */
   chooseFreeKick(option: FreeKickOption): void {
+    if (this.remote) return this.remote('chooseFreeKickOption', [option]);
     chooseFreeKickOption(this.match, this.coachSide, option);
     store.touchMatch();
   }
 
   /** Coup franc adverse : taille du mur. */
   chooseWall(wall: WallSize): void {
+    if (this.remote) return this.remote('chooseWall', [wall]);
     chooseWall(this.match, this.coachSide, wall);
     store.touchMatch();
   }
 
   /** Penalty pour le coach : frappe placée, en force ou Panenka. */
   choosePenaltyStyle(style: PenaltyStyle): void {
+    if (this.remote) return this.remote('choosePenaltyStyle', [style]);
     choosePenaltyStyle(this.match, this.coachSide, style);
     store.touchMatch();
   }
 
   /** Penalty adverse : plongeon du gardien. */
   chooseKeeperDive(dive: KeeperDive): void {
+    if (this.remote) return this.remote('chooseKeeperDive', [dive]);
     chooseKeeperDive(this.match, this.coachSide, dive);
     store.touchMatch();
   }
@@ -202,6 +238,7 @@ export class MatchController {
     this.dragging = false;
     if (targetId && targetId !== draggedId) {
       if (canSwapPositions(this.match, this.coachSide, draggedId, targetId)) {
+        if (this.remote) return this.remote('swapPositions', [draggedId, targetId]);
         swapPositions(this.match, this.coachSide, draggedId, targetId);
         store.touchMatch();
         return;
@@ -212,6 +249,7 @@ export class MatchController {
       return;
     }
     if (line && canMoveToLine(this.match, this.coachSide, draggedId, line)) {
+      if (this.remote) return this.remote('moveToLine', [draggedId, line]);
       moveToLine(this.match, this.coachSide, draggedId, line);
       store.touchMatch();
     }
@@ -220,6 +258,7 @@ export class MatchController {
   /** Consignes tactiques pendant une pause (MATCH-05). */
   updateInstructions(changes: Partial<Instructions>): void {
     const team = this.coachSide === 'home' ? this.match.home : this.match.away;
+    if (this.remote) return this.remote('setInstructions', [{ ...team.instructions, ...changes }]);
     setInstructions(this.match, this.coachSide, { ...team.instructions, ...changes });
     store.touchMatch();
   }
@@ -275,6 +314,7 @@ export class MatchController {
   /** Remplacement (MATCH-08). Le panneau du joueur se referme. */
   substitute(leavingId: string, enteringId: string): void {
     this.inspectedId = null;
+    if (this.remote) return this.remote('substitute', [leavingId, enteringId]);
     if (substitutePlayer(this.match, this.coachSide, leavingId, enteringId) === false) store.notify('Ce changement n’est pas possible.');
     store.touchMatch();
   }
