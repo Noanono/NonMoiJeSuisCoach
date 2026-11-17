@@ -20,6 +20,12 @@ bun run build    # build de production dans dist/
 
 Le jeu tourne entièrement dans le navigateur, hors ligne une fois chargé. Les parties sont sauvegardées dans le `localStorage` (3 emplacements).
 
+### Jouer entre amis
+
+Pas de serveur à lancer : sur l'accueil, l'hôte choisit **Héberger une partie**, ouvre une ligue et partage le **code** affiché (ou le lien). Les amis le collent dans **Rejoindre une partie**. L'hôte peut aussi **ouvrir son serveur au public** : il apparaît alors dans la liste sous le champ du code. Les navigateurs se parlent en pair-à-pair (WebRTC, via [Trystero](https://github.com/dmotz/trystero)) ; l'onglet de l'hôte doit rester ouvert.
+
+Le serveur du réseau local (`bun run serveur`) fonctionne encore mais est **obsolète** et sera supprimé.
+
 ## Architecture
 
 - `src/domain/` : les règles du jeu en TypeScript pur, testées avec `bun test`.
@@ -29,7 +35,9 @@ Le jeu tourne entièrement dans le navigateur, hors ligne une fois chargé. Les 
   - `club/` : finances, mercato, président, vie du vestiaire, frasques, presse, dialogues.
   - `game/` : la partie et la boucle de saison qui assemblent le tout.
   - `save/` : emplacements de sauvegarde locale.
+- `src/server/` : cœur du multijoueur sans réseau (`hub.ts`, `hostEngine.ts`, matchs en direct, envoi par différences) ; `main.ts` est l'adaptateur Node du réseau local, obsolète.
 - `src/ui/` : interface Svelte 5, selon le [design system](./docs/design-system.md).
+  - `net/` : pair-à-pair (hôte dans le navigateur, transports, code du serveur, annuaire public).
 
 Les exigences sont dans [docs/exigences.md](./docs/exigences.md) et les conventions de code dans [docs/conventions.md](./docs/conventions.md). Chaque règle cite l'identifiant de son exigence (ex. `CAP-05`) dans le code ou les tests.
 

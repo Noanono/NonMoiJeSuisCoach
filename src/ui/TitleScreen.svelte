@@ -5,70 +5,52 @@
   import { store } from './store.svelte';
   import type { SaveSlot } from '../domain/save/saveSlots';
   import { DIFFICULTIES, type Difficulty } from '../domain/game/difficulty';
-  import { localCoachId, MultiClient } from './multiClient.svelte';
-  import type { ServerInfo, SlotInfo } from '../server/hub';
+  import { lanServer } from './multiClient.svelte';
+  import type { ServerInfo } from '../server/hub';
+  import HostPanel from './online/HostPanel.svelte';
+  import JoinPanel from './online/JoinPanel.svelte';
+  import LanLeague from './lan/LanLeague.svelte';
+  import { peerHost } from './net/peerHost.svelte';
 
   const DIFFICULTY_IDS = Object.keys(DIFFICULTIES) as Difficulty[];
+  const JOIN_LINK = /^#rejoindre=(.+)$/;
 
   let slots = $state(store.listSlots());
   let creatingSlot = $state<SaveSlot | null>(null);
   let confirmDelete = $state<SaveSlot | null>(null);
   let clubName = $state('');
   let difficulty = $state<Difficulty>('normal');
-  /** Écran d'entrée : solo, héberger une ligue (sur le PC du serveur) ou rejoindre celle qui est ouverte (MULTI-09). */
-  let mode = $state<'choice' | 'solo'>('choice');
-  /** `undefined` = on cherche encore ; `null` = pas de serveur de ligue à cette adresse. */
-  let server = $state<ServerInfo | null | undefined>(undefined);
-  let hostSlots = $state<SlotInfo[]>([]);
-  let confirmLeagueDelete = $state<number | null>(null);
-  let hostFeedback = $state<string | null>(null);
-  /** Reprise d'un coach dans un autre navigateur (C10). */
-  let claimCode = $state('');
-  let claimFeedback = $state<string | null>(null);
-  /** L'identité de ce navigateur peut changer (code de reprise) : relue à chaque fois. */
-  let coachId = $state(localCoachId());
+  /** Lien d'invitation (`#rejoindre=CODE`) : on arrive directement sur « Rejoindre », le code rempli. */
+  const linkCode = readJoinLink();
+  /** Écran d'entrée : solo, héberger une ligue, ou en rejoindre une (MULTI-09, MULTI-11). */
+  let mode = $state<'choice' | 'solo' | 'host' | 'join'>(linkCode ? 'join' : peerHost.status === 'online' ? 'host' : 'choice');
+  /** @deprecated Serveur du réseau local qui sert le jeu ; `null` ailleurs (Netlify). */
+  let lan = $state<ServerInfo | null>(null);
 
-  async function giveCode(id: string): Promise<void> {
-    const reply = await MultiClient.hostClaimCode(id);
-    hostFeedback = reply.message ?? (reply.ok ? null : 'Refusé.');
-  }
-
-  async function claim(): Promise<void> {
-    const reply = await MultiClient.claim(claimCode);
-    claimFeedback = reply.message ?? null;
-    if (reply.ok) {
-      coachId = localCoachId();
-      claimCode = '';
-      await refreshServer();
+  function readJoinLink(): string {
+    const match = JOIN_LINK.exec(location.hash);
+    if (!match) return '';
+    // Le code ne reste pas dans la barre d'adresse (ni dans l'historique partagé par erreur).
+    history.replaceState(null, '', location.pathname + location.search);
+    try {
+      return decodeURIComponent(match[1]!);
+    } catch {
+      return '';
     }
   }
 
-  async function refreshServer(): Promise<void> {
-    server = await MultiClient.serverInfo();
-    hostSlots = server?.host ? await MultiClient.hostSlots() : [];
+  async function refreshLan(): Promise<void> {
+    lan = await lanServer.info();
   }
 
-  // La ligue ouverte peut changer (l'hôte en choisit une) : on relit le serveur régulièrement.
+  // Le serveur du réseau local (obsolète) peut ouvrir une autre ligue : on le relit tant qu'il répond.
   $effect(() => {
-    void refreshServer();
-    const timer = setInterval(() => void refreshServer(), 3000);
+    void refreshLan();
+    const timer = setInterval(() => {
+      if (lan) void refreshLan();
+    }, 3000);
     return () => clearInterval(timer);
   });
-
-  /** Ce navigateur a déjà joué dans la ligue ouverte : « Continuer », sinon « Rejoindre ». */
-  const known = $derived(server?.league?.coaches.some((coach) => coach.id === coachId) ?? false);
-
-  async function hostAction(action: 'open' | 'delete', slot: number): Promise<void> {
-    confirmLeagueDelete = null;
-    const reply = await MultiClient.hostAction(action, slot);
-    hostFeedback = reply.message ?? (reply.ok ? null : 'Refusé.');
-    await refreshServer();
-  }
-
-  function leagueLine(league: NonNullable<SlotInfo['league']>): string {
-    const when = league.phase === 'lobby' ? 'salle d’attente' : `saison ${league.season}, semaine ${league.week}`;
-    return `${when} · ${league.coaches.map((coach) => coach.name).join(', ') || 'aucun coach'}`;
-  }
 
   function create(event: SubmitEvent): void {
     event.preventDefault();
@@ -97,86 +79,27 @@
       <p class="texte-s meta">Ton club, ta carrière, trois vestiaires de sauvegarde sur ce PC.</p>
       <div class="row"><Button variant="primary" onclick={() => (mode = 'solo')}>Jouer en solo</Button></div>
     </Card>
-    {#if server?.host}
-      <Card title="Héberger une partie">
-        <p class="texte-s meta">Tu es sur le PC du serveur : choisis la ligue que tes amis rejoindront.</p>
-        <ul class="ligues">
-          {#each hostSlots as entry (entry.slot)}
-            <li class:ouverte={entry.active}>
-              <p class="texte-fort">Ligue {entry.slot} {#if entry.active}<Sticker>ouverte</Sticker>{/if}</p>
-              {#if entry.status === 'ok' && entry.league}
-                <p class="texte-s meta">{leagueLine(entry.league)}</p>
-              {:else if entry.status === 'error'}
-                <p class="texte-s erreur">Sauvegarde illisible.</p>
-              {:else}
-                <p class="texte-s meta">Emplacement vide.</p>
-              {/if}
-              <div class="row serre">
-                {#if entry.status === 'empty'}
-                  <Button size="s" onclick={() => hostAction('open', entry.slot)}>Nouvelle ligue</Button>
-                {:else if entry.status === 'ok'}
-                  <Button size="s" variant={entry.active ? 'ghost' : 'primary'} disabled={entry.active} onclick={() => hostAction('open', entry.slot)}>
-                    {entry.active ? 'Ouverte' : 'Ouvrir'}
-                  </Button>
-                {/if}
-                {#if entry.status !== 'empty' && !entry.active}
-                  {#if confirmLeagueDelete === entry.slot}
-                    <Button size="s" onclick={() => hostAction('delete', entry.slot)}>Confirmer</Button>
-                    <Button size="s" variant="ghost" onclick={() => (confirmLeagueDelete = null)}>Annuler</Button>
-                  {:else}
-                    <Button size="s" variant="ghost" onclick={() => (confirmLeagueDelete = entry.slot)}>Supprimer</Button>
-                  {/if}
-                {/if}
-              </div>
-            </li>
-          {/each}
-        </ul>
-        {#if server.league && server.league.coaches.length > 0}
-          <p class="texte-s meta">Un ami a changé de navigateur et voit « Rejoindre » ? Donne-lui un code de reprise.</p>
-          <ul class="ligues">
-            {#each server.league.coaches as coach (coach.id)}
-              <li class="row serre">
-                <span class="texte-s"><span class="texte-fort">{coach.name}</span> · {coach.clubName}</span>
-                <Button size="s" variant="ghost" onclick={() => giveCode(coach.id)}>Code de reprise</Button>
-              </li>
-            {/each}
-          </ul>
-        {/if}
-        <p class="texte-s texte-fort" role="status">{hostFeedback ?? ''}</p>
-      </Card>
-    {/if}
-    <Card title="Rejoindre une partie">
-      {#if server === undefined}
-        <p class="texte-s meta">Recherche du serveur…</p>
-      {:else if server === null}
-        <p class="texte-s meta">Une ligue entre amis sur le réseau local : chacun son club, la semaine avance quand tout le monde est prêt.</p>
-        <div class="aide texte-s">
-          <p class="texte-fort">Pas de serveur de ligue à cette adresse.</p>
-          <p>L'hôte lance <code>npm run serveur</code> sur son PC, puis chacun ouvre l'adresse affichée (par exemple <code>http://192.168.1.20:5300</code>) dans son navigateur.</p>
-        </div>
-      {:else if !server.league}
-        <p class="texte-s meta">{server.host ? 'Ouvre une ligue à gauche : elle apparaîtra ici.' : 'L’hôte n’a pas encore ouvert de ligue. Patience…'}</p>
-      {:else}
-        <p class="texte-fort">Ligue {server.league.slot}</p>
-        <p class="texte-s meta">{leagueLine(server.league)}</p>
-        <div class="row">
-          <Button variant="primary" onclick={() => store.openMultiplayer()}>{known ? 'Continuer' : 'Rejoindre'}</Button>
-        </div>
-        {#if !known}
-          <p class="texte-s meta">
-            {server.league.phase === 'lobby' ? 'Tu choisiras ton nom de coach et ton nom de club.' : 'La ligue a commencé : tu reprendras le club le plus faible, que tu renommeras.'}
-          </p>
-          {#if server.league.coaches.length > 0}
-            <form class="row serre" onsubmit={(event) => { event.preventDefault(); void claim(); }}>
-              <label class="texte-s" for="code-reprise">Tu avais déjà un club ? Code de l’hôte :</label>
-              <input id="code-reprise" inputmode="numeric" maxlength="4" size="5" bind:value={claimCode} autocomplete="off" />
-              <Button size="s" type="submit" disabled={claimCode.trim().length !== 4}>Reprendre mon club</Button>
-            </form>
-          {/if}
-        {/if}
-        {#if claimFeedback}<p class="texte-s texte-fort" role="status">{claimFeedback}</p>{/if}
-      {/if}
+    <Card title="Héberger une partie">
+      <p class="texte-s meta">
+        {peerHost.status === 'online' ? 'Ton serveur tourne : reviens-y pour le code et les coachs.' : 'Ton navigateur devient le serveur. Tu obtiens un code à partager, et tu peux ouvrir ta ligue au public.'}
+      </p>
+      <div class="row"><Button variant="primary" onclick={() => (mode = 'host')}>{peerHost.status === 'online' ? 'Mon serveur' : 'Héberger'}</Button></div>
     </Card>
+    <Card title="Rejoindre une partie">
+      <p class="texte-s meta">Un ami t'a donné un code ? Ou pioche dans la liste des serveurs publics.</p>
+      <div class="row"><Button variant="primary" onclick={() => (mode = 'join')}>Rejoindre</Button></div>
+    </Card>
+    {#if lan}
+      <LanLeague server={lan} onrefresh={refreshLan} />
+    {/if}
+  </div>
+  {:else if mode === 'host'}
+  <div class="row"><Button variant="ghost" onclick={() => (mode = 'choice')}>Retour au choix du mode</Button></div>
+  <HostPanel />
+  {:else if mode === 'join'}
+  <div class="row"><Button variant="ghost" onclick={() => (mode = 'choice')}>Retour au choix du mode</Button></div>
+  <div class="rejoindre">
+    <JoinPanel initialCode={linkCode} />
   </div>
   {:else}
   <div class="row"><Button variant="ghost" onclick={() => (mode = 'choice')}>Retour au choix du mode</Button></div>
@@ -250,35 +173,11 @@
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: var(--space-6);
   }
-  .ligues {
-    list-style: none;
-    margin: var(--space-2) 0 0;
-    padding: 0;
+  .rejoindre {
     display: grid;
-    gap: var(--space-2);
-  }
-  .ligues li {
-    padding: var(--space-2);
-    border: var(--trait-fin) solid var(--encre-pale);
-    border-radius: var(--radius-xs);
-  }
-  .ligues li.ouverte {
-    border-color: var(--encre);
-    background: var(--craie);
-  }
-  .ligues p {
-    margin: 0;
-  }
-  .row.serre {
-    margin-top: var(--space-1);
-  }
-  .aide {
-    margin-top: var(--space-4);
-    display: grid;
-    gap: var(--space-1);
-  }
-  .aide p {
-    margin: 0;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--space-6);
+    align-items: start;
   }
   .slots {
     display: grid;
