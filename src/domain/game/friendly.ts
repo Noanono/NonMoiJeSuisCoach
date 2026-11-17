@@ -35,6 +35,11 @@ export interface FriendlyMatch {
 
 /** L'équipe étrangère a de 5 à 8 points de plus que le onze du coach. */
 const STRENGTH_GAP = { min: 5, max: 8 } as const;
+/**
+ * Réglage par nation : leurs capacités et leur style ne pèsent pas pareil. Calé pour qu'un coach qui joue ses
+ * capacités gagne environ 30 % des amicaux contre chacune (mesuré sur 600 matchs).
+ */
+const NATION_STRENGTH_SHIFT: Record<NationId, number> = { cn: -1, dz: 2, sn: 3, br: -3 };
 /** Chaque joueur étranger varie autour de ce niveau. */
 const PLAYER_SPREAD = 3;
 const MAX_ATTRIBUTE = 99;
@@ -107,7 +112,7 @@ function nationAbilityFor(nation: Nation, player: Player, onBench: boolean): str
 /** L'équipe étrangère, construite pour ce match : à hauteur du coach, plus 5 à 8 points. */
 export function foreignTeamSheet(state: GameState, nationId: NationId, rng: Rng): TeamSheet {
   const nation = NATIONS[nationId];
-  const level = Math.round(coachLevel(state)) + rng.int(STRENGTH_GAP.min, STRENGTH_GAP.max);
+  const level = Math.round(coachLevel(state)) + rng.int(STRENGTH_GAP.min, STRENGTH_GAP.max) + NATION_STRENGTH_SHIFT[nation.id];
   const clubId = foreignClubId(nation.id);
   const players: Player[] = [];
   for (const position of Object.keys(SQUAD_COMPOSITION) as Position[]) {
