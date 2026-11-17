@@ -1,65 +1,68 @@
 /**
- * Connexion au serveur de la ligue entre amis (MULTI-01 à MULTI-05). Le serveur sert aussi le jeu :
- * on lui parle à la même adresse. Il pousse la partie en direct (Server-Sent Events) ; on lui envoie
- * les commandes en POST.
+ * Connexion du coach à la ligue entre amis (MULTI-01 à MULTI-05). Le chemin vers l'hôte (pair-à-pair,
+ * lui-même, ou serveur du réseau local obsolète) est un `Transport` : l'hôte pousse la partie en direct,
+ * le coach lui envoie ses actions.
  */
 import type { CoachPresence, ServerInfo, ServerMessage, SlotInfo } from '../server/hub';
 import type { DuelView } from '../server/duel';
 import { applyPatch } from '../server/patch';
 import type { GameState } from '../domain/game';
 import type { MatchState } from '../domain/match';
+import { adoptIdentity, localCoachId, saveProfile, type CoachProfile } from './net/identity';
+import type { ApiResult, ConnectionStatus, Transport } from './net/transport';
 
-const COACH_ID_KEY = 'nmjsc-coach-id';
-const PROFILE_KEY = 'nmjsc-coach-profile';
+export { localCoachId, savedProfile, type CoachProfile } from './net/identity';
+export type { ConnectionStatus } from './net/transport';
 
-export type ConnectionStatus = 'idle' | 'connecting' | 'online' | 'offline';
+/** @deprecated Serveur Node du réseau local : appels réservés à l'accueil (MULTI-09). */
+export const lanServer = {
+  /** Serveur de ligue à cette adresse, et la ligue qu'il a ouverte ; `null` sans serveur (le cas sur Netlify). */
+  async info(): Promise<ServerInfo | null> {
+    try {
+      const response = await fetch('/api/info', { cache: 'no-store' });
+      if (!response.ok || !(response.headers.get('content-type') ?? '').includes('json')) return null;
+      return (await response.json()) as ServerInfo;
+    } catch {
+      return null;
+    }
+  },
 
-export interface CoachProfile {
-  name: string;
-  clubName: string;
-}
+  /** Les 3 emplacements de ligue de l'hôte. */
+  async slots(): Promise<SlotInfo[]> {
+    try {
+      const response = await fetch('/api/host/slots', { cache: 'no-store' });
+      return response.ok ? ((await response.json()) as { slots: SlotInfo[] }).slots : [];
+    } catch {
+      return [];
+    }
+  },
 
-interface ApiResult {
-  ok: boolean;
-  message?: string;
-  value?: unknown;
-}
+  /** L'hôte ouvre (reprend ou crée) une ligue, ou en range une à la corbeille. */
+  async hostAction(action: 'open' | 'delete', slot: number): Promise<ApiResult> {
+    return post(`/api/host/${action}`, { slot });
+  },
 
-/** Identifiant du coach dans ce navigateur : il retrouve son club en revenant. */
-export function localCoachId(): string {
+  /** L'hôte demande un code de reprise pour un coach (C10). */
+  async claimCode(coachId: string): Promise<ApiResult> {
+    return post('/api/host/claim-code', { coachId });
+  },
+
+  /** Avec le code de l'hôte, ce navigateur devient celui du coach : il retrouve son club (C10). */
+  async claim(code: string): Promise<ApiResult> {
+    const reply = await post('/api/claim', { code });
+    const value = reply.value as { coachId: string; name: string; clubName: string; secret?: string } | undefined;
+    if (reply.ok && value) adoptIdentity(value);
+    return reply;
+  },
+};
+
+async function post(url: string, body: Record<string, unknown>): Promise<ApiResult> {
   try {
-    const existing = localStorage.getItem(COACH_ID_KEY);
-    if (existing) return existing;
-    const created = `coach-${randomToken()}`;
-    localStorage.setItem(COACH_ID_KEY, created);
-    return created;
+    const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    return (await response.json()) as ApiResult;
   } catch {
-    // Pas de stockage (navigation privée) : identité le temps de la session.
-    sessionId ??= `coach-${randomToken()}`;
-    return sessionId;
+    return { ok: false, message: 'Serveur injoignable.' };
   }
-}
-
-let sessionId: string | null = null;
-
-/**
- * Jeton aléatoire. Pas de `crypto.randomUUID` : il n'existe qu'en contexte sécurisé (localhost, https),
- * or les amis de l'hôte ouvrent le jeu par l'adresse réseau du PC, en http.
- */
-function randomToken(): string {
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
-export function savedProfile(): CoachProfile {
-  try {
-    const raw = localStorage.getItem(PROFILE_KEY);
-    if (raw) return JSON.parse(raw) as CoachProfile;
-  } catch {
-    // Profil illisible : on repart de zéro.
-  }
-  return { name: '', clubName: '' };
 }
 
 export class MultiClient {
@@ -72,128 +75,74 @@ export class MultiClient {
   /** Match en direct contre un autre coach (MULTI-07), et l'instant où on l'a reçu (comptes à rebours). */
   duel = $state.raw<DuelView | null>(null);
   duelReceivedAt = $state(0);
-  #source: EventSource | null = null;
   /** Dernière partie reçue : les envois suivants n'en contiennent que la différence (C8). */
   #game: GameState | null = null;
+  readonly #transport: Transport;
   readonly #onGame: (game: GameState) => void;
   readonly #onDuel: (match: MatchState, view: DuelView) => void;
   readonly #onClosed: (message: string) => void;
 
-  constructor(onGame: (game: GameState) => void, onDuel: (match: MatchState, view: DuelView) => void, onClosed: (message: string) => void) {
+  constructor(
+    transport: Transport,
+    onGame: (game: GameState) => void,
+    onDuel: (match: MatchState, view: DuelView) => void,
+    onClosed: (message: string) => void,
+  ) {
+    this.#transport = transport;
     this.#onGame = onGame;
     this.#onDuel = onDuel;
     this.#onClosed = onClosed;
+  }
+
+  /** Ce navigateur est celui de l'hôte : lui seul lance la ligue (MULTI-15). */
+  get host(): boolean {
+    return this.#transport.host;
   }
 
   get me(): CoachPresence | undefined {
     return this.coaches.find((coach) => coach.id === this.id);
   }
 
-  /** Serveur de ligue à cette adresse, et la ligue qu'il a ouverte ; `null` sans serveur (MULTI-09). */
-  static async serverInfo(): Promise<ServerInfo | null> {
-    try {
-      const response = await fetch('/api/info', { cache: 'no-store' });
-      if (!response.ok || !(response.headers.get('content-type') ?? '').includes('json')) return null;
-      return (await response.json()) as ServerInfo;
-    } catch {
-      return null;
-    }
-  }
-
-  /** Les 3 emplacements de ligue de l'hôte. */
-  static async hostSlots(): Promise<SlotInfo[]> {
-    try {
-      const response = await fetch('/api/host/slots', { cache: 'no-store' });
-      return response.ok ? ((await response.json()) as { slots: SlotInfo[] }).slots : [];
-    } catch {
-      return [];
-    }
-  }
-
-  /** L'hôte ouvre (reprend ou crée) une ligue, ou en range une à la corbeille. */
-  static async hostAction(action: 'open' | 'delete', slot: number): Promise<ApiResult> {
-    try {
-      const response = await fetch(`/api/host/${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slot }) });
-      return (await response.json()) as ApiResult;
-    } catch {
-      return { ok: false, message: 'Serveur injoignable.' };
-    }
-  }
-
-  /** L'hôte demande un code de reprise pour un coach (C10). */
-  static async hostClaimCode(coachId: string): Promise<ApiResult> {
-    try {
-      const response = await fetch('/api/host/claim-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ coachId }) });
-      return (await response.json()) as ApiResult;
-    } catch {
-      return { ok: false, message: 'Serveur injoignable.' };
-    }
-  }
-
-  /** Avec le code de l'hôte, ce navigateur devient celui du coach : il retrouve son club (C10). */
-  static async claim(code: string): Promise<ApiResult> {
-    try {
-      const response = await fetch('/api/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
-      const reply = (await response.json()) as ApiResult;
-      const value = reply.value as { coachId: string; name: string; clubName: string } | undefined;
-      if (reply.ok && value) {
-        try {
-          localStorage.setItem(COACH_ID_KEY, value.coachId);
-          localStorage.setItem(PROFILE_KEY, JSON.stringify({ name: value.name, clubName: value.clubName }));
-        } catch {
-          sessionId = value.coachId;
-        }
-      }
-      return reply;
-    } catch {
-      return { ok: false, message: 'Serveur injoignable.' };
-    }
-  }
-
   connect(): void {
-    if (this.#source) return;
-    this.status = 'connecting';
-    const source = new EventSource(`/api/events?coach=${encodeURIComponent(this.id)}`);
-    source.onopen = () => (this.status = 'online');
-    source.onerror = () => (this.status = source.readyState === EventSource.CLOSED ? 'offline' : 'connecting');
-    source.onmessage = (event) => this.#receive(JSON.parse(event.data as string) as ServerMessage);
-    this.#source = source;
+    this.#transport.connect({ message: (message) => this.#receive(message), status: (status) => (this.status = status) });
   }
 
   disconnect(): void {
-    this.#source?.close();
-    this.#source = null;
-    this.status = 'idle';
+    this.#transport.close();
   }
 
-  async join(profile: CoachProfile): Promise<ApiResult> {
-    try {
-      localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-    } catch {
-      // Pas de stockage : on redemandera le nom la prochaine fois.
-    }
-    return this.#post('join', { name: profile.name, clubName: profile.clubName });
+  join(profile: CoachProfile): Promise<ApiResult> {
+    saveProfile(profile);
+    return this.#transport.request('join', { name: profile.name, clubName: profile.clubName });
   }
 
   start(): Promise<ApiResult> {
-    return this.#post('start', {});
+    return this.#transport.request('start', {});
   }
 
   command(name: string, args: unknown[]): Promise<ApiResult> {
-    return this.#post('command', { name, args });
+    return this.#transport.request('command', { name, args });
   }
 
   setReady(ready: boolean): Promise<ApiResult> {
-    return this.#post('ready', { ready });
+    return this.#transport.request('ready', { ready });
   }
 
   /** Entre dans son match contre un autre coach : le coup d'envoi attend les deux. */
   joinDuel(): Promise<ApiResult> {
-    return this.#post('duel/join', {});
+    return this.#transport.request('duel/join', {});
   }
 
   duelCommand(name: string, args: unknown[] = []): Promise<ApiResult> {
-    return this.#post('duel/command', { name, args });
+    return this.#transport.request('duel/command', { name, args });
+  }
+
+  /** Code de reprise de l'hôte (C10) : ce navigateur devient celui du coach (il faut ensuite se reconnecter). */
+  async claim(code: string): Promise<ApiResult> {
+    const reply = await this.#transport.request('claim', { code });
+    const value = reply.value as { coachId: string; name: string; clubName: string; secret?: string } | undefined;
+    if (reply.ok && value) adoptIdentity(value);
+    return reply;
   }
 
   #receive(message: ServerMessage): void {
@@ -218,27 +167,13 @@ export class MultiClient {
     this.phase = 'playing';
     this.joined = true;
     if (message.type === 'gamePatch') {
-      // Une différence sans partie de départ ne peut rien donner : on se reconnecte pour tout recevoir.
+      // Une différence sans partie de départ ne peut rien donner : on redemande tout.
       if (!this.#game) {
-        this.disconnect();
-        this.connect();
+        this.#transport.resync();
         return;
       }
       this.#game = applyPatch(this.#game, message.patch);
     } else this.#game = message.game;
     this.#onGame(this.#game);
-  }
-
-  async #post(route: string, body: Record<string, unknown>): Promise<ApiResult> {
-    try {
-      const response = await fetch(`/api/${route}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coach: this.id, ...body }),
-      });
-      return (await response.json()) as ApiResult;
-    } catch {
-      return { ok: false, message: 'Serveur injoignable. L’hôte a peut-être éteint son PC.' };
-    }
   }
 }

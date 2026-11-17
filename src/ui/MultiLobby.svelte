@@ -4,6 +4,7 @@
   import Sticker from './kit/Sticker.svelte';
   import { store } from './store.svelte';
   import { savedProfile } from './multiClient.svelte';
+  import { peerHost } from './net/peerHost.svelte';
 
   /**
    * Salle d'attente de la ligue entre amis (MULTI-02, MULTI-03) : chacun crée son club, puis l'un d'eux
@@ -37,13 +38,31 @@
     if (!reply.ok) feedback = reply.message ?? 'Impossible de lancer la ligue.';
   }
 
-  const STATUS_LABEL = { idle: 'Déconnecté', connecting: 'Connexion au serveur…', online: 'Connecté au serveur', offline: 'Serveur injoignable' } as const;
+  /** Code à partager : celui de l'hôte s'il joue dans sa propre ligue, sinon celui du serveur rejoint. */
+  const shareCode = $derived(store.serverCode ?? (peerHost.status === 'online' ? peerHost.codeText : null));
+
+  /** Reprise de son club depuis ce navigateur, avec le code de l'hôte (C10). */
+  let claimCode = $state('');
+  async function claim(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    busy = true;
+    feedback = await store.claimClub(claimCode.trim());
+    busy = false;
+  }
+
+  const STATUS_LABEL = { idle: 'Déconnecté', connecting: 'Connexion à l’hôte…', online: 'Connecté à l’hôte', offline: 'Hôte injoignable' } as const;
 </script>
 
 <div class="salle">
   <header>
     <h1 class="banderole-xl">LIGUE ENTRE<br />AMIS</h1>
     <Sticker tilted>{client ? STATUS_LABEL[client.status] : 'Déconnecté'}</Sticker>
+    {#if client?.status === 'offline'}
+      <p class="texte-s texte-fort" role="alert">L'hôte ne répond pas : il a peut-être fermé son onglet, ou vos réseaux ne se laissent pas joindre. On continue d'essayer.</p>
+    {/if}
+    {#if shareCode}
+      <p class="texte-s">Code du serveur : <span class="code">{shareCode}</span></p>
+    {/if}
   </header>
 
   <div class="colonnes">
@@ -70,11 +89,21 @@
         </div>
       </form>
       <p class="texte-s texte-fort" role="status">{feedback ?? ''}</p>
+      {#if !me && client && client.coaches.length > 0}
+        <form onsubmit={claim}>
+          <label class="tampon" for="code-reprise">Tu avais déjà un club dans cette ligue ?</label>
+          <p class="texte-s discret">Demande un code de reprise à l'hôte et tape-le ici.</p>
+          <input id="code-reprise" inputmode="numeric" maxlength="6" bind:value={claimCode} autocomplete="off" placeholder="123456" />
+          <div class="row">
+            <Button size="s" type="submit" disabled={busy || claimCode.trim().length !== 6}>Reprendre mon club</Button>
+          </div>
+        </form>
+      {/if}
     </Card>
 
     <Card title={playing ? 'Coachs de la ligue' : 'Salle d’attente'}>
       {#if !client || client.coaches.length === 0}
-        <p class="texte-s discret">Personne pour l'instant. Donne l'adresse du serveur à tes amis.</p>
+        <p class="texte-s discret">Personne pour l'instant. Donne le code du serveur à tes amis.</p>
       {:else}
         <ul class="coachs">
           {#each client.coaches as coach (coach.id)}
@@ -89,9 +118,13 @@
       {/if}
       {#if !playing}
         <p class="texte-s">La ligue démarre avec les coachs <span class="texte-fort">inscrits et connectés</span> au moment du lancement. Les retardataires reprendront le club le plus faible.</p>
-        <div class="row">
-          <Button variant="primary" disabled={!me || busy} onclick={start}>Lancer la ligue ({online.length} coach{online.length > 1 ? 's' : ''})</Button>
-        </div>
+        {#if client?.host}
+          <div class="row">
+            <Button variant="primary" disabled={!me || busy} onclick={start}>Lancer la ligue ({online.length} coach{online.length > 1 ? 's' : ''})</Button>
+          </div>
+        {:else}
+          <p class="texte-s texte-fort">C'est l'hôte qui lance la ligue, quand tout le monde est là.</p>
+        {/if}
       {/if}
     </Card>
   </div>
@@ -162,5 +195,11 @@
   }
   .pastille.en-ligne {
     background: var(--victoire);
+  }
+  .code {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    word-break: break-all;
+    user-select: all;
   }
 </style>

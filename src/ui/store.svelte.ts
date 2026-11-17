@@ -22,6 +22,7 @@ import { summarize } from '../domain/match';
 import type { MatchState, MatchSummary } from '../domain/match/types';
 import type { DuelView } from '../server/duel';
 import { MultiClient } from './multiClient.svelte';
+import type { Transport } from './net/transport';
 import type { SaveSlot, SlotSummary } from '../domain/save/saveSlots';
 
 export type Screen = 'title' | 'lobby' | 'dashboard' | 'squad' | 'tactics' | 'training' | 'market' | 'club' | 'competitions' | 'stats' | 'match';
@@ -87,14 +88,22 @@ class AppStore {
 
   // --- Ligue entre amis (MULTI-01 à MULTI-05) ---------------------------------------
 
-  /** Se connecte au serveur de l'hôte et ouvre la salle d'attente. */
-  openMultiplayer(): void {
+  /** Chemin vers l'hôte de la ligue ouverte : on le recrée pour se reconnecter (après un code de reprise). */
+  #transportFactory: (() => Transport) | null = null;
+  /** Code du serveur pair-à-pair rejoint, affiché dans la salle d'attente ; `null` pour l'hôte ou le réseau local. */
+  serverCode = $state<string | null>(null);
+
+  /** Se connecte à l'hôte (pair-à-pair, soi-même, ou réseau local) et ouvre la salle d'attente. */
+  openMultiplayer(transport: () => Transport, serverCode: string | null = null): void {
     this.multi?.disconnect();
+    this.#transportFactory = transport;
+    this.serverCode = serverCode;
     const client = new MultiClient(
+      transport(),
       (game) => this.receiveGame(game),
       (match, view) => this.receiveDuel(match, view),
       (message) => {
-        // L'hôte a fermé la ligue ou en a ouvert une autre (MULTI-09).
+        // L'hôte a fermé la ligue, en a ouvert une autre, ou a refusé ce navigateur (MULTI-09, MULTI-14).
         this.quitToTitle();
         this.notify(message);
       },
@@ -104,6 +113,18 @@ class AppStore {
     this.slot = null;
     client.connect();
     this.go('lobby');
+  }
+
+  /** Code de reprise accepté : ce navigateur a changé d'identité, on se reconnecte avec elle (C10). */
+  async claimClub(code: string): Promise<string> {
+    const multi = this.multi;
+    const factory = this.#transportFactory;
+    if (!multi || !factory) return 'Pas connecté à une ligue.';
+    const reply = await multi.claim(code);
+    if (!reply.ok) return reply.message ?? 'Code refusé.';
+    this.openMultiplayer(factory, this.serverCode);
+    this.notify(reply.message ?? 'Club retrouvé !');
+    return reply.message ?? 'Club retrouvé !';
   }
 
   /** Clé du match en direct affiché, et ceux que le coach a déjà quittés après le coup de sifflet. */
@@ -182,6 +203,8 @@ class AppStore {
     this.saveNow();
     this.multi?.disconnect();
     this.multi = null;
+    this.#transportFactory = null;
+    this.serverCode = null;
     this.game = null;
     this.match = null;
     this.go('title');

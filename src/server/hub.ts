@@ -40,6 +40,8 @@ export interface HubSnapshot {
   ready: string[];
   /** Matchs en direct en cours, enregistrés avec la ligue (C9). */
   duels?: { fixtureId: string; duel: DuelSnapshot }[];
+  /** Empreinte (SHA-256) du secret de chaque coach : en pair-à-pair, personne ne prend le club d'un autre (MULTI-14). */
+  secrets?: Record<string, string>;
 }
 
 /** Un coach vu par les autres : en ligne, prêt, ce qui le retient. */
@@ -146,6 +148,20 @@ export class MultiplayerHub {
     if (this.snapshot.game) syncFocus(this.snapshot.game);
     const duels = [...this.duels.values()].filter((entry) => !entry.applied).map((entry) => ({ fixtureId: entry.fixture.id, duel: entry.duel.toSnapshot() }));
     return duels.length > 0 ? { ...this.snapshot, duels } : this.snapshot;
+  }
+
+  /** Empreinte du secret du coach, s'il en a déjà un (MULTI-14). */
+  secretHash(coachId: string): string | undefined {
+    return this.snapshot.secrets?.[coachId];
+  }
+
+  setSecretHash(coachId: string, hash: string): void {
+    (this.snapshot.secrets ??= {})[coachId] = hash;
+  }
+
+  /** Coach inscrit dans la ligue (salle d'attente ou partie). */
+  isSignedUp(coachId: string): boolean {
+    return this.snapshot.signups.some((signup) => signup.id === coachId);
   }
 
   connect(coachId: string): void {
