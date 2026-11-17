@@ -1,0 +1,212 @@
+/*
+ * Mise en page et tableaux partagés des écrans de gestion (design system :
+ * tableaux denses en texte-s, lignes alternées craie-2, chiffres en mono alignés à droite).
+ */
+.ecran {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.colonnes {
+  display: grid;
+  gap: var(--space-6);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.colonnes.large-gauche {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+}
+
+.pile {
+  display: grid;
+  gap: var(--space-6);
+  align-content: start;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .colonnes,
+  .colonnes.large-gauche {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.defilant {
+  position: relative;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.tableau {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.tableau caption {
+  text-align: left;
+  padding-bottom: var(--space-2);
+}
+
+.tableau th {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: var(--trait-fin) solid var(--craie-2);
+}
+
+.tableau thead th {
+  border-bottom: var(--trait-epais) solid var(--encre);
+}
+
+.tableau td {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: var(--trait-fin) solid var(--craie-2);
+  vertical-align: middle;
+}
+
+.tableau tbody tr:nth-child(even) {
+  background: var(--craie-2);
+}
+
+.tableau tbody tr.surligne {
+  background: var(--scotch);
+  color: var(--encre-fixe);
+}
+
+.tableau .num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tableau th.num {
+  text-align: right;
+}
+
+.tri {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  color: inherit;
+}
+
+.lien {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.discret {
+  color: var(--encre-pale);
+}
+
+.surligne .discret {
+  color: var(--encre-fixe);
+}
+
+.bonus {
+  color: var(--victoire);
+  font-weight: 700;
+}
+
+.malus {
+  color: var(--carton);
+  font-weight: 700;
+}
+
+.liste-nue {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ligne-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.vide {
+  margin: 0;
+  font-style: italic;
+  color: var(--encre-pale);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.paire {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+}
+
+.paire dt {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--encre-pale);
+}
+
+.paire dd {
+  margin: 0;
+}
+
+.champ {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.champ select,
+.champ input,
+.select {
+  font: inherit;
+  font-size: 14px;
+  padding: var(--space-1) var(--space-2);
+  border: var(--trait-fin) solid var(--encre);
+  border-radius: var(--radius-none);
+  background: var(--craie);
+  color: var(--encre);
+  min-width: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
