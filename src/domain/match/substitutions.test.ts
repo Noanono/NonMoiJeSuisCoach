@@ -1,9 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import { makeSheet, playToEnd, testMatchOptions } from './fixtures';
 import { checkAvailability } from './activation';
-import { createMatch, requirePlayer } from './state';
+import { beginRun, createMatch, endRun, requirePlayer } from './state';
+import { injurePlayer } from './actions';
+import { tick } from './simulation';
+import { dismissEventWindow } from './windows';
 import { summarize } from './summary';
-import { canMoveToLine, canSwapPositions, MAX_SUBSTITUTIONS, moveToLine, substitutePlayer, swapPositions } from './substitutions';
+import { canMoveToLine, canSwapPositions, keeperReplacements, MAX_SUBSTITUTIONS, moveToLine, substitutePlayer, swapPositions } from './substitutions';
 
 function match(bench = ['pilier', 'pilier', 'pilier', 'pilier', 'pilier', 'pilier']) {
   return createMatch(
@@ -91,5 +94,52 @@ describe('changements de poste en match', () => {
     expect(canMoveToLine(state, 'home', 'h-0', 'DEF')).toBe(false);
     moveToLine(state, 'home', 'h-9', 'MID');
     expect(canMoveToLine(state, 'home', 'h-10', 'MID')).toBe(false);
+  });
+});
+
+describe('gardien blessé du coach (MATCH-08)', () => {
+  function injureKeeper(state: ReturnType<typeof match>) {
+    const run = beginRun(state);
+    injurePlayer(run, requirePlayer(state, 'h-0'));
+    endRun(run);
+  }
+
+  test('le match se met en pause et propose les remplaçants, gardien du banc en tête', () => {
+    const state = match();
+    requirePlayer(state, 'h-b3').profile = { ...requirePlayer(state, 'h-b3').profile, position: 'GK' };
+    injureKeeper(state);
+    expect(state.awaiting?.keeper?.injuredId).toBe('h-0');
+    expect(keeperReplacements(state.home)[0]!.id).toBe('h-b3');
+    const minute = state.minute;
+    tick(state);
+    expect(state.minute).toBe(minute);
+    // Le coach choisit : la fenêtre se ferme dès que le gardien est remplacé.
+    expect(substitutePlayer(state, 'home', 'h-0', 'h-b1')).not.toBe(false);
+    expect(requirePlayer(state, 'h-b1').line).toBe('GK');
+    expect(state.awaiting).toBeNull();
+  });
+
+  test('s’il laisse filer, le jeu fait entrer le gardien du banc', () => {
+    const state = match();
+    requirePlayer(state, 'h-b3').profile = { ...requirePlayer(state, 'h-b3').profile, position: 'GK' };
+    injureKeeper(state);
+    dismissEventWindow(state);
+    expect(requirePlayer(state, 'h-b3').line).toBe('GK');
+    expect(requirePlayer(state, 'h-0').line).toBeNull();
+    expect(state.awaiting).toBeNull();
+  });
+
+  test('sans changement possible, un joueur de champ enfile les gants', () => {
+    const state = match([]);
+    injureKeeper(state);
+    expect(state.awaiting).toBeNull();
+    expect(state.home.players.filter((player) => player.line === 'GK' && !player.injured)).toHaveLength(1);
+    expect(requirePlayer(state, 'h-0').line).not.toBe('GK');
+  });
+
+  test('l’IA n’a pas de fenêtre : elle remplace seule', () => {
+    const state = createMatch(testMatchOptions(makeSheet({ clubId: 'h', benchAbilities: ['pilier'] }), makeSheet({ clubId: 'a', isHuman: true })));
+    injureKeeper(state);
+    expect(state.awaiting).toBeNull();
   });
 });

@@ -22,6 +22,26 @@
   let hostSlots = $state<SlotInfo[]>([]);
   let confirmLeagueDelete = $state<number | null>(null);
   let hostFeedback = $state<string | null>(null);
+  /** Reprise d'un coach dans un autre navigateur (C10). */
+  let claimCode = $state('');
+  let claimFeedback = $state<string | null>(null);
+  /** L'identité de ce navigateur peut changer (code de reprise) : relue à chaque fois. */
+  let coachId = $state(localCoachId());
+
+  async function giveCode(id: string): Promise<void> {
+    const reply = await MultiClient.hostClaimCode(id);
+    hostFeedback = reply.message ?? (reply.ok ? null : 'Refusé.');
+  }
+
+  async function claim(): Promise<void> {
+    const reply = await MultiClient.claim(claimCode);
+    claimFeedback = reply.message ?? null;
+    if (reply.ok) {
+      coachId = localCoachId();
+      claimCode = '';
+      await refreshServer();
+    }
+  }
 
   async function refreshServer(): Promise<void> {
     server = await MultiClient.serverInfo();
@@ -36,7 +56,7 @@
   });
 
   /** Ce navigateur a déjà joué dans la ligue ouverte : « Continuer », sinon « Rejoindre ». */
-  const known = $derived(server?.league?.coaches.some((coach) => coach.id === localCoachId()) ?? false);
+  const known = $derived(server?.league?.coaches.some((coach) => coach.id === coachId) ?? false);
 
   async function hostAction(action: 'open' | 'delete', slot: number): Promise<void> {
     confirmLeagueDelete = null;
@@ -111,6 +131,17 @@
             </li>
           {/each}
         </ul>
+        {#if server.league && server.league.coaches.length > 0}
+          <p class="texte-s meta">Un ami a changé de navigateur et voit « Rejoindre » ? Donne-lui un code de reprise.</p>
+          <ul class="ligues">
+            {#each server.league.coaches as coach (coach.id)}
+              <li class="row serre">
+                <span class="texte-s"><span class="texte-fort">{coach.name}</span> · {coach.clubName}</span>
+                <Button size="s" variant="ghost" onclick={() => giveCode(coach.id)}>Code de reprise</Button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
         <p class="texte-s texte-fort" role="status">{hostFeedback ?? ''}</p>
       </Card>
     {/if}
@@ -135,7 +166,15 @@
           <p class="texte-s meta">
             {server.league.phase === 'lobby' ? 'Tu choisiras ton nom de coach et ton nom de club.' : 'La ligue a commencé : tu reprendras le club le plus faible, que tu renommeras.'}
           </p>
+          {#if server.league.coaches.length > 0}
+            <form class="row serre" onsubmit={(event) => { event.preventDefault(); void claim(); }}>
+              <label class="texte-s" for="code-reprise">Tu avais déjà un club ? Code de l’hôte :</label>
+              <input id="code-reprise" inputmode="numeric" maxlength="4" size="5" bind:value={claimCode} autocomplete="off" />
+              <Button size="s" type="submit" disabled={claimCode.trim().length !== 4}>Reprendre mon club</Button>
+            </form>
+          {/if}
         {/if}
+        {#if claimFeedback}<p class="texte-s texte-fort" role="status">{claimFeedback}</p>{/if}
       {/if}
     </Card>
   </div>

@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { getLegacyAbility } from '../testing/legacyAbilities';
 import { makeSheet, testMatchOptions } from './fixtures';
 import { cancelActivation, confirmActivation, previewActivation, selectTarget, startActivation } from './activation';
 import { announceSetPiece, awardPenalty, choosePenaltyStyle } from './plays';
@@ -101,7 +102,7 @@ describe('activation des capacités', () => {
 
   test('une seule capacité d’occasion par camp et par occasion de but', () => {
     const home = makeSheet({ clubId: 'h', isHuman: true, abilities: { 9: 'biere-tiede', 2: 'la-tete-de-pioche' } });
-    const state = createMatch({ home, away: makeSheet({ clubId: 'a', isHuman: true }), seed: 1 });
+    const state = createMatch({ lookupAbility: getLegacyAbility, home, away: makeSheet({ clubId: 'a', isHuman: true }), seed: 1 });
     state.home.gauge = 10;
     let run = beginRun(state);
     announceSetPiece(run, 'home', 'corner');
@@ -121,7 +122,7 @@ describe('activation des capacités', () => {
   test('l’IA ne joue pas deux capacités sur la même occasion', () => {
     for (let seed = 1; seed <= 60; seed++) {
       const home = makeSheet({ clubId: 'h', abilities: { 9: 'biere-tiede', 2: 'la-tete-de-pioche' } });
-      const state = createMatch({ home, away: makeSheet({ clubId: 'a', isHuman: true }), seed });
+      const state = createMatch({ lookupAbility: getLegacyAbility, home, away: makeSheet({ clubId: 'a', isHuman: true }), seed });
       state.home.gauge = 10;
       const run = beginRun(state);
       announceSetPiece(run, 'home', 'corner');
@@ -132,7 +133,7 @@ describe('activation des capacités', () => {
 
   test('une capacité d’occasion resert à chaque occasion', () => {
     const home = makeSheet({ clubId: 'h', isHuman: true, abilities: { 9: 'biere-tiede' } });
-    const state = createMatch({ home, away: makeSheet({ clubId: 'a', isHuman: true }), seed: 1 });
+    const state = createMatch({ lookupAbility: getLegacyAbility, home, away: makeSheet({ clubId: 'a', isHuman: true }), seed: 1 });
     state.home.gauge = 10;
     for (let penalty = 0; penalty < 2; penalty++) {
       const run = beginRun(state);
@@ -221,7 +222,7 @@ describe('fenêtres d’événement (CAP-19)', () => {
 
   test('Bière tiède répond au penalty comme au coup franc', () => {
     const home = makeSheet({ clubId: 'h', isHuman: true, abilities: { 9: 'biere-tiede' } });
-    const state = createMatch({ home, away: makeSheet({ clubId: 'a', isHuman: true }), seed: 1 });
+    const state = createMatch({ lookupAbility: getLegacyAbility, home, away: makeSheet({ clubId: 'a', isHuman: true }), seed: 1 });
     const run = beginRun(state);
     awardPenalty(run, 'home', null);
     endRun(run);

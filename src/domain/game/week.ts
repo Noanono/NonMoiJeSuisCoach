@@ -1,3 +1,4 @@
+import { runAiTransfers } from '../club/aiTransfers';
 import { getAbility } from '../abilities/catalog';
 import { pickWeeklyDialogue } from '../club/dialogues';
 import { facilitiesOf, facilityBonus } from '../club/facilities';
@@ -68,6 +69,7 @@ export function advanceWeek(state: GameState): void {
       refillScoutReports(state);
     });
     advanceCup(state, rng);
+    if (isTransferWindowOpen(state.week)) playAiTransfers(state, rng);
     pruneCoachOffers(state, state.week + 1, isTransferWindowOpen(state.week + 1));
     forEachCoach(state, () => {
       // Licencié : il choisit un nouveau club ; en solo, la semaine reprendra après ce choix (CLUB-05).
@@ -78,6 +80,25 @@ export function advanceWeek(state: GameState): void {
       if (state.status !== 'fired') maybeOpenDialogue(state, rng);
     });
     finishWeek(state, rng);
+  });
+}
+
+/** Mercato entre clubs IA (C7) ; chaque coach apprend ceux de sa division. */
+function playAiTransfers(state: GameState, rng: Rng): void {
+  const tierOf = (clubId: string) => state.divisions.find((division) => division.id === state.clubs[clubId]?.divisionId)?.tier ?? 1;
+  const { world, transfers } = runAiTransfers({ clubs: state.clubs, players: state.players }, { rng, abilityOf: getAbility, tierOf });
+  state.clubs = world.clubs;
+  state.players = world.players;
+  if (transfers.length === 0) return;
+  forEachCoach(state, () => {
+    const division = humanDivision(state);
+    for (const transfer of transfers) {
+      if (!division.clubIds.includes(transfer.fromClubId) && !division.clubIds.includes(transfer.toClubId)) continue;
+      const player = state.players[transfer.playerId];
+      const from = state.clubs[transfer.fromClubId]?.name ?? '?';
+      const to = state.clubs[transfer.toClubId]?.name ?? '?';
+      if (player) state.news.push(`Mercato : ${player.firstName} ${player.lastName} quitte ${from} pour ${to} contre ${transfer.price.toLocaleString('fr-FR')} €.`);
+    }
   });
 }
 

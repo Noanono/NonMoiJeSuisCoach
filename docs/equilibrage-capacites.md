@@ -2,27 +2,31 @@
 
 Ce document fixe les règles d'équilibrage des capacités spéciales. Les mesures qui les vérifient sont dans [impact-capacites.md](impact-capacites.md).
 
-## Cibles d'impact par rareté
+## Cibles d'impact par coût
 
-Une capacité se juge à ce qu'elle rapporte au classement : les **points de championnat gagnés en moyenne quand on l'active**, comparés au même match sans elle. Mesure au niveau 1, entre deux équipes de même niveau (voir la méthode dans [impact-capacites.md](impact-capacites.md)).
+Une capacité se juge à ce qu'elle rapporte au classement : les **points de championnat gagnés en moyenne quand on l'active**, comparés au même match sans elle. Mesure entre deux équipes de même niveau (voir la méthode dans [impact-capacites.md](impact-capacites.md)).
 
-| Rareté | Coût (gueulante) | Points par activation | Points par point de gueulante |
-| --- | ---: | ---: | ---: |
-| Commune | 2 | **+0,15 à +0,20** | 0,075 à 0,10 |
-| Rare | 3 | **+0,30 à +0,40** | 0,10 à 0,13 |
-| Légendaire | 5 | **+0,60 à +0,80** | 0,12 à 0,16 |
-| Mythique | 7 | **+1,00 à +1,40** | 0,14 à 0,20 |
+Le coût en gueulante de chaque capacité (1 à 7) est fixé selon ce qu'elle rapporte ; la rareté, elle, dit seulement à quel point la capacité est mécanique (CAP-12). Une commune peut donc coûter 7 et une mythique 2.
+
+| Coût | Niveau 1 | Niveau 5 |
+| ---: | ---: | ---: |
+| 1 | +0,06 à +0,10 | +0,09 à +0,20 |
+| 2 | +0,15 à +0,20 | +0,22 à +0,40 |
+| 3 | +0,30 à +0,40 | +0,45 à +0,80 |
+| 4 | +0,45 à +0,60 | +0,68 à +1,20 |
+| 5 | +0,60 à +0,80 | +0,90 à +1,60 |
+| 6 | +0,80 à +1,10 | +1,20 à +2,20 |
+| 7 | +1,00 à +1,40 | +1,50 à +2,80 |
 
 Principes :
 
-- les fourchettes ne se chevauchent pas : une rareté au-dessus est toujours plus forte ;
-- le point de gueulante rapporte un peu plus à chaque rareté : économiser pour une grosse capacité est récompensé ;
-- une mythique retourne un match à elle seule (environ un point par activation, souvent la différence entre un nul et une victoire) ;
-- une capacité de penalty ou de coup franc est jugée sur ce qu'elle rapporte quand l'événement arrive, avec les mêmes fourchettes : elle ne sert pas souvent, mais elle doit valoir son prix quand on la joue ;
-- un penalty est déjà marqué 3 fois sur 4 : une capacité qui ne fait qu'améliorer le tir plafonne vite. Les capacités de penalty ajoutent donc un effet qui dure (bonus de tir, élan de l'équipe, adversaire déconcentré), et les communes de penalty ont exceptionnellement deux effets ;
-- une capacité peut être déclarée situationnelle (`SITUATIONAL_ABILITIES` dans `src/domain/match/impactBench.ts`) si elle a le droit de dépasser sa fourchette ; la liste est vide aujourd'hui.
+- le point de gueulante rapporte un peu plus sur les grosses capacités : économiser est récompensé ;
+- au niveau 5, une capacité rapporte entre 1,5 et 2 fois sa fourchette du niveau 1 ;
+- une capacité à condition (« seulement quand tu es mené », « à partir de la 80e minute ») est jugée sur les matchs où elle a pu être jouée ;
+- une capacité de penalty ou de coup franc est jugée sur ce qu'elle rapporte quand l'événement arrive ;
+- aucun malus de stats ne dépasse −90 % (`MAX_MALUS`), à aucun niveau : au-delà, le joueur est déjà au plancher de 10 % de sa note. Une capacité au plafond progresse par sa durée ou ses cibles.
 
-Les cibles sont codées dans `IMPACT_TARGETS` (`src/domain/match/impactBench.ts`). Le test `impactBench.test.ts` vérifie à chaque lancement de la suite que chaque capacité reste dans sa fourchette (250 matchs par capacité, avec une marge de 0,2 point pour le bruit de mesure : il détecte une capacité cassée, pas un écart fin).
+Les cibles sont codées dans `IMPACT_TARGETS` et `impactTarget` (`src/domain/match/impactBench.ts`). Le test `impactBench.test.ts` vérifie à chaque lancement de la suite que chaque capacité reste dans la fourchette de son coût au niveau 1 (400 matchs par capacité, avec une marge de 2,5 erreurs types : il détecte une capacité cassée, pas un écart fin).
 
 ## Progression par niveau (CAP-11)
 
@@ -36,7 +40,13 @@ Toutes les capacités progressent à chaque niveau, du niveau 1 au niveau 5 (`st
 | Durées (effets, mises au sol, poursuite, inversion des niveaux, buts doubles, délai d'annulation) | +10 %, au moins une minute de plus à chaque niveau |
 | Capacités sans chiffre à faire grandir (annulation d'action, vol de jauge, transfert, relève, annulation de but) | petit bonus d'équipe : +3 % à toutes les stats pendant 10 minutes par niveau |
 
-Le niveau 5 garde en plus son bonus : une cible de plus pour les capacités ciblées, sinon +50 % de durée, sinon un effet 25 % plus fort. Une capacité à durée fixe (`fixedDuration`, aujourd'hui Le Bus de l'amicale) ne gagne jamais de minutes : ses niveaux et son bonus de niveau 5 ne renforcent que l'effet. La contrepartie d'une capacité (le porteur au sol après La Mêlée générale) ne grandit jamais.
+Le niveau 5 garde en plus son bonus : une cible de plus pour les capacités ciblées, sinon +50 % de durée, sinon un effet 25 % plus fort. Une capacité à durée fixe (`fixedDuration` : Le Béton armé, Le Car à deux étages) ne gagne jamais de minutes : ses niveaux et son bonus de niveau 5 ne renforcent que l'effet. La contrepartie d'une capacité (pari perdu, porteur au sol) ne grandit jamais.
+
+Chaque capacité peut régler sa progression pour tenir sa cible du niveau 5 :
+
+- `levelGain` : vitesse de progression des valeurs et des durées (1 = normale, 0,4 = freinée, 2 = doublée) ;
+- `levelBoost` : bonus d'équipe ajouté à chaque niveau (part de toutes les stats, pendant 20 minutes), pour les capacités qui ne peuvent pas grandir d'elles-mêmes (bouclier, annulation, règles du match) ;
+- `maxDuration` : durée maximale de ses effets, quel que soit le niveau (une mi-temps pour Le Gardien volant).
 
 ## Rythme de progression (CAP-10)
 

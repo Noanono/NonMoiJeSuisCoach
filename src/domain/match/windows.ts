@@ -7,7 +7,8 @@ import type { AbilityTrigger } from '../types';
 import { checkAvailability } from './activation';
 import { aiReactToTrigger } from './ai';
 import { comment, TRIGGER_LABEL } from './commentary';
-import { opponentSide, pushEvent, teamOf, type Run } from './state';
+import { beginRun, endRun, findPlayer, opponentSide, pushEvent, teamOf, type Run } from './state';
+import { replaceKeeper } from './substitutions';
 import type { EventWindow, MatchState, Side } from './types';
 
 /** Ouvre un déclencheur pour chaque camp concerné par l'événement. */
@@ -107,6 +108,13 @@ export function refreshWindow(state: MatchState): void {
   const window = state.awaiting;
   if (!window) return;
   window.eligiblePlayerIds = eligiblePlayerIds(state, window.side);
+  // Gardien blessé : la fenêtre reste ouverte tant qu'il est sur le terrain.
+  if (window.keeper) {
+    if (findPlayer(state, window.keeper.injuredId)?.line === 'GK') return;
+    state.awaiting = null;
+    openQueuedWindow(state);
+    return;
+  }
   const freeKickPending = window.freeKick !== undefined && state.pendingPlay?.kind === 'freeKick';
   const penaltyPending = window.penalty !== undefined && state.pendingPlay?.kind === 'penalty';
   if (window.eligiblePlayerIds.length === 0 && !freeKickPending && !penaltyPending) {
@@ -117,6 +125,13 @@ export function refreshWindow(state: MatchState): void {
 
 /** Le coach laisse passer la fenêtre (CAP-19) : rien n'est consommé. */
 export function dismissEventWindow(state: MatchState): void {
+  // Gardien blessé : le coach laisse filer, le jeu fait entrer le remplaçant.
+  const keeper = state.awaiting?.keeper ? findPlayer(state, state.awaiting.keeper.injuredId) : undefined;
+  if (keeper && keeper.line === 'GK') {
+    const run = beginRun(state);
+    replaceKeeper(run, teamOf(state, keeper.side), keeper);
+    endRun(run);
+  }
   state.awaiting = null;
   state.pending = null;
   openQueuedWindow(state);

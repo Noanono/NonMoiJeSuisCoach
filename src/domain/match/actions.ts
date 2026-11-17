@@ -6,18 +6,18 @@ import { clamp } from '../core/rng';
 import { comment } from './commentary';
 import { creditActive, IMPACT } from './impact';
 import { pickAssister } from './assists';
-import { GAUGE_MAX, isActive, opponentSide, pushEvent, teamOf, type Run } from './state';
+import { GAUGE_MAX, isActive, opponentSide, pushEvent, teamOf, type Run, findPlayer } from './state';
 import type { Consequence, MatchPlayer, MatchState, Side, TeamState } from './types';
+import { SUSPENSION_DIRECT_RED, SUSPENSION_SECOND_YELLOW } from './discipline';
+import { alertInjuredKeeper } from './substitutions';
 import { openTriggers } from './windows';
 
 /** Points de jauge gagnés quand l'équipe encaisse (CAP-05). */
 export const GAUGE_ON_CONCEDED = 1;
-const SUSPENSION_SECOND_YELLOW = 1;
-const SUSPENSION_DIRECT_RED = 2;
 /** La plupart des blessures se soignent dans la semaine ; les grosses, rares, coûtent plusieurs matchs. */
 export const SERIOUS_INJURY_CHANCE = 0.1;
-const SERIOUS_INJURY_WEEKS_MIN = 3;
-const SERIOUS_INJURY_WEEKS_MAX = 5;
+export const SERIOUS_INJURY_WEEKS_MIN = 3;
+export const SERIOUS_INJURY_WEEKS_MAX = 5;
 
 export function scoreLine(state: MatchState): string {
   return `${state.home.name} ${state.home.goals}-${state.away.goals} ${state.away.name}`;
@@ -124,7 +124,7 @@ export function bookPlayer(run: Run, player: MatchPlayer, card: 'yellow' | 'red'
   return given;
 }
 
-/** Blessure en match : le joueur sort, sans remplacement en V1 (MATCH-08). */
+/** Blessure en match : le joueur ne joue plus ; un gardien blessé du coach déclenche une alerte (MATCH-08). */
 export function injurePlayer(run: Run, player: MatchPlayer): void {
   const { state } = run;
   const team = teamOf(state, player.side);
@@ -135,12 +135,18 @@ export function injurePlayer(run: Run, player: MatchPlayer): void {
   if (serious) addConsequence(team, { type: 'injury', playerId: player.id, weeks, reason: 'Grosse blessure en match' });
   const text = comment(run.rng, serious ? 'injury' : 'injuryMinor', { player: player.name, team: team.name, weeks });
   pushEvent(run, 'injury', player.side, text, { playerId: player.id });
+  if (player.line === 'GK') alertInjuredKeeper(run, team, player);
 }
 
 /** Met un joueur hors jeu `minutes` minutes, avec un effet visible (CAP-09). */
 export function knockOut(run: Run, player: MatchPlayer, minutes: number, label: string): void {
   const { state } = run;
-  const until = state.elapsed + minutes;
+  if (player.steadyUntil >= state.elapsed) {
+    pushEvent(run, 'effect', player.side, `${player.name} encaisse sans broncher : il reste debout.`, { playerId: player.id });
+    return;
+  }
+  const doctor = teamOf(state, player.side).doctor;
+  const until = state.elapsed + (doctor ? Math.min(minutes, doctor.reviveAfter) : minutes);
   player.knockedOutUntil = Math.max(player.knockedOutUntil, until);
   player.effects.push({ label, stat: 'knockout', value: -1, endsAt: until });
   const text = comment(run.rng, 'knockout', {
@@ -153,15 +159,19 @@ export function knockOut(run: Run, player: MatchPlayer, minutes: number, label: 
 
 /** Retire les effets terminés (CAP-09). */
 export function expireEffects(state: MatchState): void {
-  expireTeamEffects(state.home, state.elapsed);
-  expireTeamEffects(state.away, state.elapsed);
+  expireTeamEffects(state, state.home);
+  expireTeamEffects(state, state.away);
 }
 
-function expireTeamEffects(team: TeamState, elapsed: number): void {
+/** Effets terminés, et marquages (M1) dont le marqueur n'est plus sur le terrain ou est au sol. */
+function expireTeamEffects(state: MatchState, team: TeamState): void {
+  const elapsed = state.elapsed;
   for (const player of team.players) {
     const effects = player.effects;
     for (let i = effects.length - 1; i >= 0; i--) {
-      if (effects[i]!.endsAt < elapsed) effects.splice(i, 1);
+      const effect = effects[i]!;
+      const marker = effect.markerId ? findPlayer(state, effect.markerId) : undefined;
+      if (effect.endsAt < elapsed || (effect.markerId && (!marker || !isActive(marker, elapsed)))) effects.splice(i, 1);
     }
   }
 }

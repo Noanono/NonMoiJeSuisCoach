@@ -9,7 +9,7 @@ import type { ScoutingState } from './scouting';
 import type { Difficulty } from './difficulty';
 
 /** Version du format de partie, à incrémenter à chaque changement incompatible de la sauvegarde. */
-export const GAME_VERSION = 5;
+export const GAME_VERSION = 6;
 
 export type GameStatus = 'playing' | 'fired';
 

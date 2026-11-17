@@ -23,7 +23,7 @@ describe('reroll de capacité (CAP-23)', () => {
 
   test('3 capacités différentes, compatibles, hors effectif, de la même rareté ou d’un rang au-dessus', () => {
     const player = makePlayer({ position: 'DEF' });
-    const excluded = new Set(['la-mobylette']);
+    const excluded = new Set(['le-crochet']);
     let upgrades = 0;
     let total = 0;
     for (let seed = 1; seed <= 2000; seed++) {

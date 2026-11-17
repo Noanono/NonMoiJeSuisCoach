@@ -14,6 +14,7 @@
   import Sticker from '../kit/Sticker.svelte';
   import { canAdvanceWeek, isHumanDuel, clubPlayers, currentWeek, divisionOf, humanDivision, humanFixture, humanLineupErrors, isDerby, outcomeFor } from '../../domain/game';
   import { overall } from '../../domain/player/rating';
+  import { AI_STYLE_HINT, AI_STYLE_LABEL, aiStyleOf } from '../../domain/club/aiStyle';
   import { recentForm, weekLabel, type FormLetter } from './views';
 
   /** Bureau du coach : semaine, prochain match, actualité, dialogue, offres, finances et président. */
@@ -44,6 +45,8 @@
           outcome: outcome ? (FORM_LETTER[outcome] as FormLetter) : null,
           ownForm: recentForm(allFixtures, game.humanClubId),
           opponentForm: recentForm(allFixtures, opponentId),
+          // Style du coach IA d'en face (C6) : connu de tous, il se voit à la télé locale.
+          style: game.clubs[opponentId]?.isHuman ? null : { label: AI_STYLE_LABEL[aiStyleOf(opponentId)], hint: AI_STYLE_HINT[aiStyleOf(opponentId)] },
           derby: isDerby(game, fixture),
           // Contre un autre coach de la ligue (MULTI-06).
           duel: isHumanDuel(game, fixture),
@@ -161,6 +164,9 @@
               <p class="banderole-m">
                 {desk.match.isHome ? 'Contre' : 'Chez'} {desk.match.opponent}
               </p>
+              {#if desk.match.style}
+                <p class="texte-s"><span class="tampon">Leur coach</span> <span class="texte-fort">{desk.match.style.label}</span> : {desk.match.style.hint}.</p>
+              {/if}
               {#if desk.match.score}
                 <p class="resultat">
                   <span class="tampon">Score</span>

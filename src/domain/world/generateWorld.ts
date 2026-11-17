@@ -12,7 +12,7 @@ export const PROMOTION_SLOTS = 2;
 export const DEFAULT_FORMATION: Formation = '4-4-2';
 
 /** Fourchette de réputation par division, de l'élite (index 0) au district. */
-const REPUTATION_BY_TIER: readonly { min: number; max: number }[] = [
+export const REPUTATION_BY_TIER: readonly { min: number; max: number }[] = [
   { min: 70, max: 85 },
   { min: 55, max: 70 },
   { min: 40, max: 55 },

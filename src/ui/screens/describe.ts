@@ -103,7 +103,8 @@ export function describeEffect(effect: Effect): string {
       if (effect.per === 'minute') {
         return `${signedPercent(effect.perUnit)} ${STAT_LABEL[effect.stat]} par minute jouée (${SCOPE_LABEL[effect.scope]}) pendant ${effect.duration}${NBSP}min`;
       }
-      return `${signedPercent(effect.base)} ${STAT_LABEL[effect.stat]} (${SCOPE_LABEL[effect.scope]}) pendant ${effect.duration}${NBSP}min, ${signedPercent(effect.perUnit)} par but encaissé`;
+      const unit = effect.per === 'goalDeficit' ? 'par but de retard' : 'par but encaissé';
+      return `${signedPercent(effect.base)} ${STAT_LABEL[effect.stat]} (${SCOPE_LABEL[effect.scope]}) pendant ${effect.duration}${NBSP}min, ${signedPercent(effect.perUnit)} ${unit}`;
     }
     case 'knockout': {
       const chase = effect.chaseDuration ? `, puis un autre adversaire ${effect.chaseDuration}${NBSP}min` : '';
@@ -133,8 +134,18 @@ export function describeEffect(effect: Effect): string {
       return `Vole ${plural(effect.value, 'point')} de Gueulante au coach adverse`;
     case 'cleanSheetGauge':
       return `+${plural(effect.value, 'point')} de Gueulante si aucun but encaissé pendant ${effect.duration}${NBSP}min`;
-    case 'clearMaluses':
-      return `Retire tous les malus de son équipe, +${plural(effect.bonusGauge, 'point')} de Gueulante si au moins ${effect.threshold} sont retirés`;
+    case 'clearMaluses': {
+      const who = effect.scope === 'targets' ? 'de la cible' : 'de son équipe';
+      const gauge = effect.bonusGauge > 0 ? `, +${plural(effect.bonusGauge, 'point')} de Gueulante si au moins ${effect.threshold} sont retirés` : '';
+      const perMalus = effect.perMalus ? `, ${signedPercent(effect.perMalus)} à toutes les stats (son équipe) par malus retiré pendant ${effect.perMalusDuration ?? 15}${NBSP}min` : '';
+      return `Retire tous les malus ${who}${gauge}${perMalus}`;
+    }
+    case 'prolongDown':
+      return `${SCOPE_LABEL[effect.scope]} reste au sol ${effect.minutes}${NBSP}min de plus`;
+    case 'steady':
+      return `Impossible à mettre au sol pendant ${effect.duration}${NBSP}min (${SCOPE_LABEL[effect.scope]})`;
+    case 'fieldDoctor':
+      return `Jusqu'à la fin du match : un joueur de son équipe mis au sol se relève après ${effect.reviveAfter}${NBSP}min, et les malus adverses durent ${Math.round(effect.malusFactor * 100)}${NBSP}% de leur durée`;
     case 'swapTeams':
       return `Inverse les niveaux des deux équipes pendant ${effect.duration}${NBSP}min`;
     case 'poachBest':
@@ -155,6 +166,30 @@ export function describeEffect(effect: Effect): string {
       return effect.count > 1 ? `Les ${effect.count} prochains penalties adverses marqués sont à retirer` : 'Le prochain penalty adverse marqué est à retirer';
     case 'turnIntoPenalty':
       return 'Le coup franc devient un penalty';
+    case 'mark':
+      return `Marquage : ${signedPercent(effect.value)} ${STAT_LABEL[effect.stat]} pour la cible pendant ${effect.duration}${NBSP}min, tant que le marqueur est sur le terrain et debout`;
+    case 'gamble':
+      return `Pari à ${percent(effect.chance)} : ${effect.success.map(describeEffect).join(', ')}. Raté : ${effect.failure.map(describeEffect).join(', ') || 'rien'}`;
+    case 'bookSelf':
+      return effect.card === 'red' ? 'Carton rouge pour lui' : 'Carton jaune pour lui';
+    case 'awardPenalty':
+      return 'Penalty pour son équipe';
+    case 'opponentChance':
+      return `Occasion adverse à ${percent(effect.chance)} de but`;
+    case 'deadMinutes':
+      return `${plural(effect.duration, 'minute')} sans occasion ni faute, pour personne`;
+    case 'addedTime':
+      return `+${plural(effect.minutes, 'minute')} de temps additionnel en fin de match`;
+    case 'rewind':
+      return `Efface tous les buts des ${effect.minutes} dernières minutes, des deux côtés`;
+    case 'shield':
+      return `Bouclier (${SCOPE_LABEL[effect.scope]}) : ${plural(effect.charges, 'la prochaine capacité adverse qui le vise est annulée', 'prochaines capacités adverses qui le visent sont annulées')} sur lui, pendant ${effect.duration}${NBSP}min`;
+    case 'copyLast':
+      return "Rejoue la dernière capacité utilisée par l'adversaire, pour son équipe ; si elle coûtait moins cher, la différence de Gueulante est rendue";
+    case 'drain':
+      return `+${Math.round(effect.value)} de fatigue (${SCOPE_LABEL[effect.scope]}), le temps du match`;
+    case 'overcharge':
+      return `Surcharge : vide toute la Gueulante, ${signedPercent(effect.perPoint)} ${STAT_LABEL[effect.stat]} (${SCOPE_LABEL[effect.scope]}) par point dépensé (coût compris) pendant ${effect.duration}${NBSP}min`;
   }
 }
 

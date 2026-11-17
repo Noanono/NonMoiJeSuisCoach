@@ -16,7 +16,10 @@ export const XP_THRESHOLDS = [0, 250, 900, 2400, 5000] as const;
 export const CAREER_XP_PER_SEASON = { min: 120, max: 320 } as const;
 export const CAREER_START_AGE = 18;
 
-/** Coût en Jauge de Gueulante et recharge en minutes (0 = aucune) selon la rareté. */
+/**
+ * Coût par défaut selon la rareté, pour une capacité sans coût propre (capacités de test). Celles du catalogue
+ * ont chacune leur coût (`Ability.cost`), qui suit leur puissance mesurée et non leur rareté.
+ */
 export const RARITY_COST: Record<Rarity, number> = { common: 2, rare: 3, legendary: 5, mythic: 7 };
 /** Plus de recharge : chaque capacité ne sert qu'une fois par match (CAP-04). */
 export const RARITY_COOLDOWN: Record<Rarity, number> = { common: 0, rare: 0, legendary: 0, mythic: 0 };
@@ -31,10 +34,14 @@ const DURATION_GAIN_PER_LEVEL = 0.1;
  */
 export const LEVEL_BONUS_PER_LEVEL = 0.03;
 export const LEVEL_BONUS_DURATION = 10;
+/** Durée du bonus d'équipe réglé par capacité (`levelBoost`). */
+const LEVEL_BOOST_DURATION = 20;
 export const LEVEL_BONUS_LABEL = 'Bonus de niveau';
 /** Au niveau 5 : durée allongée, sinon effet renforcé, pour les capacités sans cible à choisir. */
 const LEVEL5_DURATION_FACTOR = 1.5;
 const LEVEL5_EFFECT_FACTOR = 1.25;
+/** Un joueur ne descend jamais sous 10 % de sa note : un malus au-delà de −90 % ne servirait à rien. */
+export const MAX_MALUS = -0.9;
 
 const BASE_ACTIVATION_XP = 10;
 
@@ -96,17 +103,19 @@ export function level5Bonus(ability: Ability): Level5Bonus {
 export function statsAtLevel(ability: Ability, level: number): AbilityStats {
   const lvl = clamp(Math.round(level), 1, MAX_LEVEL);
   const bonus = lvl === MAX_LEVEL ? level5Bonus(ability) : null;
-  const factor = (1 + (lvl - 1) * EFFECT_GAIN_PER_LEVEL) * (bonus === 'strongerEffect' ? LEVEL5_EFFECT_FACTOR : 1);
+  const gain = ability.levelGain ?? 1;
+  const factor = (1 + (lvl - 1) * EFFECT_GAIN_PER_LEVEL * gain) * (bonus === 'strongerEffect' ? LEVEL5_EFFECT_FACTOR : 1);
   const durationFactor = bonus === 'longerDuration' ? LEVEL5_DURATION_FACTOR : 1;
   const cooldown = RARITY_COOLDOWN[ability.rarity];
   // Une capacité à durée fixe ne gagne que de l'effet avec le niveau.
   const durationLevel = ability.fixedDuration ? 1 : lvl;
-  const effects = ability.effects.map((effect) => lengthen(extendPerLevel(scaleEffect(effect, factor), durationLevel), durationFactor));
-  if (lvl > 1 && !ability.effects.some(growsWithLevel)) effects.push(levelBonus(lvl));
+  const effects = ability.effects.map((effect) => capDuration(capMalus(lengthen(extendPerLevel(scaleEffect(effect, factor), durationLevel, gain), durationFactor)), ability.maxDuration));
+  const boost = ability.levelBoost ?? (ability.effects.some(growsWithLevel) ? 0 : LEVEL_BONUS_PER_LEVEL);
+  if (lvl > 1 && boost > 0) effects.push(levelBonus(lvl, boost, ability.levelBoost === undefined ? LEVEL_BONUS_DURATION : LEVEL_BOOST_DURATION));
   return {
     effects,
     targeting: bonus === 'extraTarget' ? { ...ability.targeting, count: (ability.targeting.count ?? 1) + 1 } : ability.targeting,
-    cost: RARITY_COST[ability.rarity],
+    cost: ability.cost ?? RARITY_COST[ability.rarity],
     cooldown,
   };
 }
@@ -122,11 +131,23 @@ export function scaleEffect(effect: Effect, factor: number): Effect {
       return { ...effect, value: towardCertainty(effect.value, factor) };
     case 'opponentChanceMalus':
       // Le malus approche 100 % et touche un tir de plus aux niveaux 3 et 5.
-      return { ...effect, value: towardCertainty(effect.value, factor), shots: effect.shots + Math.floor(Math.round((factor - 1) / EFFECT_GAIN_PER_LEVEL) / 2) };
+      return { ...effect, value: towardCertainty(effect.value, factor), shots: effect.shots + Math.floor(Math.round((factor - 1) / EFFECT_GAIN_PER_LEVEL + 1e-9) / 2) };
     case 'scaledModifier':
       return { ...effect, base: effect.base * factor, perUnit: effect.perUnit * factor };
     case 'instantChance':
       return { ...effect, chance: towardCertainty(effect.chance, factor) };
+    case 'mark':
+    case 'drain':
+      return { ...effect, value: effect.value * factor };
+    case 'overcharge':
+      return { ...effect, perPoint: effect.perPoint * factor };
+    case 'clearMaluses':
+      return effect.perMalus ? { ...effect, perMalus: effect.perMalus * factor } : effect;
+    case 'gamble':
+      // Le niveau rend le pari plus sûr et son gain plus fort ; la contrepartie ne change pas.
+      return { ...effect, chance: towardCertainty(effect.chance, factor), success: effect.success.map((inner) => scaleEffect(inner, factor)) };
+    case 'shield':
+      return { ...effect, charges: effect.charges + (factor >= 1 + 4 * EFFECT_GAIN_PER_LEVEL ? 1 : 0) };
     default:
       return effect;
   }
@@ -156,7 +177,16 @@ export function growsWithLevel(effect: Effect): boolean {
     case 'doubleGoals':
     case 'cleanSheetGauge':
     case 'setPieceBoost':
+    case 'mark':
+    case 'drain':
+    case 'overcharge':
+    case 'gamble':
+    case 'deadMinutes':
+    case 'shield':
+    case 'steady':
       return true;
+    case 'clearMaluses':
+      return effect.perMalus !== undefined;
     case 'knockout':
       return effect.scope !== 'self';
     default:
@@ -165,28 +195,41 @@ export function growsWithLevel(effect: Effect): boolean {
 }
 
 /** Minutes gagnées au niveau `level` par un effet qui dure `minutes` au niveau 1. */
-export function extraMinutes(minutes: number, level: number): number {
-  return Math.max(1, Math.round(minutes * DURATION_GAIN_PER_LEVEL)) * (level - 1);
+export function extraMinutes(minutes: number, level: number, gain = 1): number {
+  return Math.round(Math.max(1, Math.round(minutes * DURATION_GAIN_PER_LEVEL)) * (level - 1) * gain);
+}
+
+/** Une capacité peut borner la durée de ses effets (une mi-temps au plus, par exemple). */
+function capDuration(effect: Effect, max: number | undefined): Effect {
+  if (max === undefined || !('duration' in effect) || effect.duration <= max) return effect;
+  return { ...effect, duration: max };
+}
+
+/** Plafonne un malus de stats à −90 % ; plusieurs malus peuvent toujours se cumuler en match. */
+function capMalus(effect: Effect): Effect {
+  if ((effect.type === 'modifier' || effect.type === 'mark') && effect.value < MAX_MALUS) return { ...effect, value: MAX_MALUS };
+  if (effect.type === 'gamble') return { ...effect, success: effect.success.map(capMalus), failure: effect.failure.map(capMalus) };
+  return effect;
 }
 
 /** Allonge les durées selon le niveau. Une contrepartie (le porteur hors jeu) ne grandit pas. */
-function extendPerLevel(effect: Effect, level: number): Effect {
+function extendPerLevel(effect: Effect, level: number, gain = 1): Effect {
   if (level === 1) return effect;
-  if (effect.type === 'cancelGoal') return { ...effect, withinMinutes: effect.withinMinutes + extraMinutes(effect.withinMinutes, level) };
+  if (effect.type === 'cancelGoal') return { ...effect, withinMinutes: effect.withinMinutes + extraMinutes(effect.withinMinutes, level, gain) };
   if (effect.type === 'knockout') {
     if (effect.scope === 'self') return effect;
     const chase = effect.chaseDuration;
     return {
       ...effect,
-      duration: effect.duration + extraMinutes(effect.duration, level),
-      ...(chase !== undefined ? { chaseDuration: chase + extraMinutes(chase, level) } : {}),
+      duration: effect.duration + extraMinutes(effect.duration, level, gain),
+      ...(chase !== undefined ? { chaseDuration: chase + extraMinutes(chase, level, gain) } : {}),
     };
   }
-  return 'duration' in effect ? { ...effect, duration: effect.duration + extraMinutes(effect.duration, level) } : effect;
+  return 'duration' in effect ? { ...effect, duration: effect.duration + extraMinutes(effect.duration, level, gain) } : effect;
 }
 
-function levelBonus(level: number): Effect {
-  return { type: 'modifier', scope: 'team', stat: 'all', value: LEVEL_BONUS_PER_LEVEL * (level - 1), duration: LEVEL_BONUS_DURATION };
+function levelBonus(level: number, perLevel: number, duration: number): Effect {
+  return { type: 'modifier', scope: 'team', stat: 'all', value: perLevel * (level - 1), duration };
 }
 
 function lengthen(effect: Effect, factor: number): Effect {

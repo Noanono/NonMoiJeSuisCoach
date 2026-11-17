@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { getLegacyAbility } from '../../domain/testing/legacyAbilities';
 import { createMatch, selectTarget, startActivation } from '../../domain/match';
 import { makeSheet, testMatchOptions } from '../../domain/match/fixtures';
 import { findPlayer } from '../../domain/match/state';
@@ -15,7 +16,7 @@ function match() {
 
 describe('terrain en direct (CAP-03)', () => {
   test('un adversaire porte le liseré de la rareté de sa capacité, sauf si elle est cachée', () => {
-    const state = createMatch({
+    const state = createMatch({ lookupAbility: getLegacyAbility,
       home: makeSheet({ clubId: 'h', isHuman: true, abilities: { 9: 'le-sombrero-bourre' } }),
       away: makeSheet({ clubId: 'a', abilities: { 9: 'le-sombrero-bourre' }, benchAbilities: ['le-kebab-du-siecle'] }),
       seed: 3,

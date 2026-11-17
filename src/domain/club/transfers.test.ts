@@ -107,7 +107,7 @@ describe('liste du mercato', () => {
     const listings = marketListings(makeWorld(), 'coach', abilityOf);
     expect(listings.some((listing) => listing.clubId === 'coach')).toBe(false);
     expect(listings.find((listing) => listing.playerId === 'ai-0')?.ability).toEqual({ abilityId: 'legende', rarity: 'legendary' });
-    expect(listings.find((listing) => listing.playerId === 'ai-1')?.ability).toEqual({ abilityId: 'la-mobylette', rarity: 'common' });
+    expect(listings.find((listing) => listing.playerId === 'ai-1')?.ability).toEqual({ abilityId: 'le-crochet', rarity: 'common' });
   });
 });
 

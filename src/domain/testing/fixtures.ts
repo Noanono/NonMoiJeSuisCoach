@@ -15,7 +15,7 @@ export function makePlayer(overrides: Partial<Player> = {}): Player {
     fatigue: 0,
     injuryWeeks: 0,
     suspendedMatches: 0,
-    ability: { abilityId: 'la-mobylette', level: 1, xp: 0, revealed: true },
+    ability: { abilityId: 'le-crochet', level: 1, xp: 0, revealed: true },
     salary: 100,
     clubId: 'c1',
     seasonStats: { matches: 0, goals: 0, assists: 0, yellowCards: 0, redCards: 0 },

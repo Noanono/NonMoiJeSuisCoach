@@ -26,7 +26,7 @@ export {
   type PenaltyChances,
   WALL_FACTOR,
 } from './plays';
-export { canEnter, canLeave, canMoveToLine, canReposition, canSwapPositions, MAX_SUBSTITUTIONS, moveToLine, substitutePlayer, substitutionsLeft, swapPositions } from './substitutions';
+export { canEnter, canLeave, canMoveToLine, canReposition, canSwapPositions, keeperReplacements, MAX_SUBSTITUTIONS, moveToLine, substitutePlayer, substitutionsLeft, swapPositions } from './substitutions';
 export { expectedAgainstDive, expectedPenaltyChance, KEEPER_HABIT_LABEL, KEEPER_STAY_CHANCE, keeperHabit, PENALTY_STYLE_LABEL } from './penaltyKick';
 export { summarize, toMatchResult } from './summary';
 export { simulateQuick } from './quick';

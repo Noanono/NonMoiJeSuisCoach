@@ -38,6 +38,7 @@
       return `choisit la cible de « ${source?.ability?.name ?? 'sa capacité'} »`;
     }
     const window = match.awaiting;
+    if (window?.keeper) return 'remplace son gardien blessé';
     if (window?.penalty) return window.penalty === 'attack' ? 'choisit sa frappe de penalty' : 'choisit où plonge son gardien';
     if (window?.freeKick) return window.freeKick === 'attack' ? 'choisit son coup franc' : 'place son mur';
     return 'hésite à lancer une capacité';

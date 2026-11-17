@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { getLegacyAbility } from '../testing/legacyAbilities';
 import { makeSheet } from './fixtures';
 import { expectedAgainstDive, expectedPenaltyChance, KEEPER_STAY_CHANCE, keeperHabit, PENALTY_STYLE_CHANCE } from './penaltyKick';
 import { awardPenalty, chooseKeeperDive, choosePenaltyStyle, penaltyChances } from './plays';
@@ -9,7 +10,7 @@ import { dismissEventWindow } from './windows';
 import type { KeeperDive, MatchState, PenaltyStyle } from './types';
 
 function penaltyMatch(seed: number, humanSide: 'home' | 'away'): MatchState {
-  const state = createMatch({
+  const state = createMatch({ lookupAbility: getLegacyAbility,
     home: makeSheet({ clubId: 'h', isHuman: humanSide === 'home' }),
     away: makeSheet({ clubId: 'a', isHuman: humanSide === 'away' }),
     seed,
@@ -111,7 +112,7 @@ describe('penalty : style de frappe et plongeon (P4)', () => {
   });
 
   test('Le Danseur divise les chances du tireur par deux, et les chiffres le montrent', () => {
-    const state = createMatch({
+    const state = createMatch({ lookupAbility: getLegacyAbility,
       home: makeSheet({ clubId: 'h' }),
       away: makeSheet({ clubId: 'a', isHuman: true, abilities: { 0: 'le-danseur' } }),
       seed: 3,
@@ -134,7 +135,7 @@ describe('penalty : style de frappe et plongeon (P4)', () => {
   });
 
   test('deux coachs humains : le tireur choisit sa frappe, puis le gardien adverse son plongeon (MULTI-07)', () => {
-    const state = createMatch({ home: makeSheet({ clubId: 'h', isHuman: true }), away: makeSheet({ clubId: 'a', isHuman: true }), seed: 5 });
+    const state = createMatch({ lookupAbility: getLegacyAbility, home: makeSheet({ clubId: 'h', isHuman: true }), away: makeSheet({ clubId: 'a', isHuman: true }), seed: 5 });
     const run = beginRun(state);
     awardPenalty(run, 'home', null);
     endRun(run);

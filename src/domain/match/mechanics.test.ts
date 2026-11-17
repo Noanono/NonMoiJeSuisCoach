@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { getAbility } from '../abilities/catalog';
+import { getLegacyAbility } from '../testing/legacyAbilities';
+
 import type { Effect } from '../types';
 import { injurePlayer, recordGoal } from './actions';
 import { confirmActivation, previewActivation, selectTarget, startActivation } from './activation';
@@ -13,14 +14,14 @@ import { dismissEventWindow } from './windows';
 
 /** Effet d'un type donné d'une capacité du catalogue, au niveau 1 : les tests suivent l'équilibrage. */
 function effectOf<T extends Effect['type']>(id: string, type: T): Extract<Effect, { type: T }> {
-  const effect = getAbility(id).effects.find((candidate) => candidate.type === type);
+  const effect = getLegacyAbility(id).effects.find((candidate) => candidate.type === type);
   if (!effect) throw new Error(`${id} n'a pas d'effet ${type}`);
   return effect as Extract<Effect, { type: T }>;
 }
 
 /** Le vrai catalogue, deux coachs humains, jauge pleine. */
 function match(abilities: Record<number, string>, bench: string[] = []): MatchState {
-  const state = createMatch({
+  const state = createMatch({ lookupAbility: getLegacyAbility,
     home: makeSheet({ clubId: 'h', isHuman: true, abilities, benchAbilities: bench }),
     away: makeSheet({ clubId: 'a', isHuman: true }),
     seed: 42,
@@ -159,7 +160,7 @@ describe('mécaniques des légendaires', () => {
   test('La Panenka ivre crée une occasion tout de suite', () => {
     let goals = 0;
     for (let seed = 0; seed < 40; seed++) {
-      const state = createMatch({
+      const state = createMatch({ lookupAbility: getLegacyAbility,
         home: makeSheet({ clubId: 'h', isHuman: true, abilities: { 9: 'la-panenka-ivre' } }),
         away: makeSheet({ clubId: 'a', isHuman: true }),
         seed,
@@ -183,7 +184,7 @@ describe('mécaniques des légendaires', () => {
   test('La Mêlée générale sort trois adversaires et le porteur', () => {
     const state = match({ 5: 'la-melee-generale' });
     shout(state, 'h-5', ['a-1', 'a-2', 'a-3']);
-    const [brawl, self] = getAbility('la-melee-generale').effects as Extract<Effect, { type: 'knockout' }>[];
+    const [brawl, self] = getLegacyAbility('la-melee-generale').effects as Extract<Effect, { type: 'knockout' }>[];
     for (const id of ['a-1', 'a-2', 'a-3']) expect(requirePlayer(state, id).knockedOutUntil).toBe(brawl!.duration);
     expect(requirePlayer(state, 'h-5').knockedOutUntil).toBe(self!.duration);
   });
@@ -237,7 +238,7 @@ describe('mécaniques des mythiques', () => {
   });
 
   test('un but double annulé retire bien ses deux points', () => {
-    const state = createMatch({
+    const state = createMatch({ lookupAbility: getLegacyAbility,
       home: makeSheet({ clubId: 'h', isHuman: true, abilities: { 9: 'le-but-en-or-massif' } }),
       away: makeSheet({ clubId: 'a', isHuman: true, benchAbilities: ['la-coupure-de-courant'] }),
       seed: 42,
@@ -284,7 +285,7 @@ describe('mécaniques des mythiques', () => {
   });
 
   test('l’IA économise sa jauge et déclenche sa mythique', () => {
-    const state = createMatch({
+    const state = createMatch({ lookupAbility: getLegacyAbility,
       home: makeSheet({ clubId: 'h', isHuman: true }),
       away: makeSheet({ clubId: 'a', abilities: { 5: 'le-transfert-du-parking', 6: 'le-chambreur', 7: 'le-lacet-fou' } }),
       seed: 12,
@@ -336,7 +337,7 @@ describe('les capacités restent dans le match', () => {
     const shotsBy = (boosted: boolean) => {
       let shots = 0;
       for (let seed = 0; seed < 30; seed++) {
-        const state = createMatch({
+        const state = createMatch({ lookupAbility: getLegacyAbility,
           home: makeSheet({ clubId: 'h', isHuman: true }),
           away: makeSheet({ clubId: 'a', isHuman: true }),
           seed,

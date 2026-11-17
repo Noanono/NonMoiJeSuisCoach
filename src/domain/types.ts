@@ -73,7 +73,7 @@ export interface Lineup {
   formation: Formation;
   /** 11 places, dans l'ordre des postes de la formation (voir FORMATION_SLOTS) ; EMPTY_SLOT = poste libre. */
   starters: string[];
-  /** Remplaçants (aucun changement en match en V1, MATCH-08) : utiles pour les capacités « Banc ». */
+  /** Remplaçants : cinq changements en match (MATCH-08), et porteurs des capacités « Banc ». */
   bench: string[];
   instructions: Instructions;
 }
@@ -101,7 +101,7 @@ export interface Targeting {
   count?: number;
   /** Limite les cibles à une ligne (« 1 attaquant », « 2 défenseurs »). */
   line?: Position;
-  /** Seuls les joueurs actuellement au sol sont des cibles (Le Kiné douteux). */
+  /** Seuls les joueurs au sol ou blessés sont des cibles (L'Éponge miracle, Le Kiné du dimanche). */
   downed?: boolean;
 }
 
@@ -135,7 +135,7 @@ export type Effect =
   /** `extendOnGoal` : minutes ajoutées à l'effet à chaque but marqué par l'équipe. */
   | { type: 'modifier'; scope: Scope; stat: MatchStat; value: number; duration: number; extendOnGoal?: number }
   /** Modificateur calculé à l'activation : `base` + `perUnit` par but encaissé ou par minute jouée. */
-  | { type: 'scaledModifier'; scope: Scope; stat: MatchStat; base: number; perUnit: number; per: 'concededGoal' | 'minute'; duration: number }
+  | { type: 'scaledModifier'; scope: Scope; stat: MatchStat; base: number; perUnit: number; per: 'concededGoal' | 'minute' | 'goalDeficit'; duration: number }
   /** Joueur(s) hors jeu. `chaseDuration` : la mise hors jeu passe ensuite à un autre adversaire. */
   | { type: 'knockout'; scope: Scope; duration: number; chaseDuration?: number }
   /** Relève immédiatement un joueur au sol. */
@@ -157,7 +157,13 @@ export type Effect =
   /** Points de jauge gagnés si l'équipe n'encaisse rien pendant `duration`. */
   | { type: 'cleanSheetGauge'; value: number; duration: number }
   /** Retire les malus de l'équipe ; `bonusGauge` points si au moins `threshold` malus sont retirés. */
-  | { type: 'clearMaluses'; bonusGauge: number; threshold: number }
+  | { type: 'clearMaluses'; bonusGauge: number; threshold: number; scope?: 'targets'; perMalus?: number; perMalusDuration?: number }
+  /** Soins : le joueur visé reste au sol `minutes` de plus (contrepartie d'un pari raté). */
+  | { type: 'prolongDown'; scope: Scope; minutes: number }
+  /** Soins : les joueurs visés ne peuvent pas être mis au sol pendant `duration`. */
+  | { type: 'steady'; scope: Scope; duration: number }
+  /** Soins : jusqu'à la fin du match, un joueur au sol se relève après `reviveAfter` minutes et les malus adverses durent `malusFactor` fois leur durée. */
+  | { type: 'fieldDoctor'; reviveAfter: number; malusFactor: number }
   /** Inverse les niveaux des deux équipes. */
   | { type: 'swapTeams'; duration: number }
   /** Le meilleur joueur de champ adverse rejoint l'équipe jusqu'à la fin du match. */
@@ -175,7 +181,38 @@ export type Effect =
   /** Les `count` prochains penalties adverses marqués sont à retirer. */
   | { type: 'retakePenalty'; count: number }
   /** Le coup franc en cours devient un penalty. */
-  | { type: 'turnIntoPenalty' };
+  | { type: 'turnIntoPenalty' }
+  /** Marquage (M1) : malus sur les cibles tant que le porteur est sur le terrain et debout. */
+  | { type: 'mark'; stat: MatchStat; value: number; duration: number }
+  /** Pari (M4) : `success` avec cette probabilité, `failure` sinon. */
+  | { type: 'gamble'; chance: number; success: Effect[]; failure: Effect[] }
+  /** Carton pour le porteur (contrepartie d'un pari). */
+  | { type: 'bookSelf'; card: 'yellow' | 'red' }
+  /** Penalty tout de suite pour l'équipe. */
+  | { type: 'awardPenalty' }
+  /** Occasion tout de suite pour l'adversaire, avec cette probabilité de but (contrepartie). */
+  | { type: 'opponentChance'; chance: number }
+  /** Chrono (M5) : minutes mortes, sans occasion ni faute pour personne. */
+  | { type: 'deadMinutes'; duration: number }
+  /** Chrono (M5) : minutes ajoutées au temps additionnel de la fin du match. */
+  | { type: 'addedTime'; minutes: number }
+  /** Chrono (M5) : les buts des `minutes` dernières minutes sont effacés, des deux côtés. */
+  | { type: 'rewind'; minutes: number }
+  /** Bouclier (M7) : absorbe les `charges` prochaines capacités hostiles adverses. */
+  | { type: 'shield'; scope: Scope; charges: number; duration: number }
+  /** Copie (M9) : rejoue la dernière capacité « à tout moment » de l'adversaire. */
+  | { type: 'copyLast' }
+  /** Énergie (M11) : fatigue en plus, pour ce match seulement. */
+  | { type: 'drain'; scope: Scope; value: number }
+  /** Surcharge (M13) : vide la jauge restante, +`perPoint` par point dépensé. */
+  | { type: 'overcharge'; scope: Scope; stat: MatchStat; perPoint: number; duration: number };
+
+/** Situation de match qui rend une capacité disponible (M12). */
+export interface AbilityCondition {
+  score?: 'behind' | 'ahead' | 'level' | 'notAhead';
+  /** À partir de cette minute de jeu. */
+  fromMinute?: number;
+}
 
 export interface AbilityStats {
   effects: Effect[];
@@ -196,13 +233,23 @@ export interface Ability {
   trigger: AbilityTrigger;
   /** Disponible seulement si un but adverse date de moins de tant de minutes. */
   requiresRecentOpponentGoal?: number;
+  /** Coût en Gueulante propre à la capacité (1 à 7) ; à défaut, celui de sa rareté. */
+  cost?: number;
+  /** Réglage de la montée en niveau : 1 = gain normal par niveau, 0 = seul le bonus du niveau 5 compte. */
+  levelGain?: number;
+  /** Bonus d'équipe ajouté à chaque niveau au-delà du premier (part de toutes les stats, 10 min). */
+  levelBoost?: number;
+  /** Durée maximale des effets, en minutes, quel que soit le niveau. */
+  maxDuration?: number;
+  /** Disponible seulement dans cette situation (M12). */
+  condition?: AbilityCondition;
   /** Texte humoristique, sans chiffres : les chiffres dépendent du niveau et sont calculés. */
   description: string;
   /** Effets au niveau 1. */
   effects: Effect[];
   /** Capacité cachée jusqu'à l'arrivée au club ou la première activation (CAP-13). */
   hidden: boolean;
-  /** Les niveaux renforcent l'effet sans allonger sa durée (Le Bus de l'amicale). */
+  /** Les niveaux renforcent l'effet sans allonger sa durée (Le Béton armé, Le Car à deux étages). */
   fixedDuration?: boolean;
 }
 

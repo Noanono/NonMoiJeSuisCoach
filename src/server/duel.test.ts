@@ -129,4 +129,30 @@ describe('match en direct entre coachs (MULTI-07)', () => {
     for (let step = 0; step < 200; step++) hub.advanceDuels((now += 200));
     expect(view(hub, 'a', now).match.minute).toBeGreaterThan(minute);
   });
+
+  test('un match en direct est enregistré avec la ligue et reprend après un arrêt du serveur (C9)', () => {
+    const hub = duelWeek();
+    let now = 1_000;
+    hub.joinDuel('a', now);
+    hub.joinDuel('b', now);
+    for (let step = 0; step < 30; step++) {
+      now += DUEL_MINUTE_MS;
+      hub.advanceDuels(now);
+      const match = view(hub, 'a', now).match;
+      if (match.awaiting || match.pending) hub.duelCommand(match.awaiting?.side === 'home' ? 'a' : 'b', 'dismissWindow', [], now);
+    }
+    const before = view(hub, 'a', now).match;
+    expect(before.minute).toBeGreaterThan(5);
+    // Le serveur s'arrête : on relit la ligue enregistrée.
+    const reloaded = new MultiplayerHub(JSON.parse(JSON.stringify(hub.save())));
+    const resumed = view(reloaded, 'a', now);
+    expect(resumed.match.minute).toBe(before.minute);
+    expect(resumed.match.home.goals).toBe(before.home.goals);
+    // Le coup d'envoi de la reprise attend les deux coachs.
+    expect(resumed.view.started).toBe(false);
+    reloaded.joinDuel('a', now);
+    reloaded.joinDuel('b', now);
+    reloaded.advanceDuels(now + DUEL_MINUTE_MS + 1);
+    expect(view(reloaded, 'a', now + DUEL_MINUTE_MS + 1).match.minute).toBeGreaterThan(before.minute);
+  });
 });

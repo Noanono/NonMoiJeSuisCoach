@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { Effect } from '../types';
-import { ABILITIES, getAbility } from './catalog';
+import { ABILITIES } from './catalog';
+import { getLegacyAbility as getAbility } from '../testing/legacyAbilities';
 import { createRng } from '../core/rng';
 import { careerXpAtAge, gainXp, growsWithLevel, LEVEL_BONUS_PER_LEVEL, level5Bonus, levelForXp, MAX_LEVEL, statsAtLevel, XP_THRESHOLDS } from './progression';
 

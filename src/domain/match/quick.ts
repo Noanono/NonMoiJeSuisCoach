@@ -2,11 +2,13 @@
  * Simulation rapide des matchs IA contre IA (green code) : pas de minute par minute,
  * les buts attendus sont calculés une fois à partir des mêmes forces et consignes
  * que la simulation détaillée, puis tirés selon une loi de Poisson. Les capacités
- * spéciales n'y sont pas jouées.
+ * spéciales n'y sont pas jouées ; cartons et blessures, si (C2), aux mêmes taux qu'en direct.
  */
 import type { MatchResult, Player, Position } from '../types';
 import type { Rng } from '../core/rng';
-import { effectiveRating, FORMATION_SLOTS } from '../player/rating';
+import { effectiveRating, FORMATION_SLOTS, injuryRisk } from '../player/rating';
+import { SERIOUS_INJURY_CHANCE, SERIOUS_INJURY_WEEKS_MAX, SERIOUS_INJURY_WEEKS_MIN } from './actions';
+import { cardChances, FOULER_WEIGHTS, foulRate, SUSPENSION_DIRECT_RED, SUSPENSION_SECOND_YELLOW } from './discipline';
 import {
   baseChanceRate,
   expectedConversion,
@@ -25,12 +27,27 @@ const AVERAGE_STOPPAGE = 5;
 /** Part des buts venant des coups de pied arrêtés et penalties, en plus du jeu. */
 const SET_PIECE_FACTOR = 1.35;
 
+/** En moyenne, un titulaire finit un match simulé à mi-chemin de sa fatigue d'après-match. */
+const QUICK_MID_MATCH_FATIGUE = 20;
+
+/** Cartons et blessures d'un match simulé, mêmes taux qu'en direct (C2). */
+export interface QuickIncidents {
+  cards: { playerId: string; card: 'yellow' | 'red'; suspension: number }[];
+  /** Blessures sérieuses seulement : une petite blessure ne dure que le match. */
+  injuries: { playerId: string; weeks: number }[];
+}
+
+export interface QuickMatch {
+  result: MatchResult;
+  incidents: QuickIncidents;
+}
+
 interface QuickTeam extends TacticalSide {
   sheet: TeamSheet;
   shooting: number;
 }
 
-export function simulateQuick(home: TeamSheet, away: TeamSheet, rng: Rng, knockout = false): MatchResult {
+export function simulateQuick(home: TeamSheet, away: TeamSheet, rng: Rng, knockout = false, derby = false): QuickMatch {
   const homeTeam = assess(home);
   const awayTeam = assess(away);
   const homeGoals = samplePoisson(rng, expectedGoals(homeTeam, awayTeam, HOME_ADVANTAGE));
@@ -50,7 +67,60 @@ export function simulateQuick(home: TeamSheet, away: TeamSheet, rng: Rng, knocko
     );
     result.penaltyWinnerId = shootout.winner === 'home' ? home.clubId : away.clubId;
   }
-  return result;
+  const incidents: QuickIncidents = { cards: [], injuries: [] };
+  for (const sheet of [home, away]) {
+    drawCards(rng, sheet, derby, incidents);
+    drawInjuries(rng, sheet, incidents);
+  }
+  return { result, incidents };
+}
+
+/** Une faute possible par minute, comme en direct ; le fautif est tiré selon son poste. */
+function drawCards(rng: Rng, sheet: TeamSheet, derby: boolean, incidents: QuickIncidents): void {
+  const slots = FORMATION_SLOTS[sheet.formation];
+  const yellows = new Map<string, number>();
+  const sentOff = new Set<string>();
+  const rate = foulRate(sheet.instructions.highPress);
+  for (let minute = 0; minute < REGULATION_MINUTES + AVERAGE_STOPPAGE; minute++) {
+    if (!rng.chance(rate)) continue;
+    const fouler = pickByLine(rng, sheet.starters.filter((player) => !sentOff.has(player.id)), slots, sheet.starters);
+    if (!fouler) continue;
+    const booked = (yellows.get(fouler.id) ?? 0) > 0;
+    const chances = cardChances({ fatigue: fouler.fatigue + QUICK_MID_MATCH_FATIGUE, distraction: 0, derby, booked });
+    const roll = rng.next();
+    if (roll < chances.red) {
+      incidents.cards.push({ playerId: fouler.id, card: 'red', suspension: SUSPENSION_DIRECT_RED });
+      sentOff.add(fouler.id);
+    } else if (roll < chances.red + chances.yellow) {
+      yellows.set(fouler.id, (yellows.get(fouler.id) ?? 0) + 1);
+      incidents.cards.push({ playerId: fouler.id, card: 'yellow', suspension: 0 });
+      if (booked) {
+        incidents.cards.push({ playerId: fouler.id, card: 'red', suspension: SUSPENSION_SECOND_YELLOW });
+        sentOff.add(fouler.id);
+      }
+    }
+  }
+}
+
+function pickByLine(rng: Rng, players: readonly Player[], slots: readonly Position[], starters: readonly Player[]): Player | undefined {
+  const weightOf = (player: Player) => FOULER_WEIGHTS[slots[starters.indexOf(player)] ?? player.position];
+  let total = 0;
+  for (const player of players) total += weightOf(player);
+  let roll = rng.next() * total;
+  for (const player of players) {
+    roll -= weightOf(player);
+    if (roll < 0) return player;
+  }
+  return undefined;
+}
+
+/** Chaque titulaire risque la blessure selon sa fatigue, comme en direct ; une sur dix est sérieuse. */
+function drawInjuries(rng: Rng, sheet: TeamSheet, incidents: QuickIncidents): void {
+  for (const player of sheet.starters) {
+    const midMatch = { ...player, fatigue: Math.min(100, player.fatigue + QUICK_MID_MATCH_FATIGUE) };
+    if (!rng.chance(injuryRisk(midMatch))) continue;
+    if (rng.chance(SERIOUS_INJURY_CHANCE)) incidents.injuries.push({ playerId: player.id, weeks: rng.int(SERIOUS_INJURY_WEEKS_MIN, SERIOUS_INJURY_WEEKS_MAX) });
+  }
 }
 
 function assess(sheet: TeamSheet): QuickTeam {

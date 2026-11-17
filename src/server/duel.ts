@@ -50,6 +50,15 @@ export interface DuelView {
 
 export type DuelResult = { ok: true } | { ok: false; message: string };
 
+/** Match en direct enregistré avec la ligue (C9) : il reprend où il en était quand les deux coachs reviennent. */
+export interface DuelSnapshot {
+  key: string;
+  match: MatchState;
+  coaches: Record<Side, string>;
+  names: Record<Side, string>;
+  pausesLeft: Record<Side, number>;
+}
+
 const refused = (message: string): DuelResult => ({ ok: false, message });
 
 export class LiveDuel {
@@ -76,6 +85,19 @@ export class LiveDuel {
     this.coaches = coaches;
     this.names = names;
     this.activationsSeen = match.activations.length;
+  }
+
+  /** État à enregistrer : le match et les pauses restantes. Les chronos repartent à la reprise. */
+  toSnapshot(): DuelSnapshot {
+    return { key: this.key, match: this.match, coaches: this.coaches, names: this.names, pausesLeft: { ...this.pausesLeft } };
+  }
+
+  /** Match repris après un arrêt du serveur : le coup d'envoi attend de nouveau les deux coachs. */
+  static restore(snapshot: DuelSnapshot): LiveDuel {
+    const duel = new LiveDuel(snapshot.key, snapshot.match, snapshot.coaches, snapshot.names);
+    duel.pausesLeft.home = snapshot.pausesLeft.home;
+    duel.pausesLeft.away = snapshot.pausesLeft.away;
+    return duel;
   }
 
   get finished(): boolean {

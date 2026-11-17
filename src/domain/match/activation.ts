@@ -7,7 +7,7 @@ import { addConsequence } from './actions';
 import { comment, fill, TRIGGER_LABEL, UNAVAILABLE } from './commentary';
 import { applyEffects, type EffectContext } from './effects';
 import { IMPACT, IMPACT_WINDOW_MINUTES } from './impact';
-import { beginRun, endRun, opponentSide, pushEvent, requirePlayer, teamOf, type Run } from './state';
+import { beginRun, endRun, findPlayer, opponentSide, pushEvent, requirePlayer, teamOf, type Run } from './state';
 import { chosenTargetCount, validTargets } from './targets';
 import type { ActivationPreview, ActivationRecord, MatchEvent, MatchPlayer, MatchState, PreparedAbility, Side } from './types';
 import { isOccasion, refreshWindow, triggerIsOpen } from './windows';
@@ -37,6 +37,36 @@ function timingReason(state: MatchState, side: Side, ability: PreparedAbility): 
   }
   const window = ability.requiresRecentOpponentGoal;
   if (window !== null && !hasRecentGoal(state, opponentSide(side), window)) return fill(UNAVAILABLE.noRecentGoal, { n: window });
+  const condition = conditionReason(state, side, ability);
+  if (condition) return condition;
+  if (ability.effects.some((effect) => effect.type === 'copyLast') && !copyableActivation(state, side)) return 'Rien à copier : l’adversaire n’a encore rien tenté.';
+  return null;
+}
+
+/** Situation de match requise (M12) : score, minute. */
+function conditionReason(state: MatchState, side: Side, ability: PreparedAbility): string | null {
+  const condition = ability.condition;
+  if (!condition) return null;
+  const diff = teamOf(state, side).goals - teamOf(state, opponentSide(side)).goals;
+  const score = condition.score;
+  if (score === 'behind' && diff >= 0) return 'Seulement quand tu es mené.';
+  if (score === 'ahead' && diff <= 0) return 'Seulement quand tu mènes.';
+  if (score === 'level' && diff !== 0) return 'Seulement à égalité.';
+  if (score === 'notAhead' && diff > 0) return 'Seulement si tu ne mènes pas.';
+  if (condition.fromMinute !== undefined && state.minute < condition.fromMinute) return `Seulement à partir de la ${condition.fromMinute}e minute.`;
+  return null;
+}
+
+/** Dernière capacité « à tout moment » de l'adversaire, que la Copie (M9) peut rejouer. */
+export function copyableActivation(state: MatchState, side: Side): { player: MatchPlayer; ability: PreparedAbility } | null {
+  for (let index = state.activations.length - 1; index >= 0; index--) {
+    const record = state.activations[index]!;
+    if (record.side === side) continue;
+    const player = findPlayer(state, record.playerId);
+    const ability = player?.ability;
+    if (!player || !ability || ability.trigger !== 'anytime' || ability.effects.some((effect) => effect.type === 'copyLast')) continue;
+    return { player, ability };
+  }
   return null;
 }
 

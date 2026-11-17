@@ -53,6 +53,54 @@ export function substitutePlayer(state: MatchState, side: Side, leavingId: strin
   return endRun(run);
 }
 
+/**
+ * Gardien du coach blessé (MATCH-08) : le match se met en pause pour qu'il choisisse le remplaçant.
+ * Si une autre décision est déjà en cours, ou plus tard s'il laisse filer, le jeu remplace lui-même.
+ */
+export function alertInjuredKeeper(run: Run, team: TeamState, keeper: MatchPlayer): void {
+  const { state } = run;
+  if (!team.isHuman || keeper.line !== 'GK') return;
+  if (substitutionsLeft(team) <= 0 || !team.players.some(canEnter)) {
+    emergencyKeeper(run, team, keeper);
+    return;
+  }
+  if (state.awaiting || state.pending) {
+    replaceKeeper(run, team, keeper);
+    return;
+  }
+  state.awaiting = { side: team.side, trigger: 'anytime', eligiblePlayerIds: [], keeper: { injuredId: keeper.id } };
+  pushEvent(run, 'eventWindow', team.side, `${keeper.name} est à terre et ne se relèvera pas : qui va dans les buts ?`, { playerId: keeper.id });
+}
+
+/** Remplaçants proposés pour le gardien : les gardiens d'abord, puis les meilleurs. */
+export function keeperReplacements(team: TeamState): MatchPlayer[] {
+  return team.players.filter(canEnter).sort((a, b) => Number(b.profile.position === 'GK') - Number(a.profile.position === 'GK') || b.rating - a.rating);
+}
+
+/** Le jeu choisit : le gardien du banc, sinon le meilleur remplaçant. Sans rng, pour pouvoir être appelé n'importe quand. */
+export function replaceKeeper(run: Run, team: TeamState, keeper: MatchPlayer): void {
+  if (keeper.line === null) return;
+  const entering = keeperReplacements(team)[0];
+  if (!entering || substitutionsLeft(team) <= 0) {
+    emergencyKeeper(run, team, keeper);
+    return;
+  }
+  performSubstitution(run, team, keeper, entering);
+}
+
+/** Plus de changement possible : le joueur de champ le plus doué aux arrêts enfile les gants. */
+function emergencyKeeper(run: Run, team: TeamState, keeper: MatchPlayer): void {
+  const field = team.players.filter((player) => player.line !== null && player.line !== 'GK' && !player.sentOff && !player.injured);
+  const best = field.sort((a, b) => b.profile.attributes.goalkeeping - a.profile.attributes.goalkeeping)[0];
+  if (!best) return;
+  const line = best.line!;
+  best.line = 'GK';
+  keeper.line = line;
+  refreshRating(best);
+  refreshRating(keeper);
+  pushEvent(run, 'substitution', team.side, `Plus de changement : ${best.name} enfile les gants de ${keeper.name}.`, { playerId: best.id });
+}
+
 /** L'IA remplace ses blessés, par un joueur du même poste si elle en a un. */
 export function aiReplaceInjured(run: Run, team: TeamState): void {
   const injured = team.players.find((player) => player.line !== null && player.injured);

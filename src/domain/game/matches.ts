@@ -12,6 +12,7 @@ import type { GameState } from './state';
 import { asCoachOfClub } from './coaches';
 import { isScouted, scoutOpponents } from './scouting';
 import { autoPickLineup } from './actions';
+import { aiStyleOf } from '../club/aiStyle';
 
 /** Fatigue d'un match simulé rapidement (matchs IA contre IA). */
 const QUICK_MATCH_FATIGUE = 40;
@@ -33,6 +34,7 @@ export function teamSheet(state: GameState, clubId: string): TeamSheet {
     instructions: lineup.instructions,
     captainId: captain.id,
     isHuman: club.isHuman,
+    ...(club.isHuman ? {} : { aiStyle: aiStyleOf(club.id) }),
   };
 }
 
@@ -40,10 +42,23 @@ export function teamSheet(state: GameState, clubId: string): TeamSheet {
 export function playAiFixture(state: GameState, fixture: Fixture, rng: Rng): void {
   const home = teamSheet(state, fixture.homeId);
   const away = teamSheet(state, fixture.awayId);
-  fixture.result = simulateQuick(home, away, rng, fixture.competition !== 'league');
+  const { result, incidents } = simulateQuick(home, away, rng, fixture.competition !== 'league');
+  fixture.result = result;
   for (const player of [...home.starters, ...away.starters]) {
     player.fatigue = Math.min(100, player.fatigue + QUICK_MATCH_FATIGUE);
     player.seasonStats.matches += 1;
+  }
+  // Mêmes cartons et blessures qu'en direct (C2) : les adversaires ne sont plus toujours au complet.
+  for (const card of incidents.cards) {
+    const player = state.players[card.playerId];
+    if (!player) continue;
+    if (card.card === 'yellow') player.seasonStats.yellowCards += 1;
+    else player.seasonStats.redCards += 1;
+    player.suspendedMatches += card.suspension;
+  }
+  for (const injury of incidents.injuries) {
+    const player = state.players[injury.playerId];
+    if (player) player.injuryWeeks = Math.max(player.injuryWeeks, injury.weeks);
   }
   for (const scorer of fixture.result.scorers) {
     const player = state.players[scorer.playerId];

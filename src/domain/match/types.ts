@@ -2,6 +2,7 @@
  * Types du moteur de match. L'état est un objet JSON simple, muté en place
  * par le moteur (pas de copie à chaque minute) et sauvegardable tel quel.
  */
+import type { AiStyle } from '../club/aiStyle';
 import type {
   Ability,
   AbilityCategory,
@@ -16,6 +17,7 @@ import type {
   Rarity,
   TargetKind,
   Targeting,
+  AbilityCondition,
 } from '../types';
 
 export type Side = 'home' | 'away';
@@ -34,6 +36,8 @@ export interface TeamSheet {
   instructions: Instructions;
   captainId: string;
   isHuman: boolean;
+  /** Style du coach IA (C6) ; absent pour un coach humain. */
+  aiStyle?: AiStyle;
 }
 
 export interface MatchOptions {
@@ -73,6 +77,8 @@ export interface ActiveEffect {
   extendOnGoal?: number;
   /** Compté dans le jeu mais non affiché (bonus d'entraînement). */
   quiet?: boolean;
+  /** Marquage (M1) : l'effet tombe dès que ce joueur n'est plus actif. */
+  markerId?: string;
 }
 
 /** Capacité prête à l'emploi : niveau déjà appliqué à la création du match. */
@@ -85,6 +91,8 @@ export interface PreparedAbility {
   targeting: Targeting;
   trigger: AbilityTrigger;
   requiresRecentOpponentGoal: number | null;
+  /** Situation de match requise (M12), `null` sans condition. */
+  condition: AbilityCondition | null;
   description: string;
   hidden: boolean;
   cost: number;
@@ -107,6 +115,10 @@ export interface MatchPlayer {
   injured: boolean;
   /** Hors jeu (au sol, aux toilettes…) jusqu'à cette minute écoulée incluse. */
   knockedOutUntil: number;
+  /** Ne peut pas être mis au sol jusqu'à cette minute écoulée incluse. */
+  steadyUntil: number;
+  /** Bouclier (M7) : capacités adverses encore annulées sur ce joueur, jusqu'à cette minute ; `absorbing` = celle en cours. */
+  shield?: { charges: number; until: number; absorbing?: ActivationRecord };
   effects: ActiveEffect[];
   ability: PreparedAbility | null;
   abilityRevealed: boolean;
@@ -155,6 +167,7 @@ export interface TeamState {
   formation: Formation;
   instructions: Instructions;
   isHuman: boolean;
+  aiStyle?: AiStyle;
   captainId: string;
   /** Titulaires (11, ordre de la formation) puis remplaçants. */
   players: MatchPlayer[];
@@ -176,6 +189,8 @@ export interface TeamState {
   substitutionsUsed: number;
   /** Les buts de l'équipe comptent double jusqu'à cette minute écoulée incluse. */
   doubleGoalsUntil: number;
+  /** Soigneur de l'équipe : relève rapide et malus adverses raccourcis, jusqu'à la fin du match. */
+  doctor?: { reviveAfter: number; malusFactor: number };
   consequences: Consequence[];
 }
 
@@ -248,6 +263,8 @@ export interface EventWindow {
   freeKick?: 'attack' | 'defense';
   /** Penalty : le coach choisit la frappe (attaque) ou le plongeon de son gardien (défense). */
   penalty?: 'attack' | 'defense';
+  /** Gardien blessé (MATCH-08) : le coach choisit qui entre ; s'il laisse filer, le jeu choisit pour lui. */
+  keeper?: { injuredId: string };
 }
 
 /** Activation en cours de ciblage (CAP-16, CAP-17, CAP-20). */
@@ -308,6 +325,10 @@ export interface MatchState {
   stoppageAnnounced: boolean;
   /** Niveaux des équipes inversés jusqu'à cette minute écoulée incluse. */
   swappedUntil: number;
+  /** Chrono (M5) : aucune occasion ni faute jusqu'à cette minute écoulée incluse. */
+  deadUntil?: number;
+  /** Chrono (M5) : minutes ajoutées au temps additionnel de la 2e mi-temps. */
+  bonusStoppage?: number;
   homeAdvantage: number;
   derby: boolean;
   home: TeamState;

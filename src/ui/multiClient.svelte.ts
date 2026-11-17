@@ -5,6 +5,7 @@
  */
 import type { CoachPresence, ServerInfo, ServerMessage, SlotInfo } from '../server/hub';
 import type { DuelView } from '../server/duel';
+import { applyPatch } from '../server/patch';
 import type { GameState } from '../domain/game';
 import type { MatchState } from '../domain/match';
 
@@ -72,6 +73,8 @@ export class MultiClient {
   duel = $state.raw<DuelView | null>(null);
   duelReceivedAt = $state(0);
   #source: EventSource | null = null;
+  /** Dernière partie reçue : les envois suivants n'en contiennent que la différence (C8). */
+  #game: GameState | null = null;
   readonly #onGame: (game: GameState) => void;
   readonly #onDuel: (match: MatchState, view: DuelView) => void;
   readonly #onClosed: (message: string) => void;
@@ -112,6 +115,36 @@ export class MultiClient {
     try {
       const response = await fetch(`/api/host/${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slot }) });
       return (await response.json()) as ApiResult;
+    } catch {
+      return { ok: false, message: 'Serveur injoignable.' };
+    }
+  }
+
+  /** L'hôte demande un code de reprise pour un coach (C10). */
+  static async hostClaimCode(coachId: string): Promise<ApiResult> {
+    try {
+      const response = await fetch('/api/host/claim-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ coachId }) });
+      return (await response.json()) as ApiResult;
+    } catch {
+      return { ok: false, message: 'Serveur injoignable.' };
+    }
+  }
+
+  /** Avec le code de l'hôte, ce navigateur devient celui du coach : il retrouve son club (C10). */
+  static async claim(code: string): Promise<ApiResult> {
+    try {
+      const response = await fetch('/api/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+      const reply = (await response.json()) as ApiResult;
+      const value = reply.value as { coachId: string; name: string; clubName: string } | undefined;
+      if (reply.ok && value) {
+        try {
+          localStorage.setItem(COACH_ID_KEY, value.coachId);
+          localStorage.setItem(PROFILE_KEY, JSON.stringify({ name: value.name, clubName: value.clubName }));
+        } catch {
+          sessionId = value.coachId;
+        }
+      }
+      return reply;
     } catch {
       return { ok: false, message: 'Serveur injoignable.' };
     }
@@ -184,7 +217,16 @@ export class MultiClient {
     }
     this.phase = 'playing';
     this.joined = true;
-    this.#onGame(message.game);
+    if (message.type === 'gamePatch') {
+      // Une différence sans partie de départ ne peut rien donner : on se reconnecte pour tout recevoir.
+      if (!this.#game) {
+        this.disconnect();
+        this.connect();
+        return;
+      }
+      this.#game = applyPatch(this.#game, message.patch);
+    } else this.#game = message.game;
+    this.#onGame(this.#game);
   }
 
   async #post(route: string, body: Record<string, unknown>): Promise<ApiResult> {

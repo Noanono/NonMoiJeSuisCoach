@@ -71,8 +71,10 @@ function simulateMinute(run: Run): void {
   measureTeam(state.away, state.elapsed, awayStrength);
   if (state.swappedUntil >= state.elapsed) swapStrengths(homeStrength, awayStrength);
   const eventsBefore = run.events.length;
-  playChances(run, homeStrength, awayStrength);
-  if (!interrupted(state)) playFouls(run);
+  // Chrono (M5) : minutes mortes, il ne se passe rien.
+  const dead = state.elapsed <= (state.deadUntil ?? -1);
+  if (!dead) playChances(run, homeStrength, awayStrength);
+  if (!dead && !interrupted(state)) playFouls(run);
   if (!interrupted(state)) rollInjury(run);
   if (!interrupted(state)) playAiTurns(run);
   if (run.events.length === eventsBefore && run.rng.chance(AMBIANCE_CHANCE)) commentAmbiance(run);

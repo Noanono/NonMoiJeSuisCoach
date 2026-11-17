@@ -97,7 +97,7 @@ export function measureTeam(team: TeamState, elapsed: number, out: TeamStrength)
   }
 }
 
-/** Les deux équipes échangent leurs niveaux (L'Échange de maillots). */
+/** Les deux équipes échangent leurs niveaux (Le Maillot retourné). */
 export function swapStrengths(a: TeamStrength, b: TeamStrength): void {
   [a.attack, b.attack] = [b.attack, a.attack];
   [a.midfield, b.midfield] = [b.midfield, a.midfield];

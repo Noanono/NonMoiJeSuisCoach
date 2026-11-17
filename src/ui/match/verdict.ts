@@ -48,6 +48,7 @@ const SET_PIECE_NAME: Record<PendingPlay['kind'], string> = {
 
 /** Titre du bandeau de fenêtre d'événement (CAP-19). */
 export function windowTitle(window: EventWindow, pendingPlay: PendingPlay | null): string {
+  if (window.keeper) return 'Ton gardien est blessé : qui va dans les buts ?';
   const setPiece = SET_PIECE_NAME[pendingPlay?.kind ?? 'freeKick'];
   switch (window.trigger) {
     case 'ownSetPiece':

@@ -45,13 +45,15 @@ Le jeu mêle une vraie couche de gestion (effectif, tactique, mercato, budget) e
 | MATCH-05 | Avant le match et pendant les pauses, le coach donne des consignes tactiques (défensif, équilibré, offensif, pressing haut, jeu long…) qui modifient la simulation. |
 | MATCH-06 | À la fin du match, un résumé affiche le score, les buteurs et leurs passeurs, les cartons, les blessures et l'impact de chaque capacité utilisée. |
 | MATCH-07 | L'équipe adverse, pilotée par l'IA, active elle aussi ses capacités ; le coach les voit annoncées et peut riposter. |
-| MATCH-08 | Le coach peut faire 5 remplacements par match, à tout moment, en glissant un remplaçant sur un joueur du terrain (ou l'inverse) ou depuis le panneau du joueur. Un joueur sorti ne revient pas. Un blessé peut être remplacé, pas un exclu. L'IA remplace ses blessés. |
+| MATCH-08 | Le coach peut faire 5 remplacements par match, à tout moment, en glissant un remplaçant sur un joueur du terrain (ou l'inverse) ou depuis le panneau du joueur. Un joueur sorti ne revient pas. Un blessé peut être remplacé, pas un exclu. Si le gardien du coach se blesse, le match se met en pause pour qu'il choisisse le remplaçant ; s'il laisse filer, le jeu fait entrer le gardien du banc (un joueur de champ enfile les gants s'il n'y a plus de changement). L'IA remplace ses blessés, et ses joueurs cuits après l'heure de jeu. |
 | MATCH-09 | Une mini-carte animée montre les joueurs et le ballon. Le coach attaque toujours vers la droite et son équipe est à gauche du tableau de score. |
 | MATCH-10 | Un bouton en coin rappelle l'impact de chaque effet, match en pause. |
 | MATCH-11 | Un but arrête le match et s'annonce au centre de l'écran (buteur, minute, score). Le coach reprend quand il veut. |
 | MATCH-12 | Un coup franc est annoncé avec sa distance (proche, moyenne, lointaine). Le match s'arrête : l'équipe qui tire choisit frappe directe, centre ou combinaison, celle qui défend choisit la taille de son mur. De près la frappe directe paie, de loin le centre ; un grand mur ferme la frappe mais ouvre les centres, un petit mur l'inverse. Un centre repoussé laisse parfois un contre. L'IA fait des choix logiques ; si le coach laisse filer, le choix logique est joué. |
 | MATCH-13 | Sur un penalty, le match s'arrête : le tireur choisit sa frappe (placée, en force ou Panenka), le gardien plonge à gauche, à droite ou reste au centre. Le côté visé est tiré au sort. La frappe placée punit le gardien qui reste au centre, la frappe en force déborde celui qui plonge, la Panenka est imparable s'il plonge et ridicule s'il attend ; une Panenka réussie fait gagner 1 point de gueulante et en fait perdre 1 à l'adversaire, une ratée l'inverse. Chaque gardien a une habitude cachée (plonge presque toujours, la plupart du temps, ou reste volontiers au centre), notée par le staff après son premier penalty du match. Laissé à l'IA, un penalty rentre toujours environ 3 fois sur 4. |
 | MATCH-14 | Pendant le match, sans user de remplacement, le coach glisse un titulaire sur un autre titulaire pour échanger leurs postes (gardien compris), ou sur une autre ligne pour changer de formation. Chaque ligne garde au moins un joueur, 6 au plus ; on ne devient gardien que par échange. Exclus et blessés ne bougent pas. |
+| MATCH-15 | Fautes et cartons ont les mêmes taux en direct et en simulation rapide (matchs entre clubs IA) : environ 6 % de rouges par équipe et par match. Le risque de carton monte avec la fatigue du fautif, ses malus de concentration et dans un derby ; le pressing haut fait plus de fautes ; un joueur averti lève le pied. Les clubs IA subissent aussi blessures et suspensions. |
+| MATCH-16 | Chaque coach IA a un style reconnaissable, affiché avant le match : le bétonneur, le fou d’attaque, le presseur, le roublard. Le style fixe sa formation et ses consignes, son goût pour certaines capacités, et le moment où il pousse quand il est mené ou ferme le jeu quand il mène. |
 
 ## Club, mercato et président
 
@@ -67,6 +69,8 @@ Le jeu mêle une vraie couche de gestion (effectif, tactique, mercato, budget) e
 | CLUB-08 | La valeur d'un joueur au mercato est calculée à partir de sa note globale, de la rareté de sa capacité et de son niveau : à note égale, un joueur avec une capacité légendaire vaut nettement plus qu'un joueur avec une capacité commune, et chaque niveau de capacité ajoute 20 % (×1,8 au niveau 5). La rareté et la valeur sont affichées sur la fiche du joueur. |
 | CLUB-09 | Le coach améliore six installations avec son budget (cinq niveaux chacune, de 10 000 € à 160 000 €) : buvette (recettes), tribunes (sponsors et avantage du terrain), vestiaires (récupération), centre d'entraînement (progression) et centre de formation (qualité du jeune promu). |
 | CLUB-10 | Cellule de scouts (installation, niveaux 0 à 5). Des joueurs des autres clubs, la rareté de la capacité se voit toujours ; son nom, son effet et le potentiel se découvrent d'un coup. Chaque semaine, la cellule donne 2 à 12 rapports (stockables 2 semaines) : un rapport révèle la capacité et le potentiel exact d'un joueur. 5 à 55 % des joueurs sont connus d'office (+10 % par niveau), et les joueurs affrontés en match aussi. En multi, chaque coach a ses propres connaissances. |
+| CLUB-11 | La réputation des clubs suit leurs saisons : elle monte avec le classement, une montée et un beau parcours en coupe, baisse avec une descente, et se rapproche peu à peu de la division où le club joue. Elle décide du niveau des jeunes, des objectifs du président, des offres d’emploi et des pronostics. |
+| CLUB-12 | Pendant les fenêtres de mercato, les clubs IA se renforcent entre eux : un club achète, à son poste le plus faible, un meilleur joueur d’un club de même niveau ou d’en dessous, dans la limite de son budget. Le coach voit passer les transferts de sa division dans l’actualité. |
 
 ## Univers et compétitions
 
@@ -91,14 +95,14 @@ Le gameplay repose sur les capacités : chaque joueur en a une, personnelle, que
 | CAP-01 | Chaque joueur possède exactement une capacité personnelle, liée à lui pour toute sa carrière (elle le suit en cas de transfert). |
 | CAP-02 | Dans un même effectif généré, deux joueurs n'ont jamais la même capacité. |
 | CAP-03 | Toutes les capacités s'activent manuellement par le coach pendant le match, en touchant le joueur sur le terrain. Les capacités « Banc » s'activent depuis le banc. |
-| CAP-04 | Chaque capacité définit : poste, cible (soi, coéquipier, adversaire, zone, équipe), effet chiffré, durée. Le coût dépend de la rareté. Chaque capacité ne sert qu'une fois par match : la jouer est un choix. Exception : les capacités d'occasion (penalty, coup franc, corner) resservent à chaque fois que l'événement se présente, tant que la jauge le permet. Sur une même occasion de but, chaque camp ne joue qu'une seule capacité d'occasion. |
+| CAP-04 | Chaque capacité définit : poste, cible (soi, coéquipier, adversaire, zone, équipe), effet chiffré, durée, et son propre coût en Gueulante (1 à 7), fixé selon sa puissance mesurée et non selon sa rareté. Chaque capacité ne sert qu'une fois par match : la jouer est un choix. Exception : les capacités d'occasion (penalty, coup franc, corner) resservent à chaque fois que l'événement se présente, tant que la jauge le permet. Sur une même occasion de but, chaque camp ne joue qu'une seule capacité d'occasion. |
 | CAP-05 | Les activations consomment la Jauge de Gueulante du coach (10 points max, 3 au coup d'envoi), qui se recharge de 1 point toutes les 10 minutes, +1 quand l'équipe encaisse un but : 4 à 6 activations par match. |
 | CAP-06 | Une capacité n'a aucun effet en dehors du match : ni budget, ni confiance, ni blessure longue, ni fatigue pour la suite. |
 | CAP-08 | La fiche du joueur détaille l'effet, la durée et le coût au niveau actuel et au niveau suivant. |
 | CAP-09 | Pendant le match, chaque effet actif apparaît sur les joueurs concernés (halo et picto, vert pour un bonus, rouge pour un malus) avec un compte à rebours. |
 | CAP-10 | Chaque capacité progresse sur 5 niveaux au fil de la carrière, grâce à l'expérience gagnée par activation (selon son impact sur le match) et à l'entraînement. Chaque niveau est plus dur à obtenir que le précédent : le niveau 5 demande presque une carrière. Les joueurs des autres clubs progressent chaque saison, et un joueur généré a le niveau de capacité de son âge : un vétéran arrive avec une capacité plus haute qu'un jeune. |
-| CAP-11 | Chaque capacité progresse à chaque niveau : effet +10 %, durée +10 % (au moins une minute) ; une capacité sans chiffre à faire grandir gagne un petit bonus d'équipe. Le niveau 5 ajoute en plus une cible, sinon 50 % de durée, sinon un effet 25 % plus fort. Une capacité peut avoir une durée fixe (Le Bus de l'amicale) : ses niveaux ne renforcent alors que l'effet. Détail dans [equilibrage-capacites.md](equilibrage-capacites.md). |
-| CAP-12 | Chaque capacité a une rareté. Commune : un effet simple, sûr et sans contrepartie. Rare : plus forte, avec une petite mécanique en plus. Légendaire : peut renverser un match. Mythique : change les règles du match, et l'IA y a droit aussi. Quelle que soit sa rareté, une capacité ne sert qu'une fois par match, sauf les capacités d'occasion (penalty, coup franc, corner), qui resservent à chaque occasion. Plus une capacité est forte, plus elle est rare à la génération des joueurs. |
+| CAP-11 | Chaque capacité progresse à chaque niveau : effet +10 %, durée +10 % (au moins une minute) ; une capacité sans chiffre à faire grandir gagne un petit bonus d'équipe. Le niveau 5 ajoute en plus une cible, sinon 50 % de durée, sinon un effet 25 % plus fort. Une capacité peut avoir une durée fixe (Le Béton armé) : ses niveaux ne renforcent alors que l'effet ; aucun malus ne dépasse −90 %. Détail dans [equilibrage-capacites.md](equilibrage-capacites.md). |
+| CAP-12 | Chaque capacité a une rareté, qui dit à quel point elle est mécanique et stratégique, pas à quel point elle est forte. Commune : un effet direct, à lancer quand on veut. Rare : une mécanique à exploiter (condition de score ou de minute, pari, marquage, moment du match). Légendaire : plusieurs mécaniques qui se combinent, à préparer. Mythique : change les règles du match, et l'IA y a droit aussi. La puissance se lit dans le coût. Quelle que soit sa rareté, une capacité ne sert qu'une fois par match, sauf les capacités d'occasion (penalty, coup franc, corner), qui resservent à chaque occasion. Les raretés hautes restent rares à la génération des joueurs. |
 | CAP-13 | Le coach connaît toujours les capacités de son effectif (recrues, jeunes promus et dépanneurs compris). Celles des joueurs des autres clubs restent inconnues tant que sa cellule de scouts ne les a pas vus (CLUB-10) ; en match, un adversaire scouté a ses capacités affichées, même celles de Banc. |
 | CAP-16 | Quand une capacité cible un coéquipier ou un adversaire, le coach choisit lui-même la cible sur le terrain : les cibles valides sont mises en évidence, les autres grisées. Le choix se fait match en pause. |
 | CAP-17 | Une cible est valide si elle est sur le terrain, n'est pas déjà hors jeu et appartient à la ligne visée. Pour une capacité à plusieurs cibles, le coach les choisit une à une. |
@@ -111,89 +115,105 @@ Le gameplay repose sur les capacités : chaque joueur en a une, personnelle, que
 
 ## Catalogue des capacités
 
-CAT-01 : le jeu contient les 55 capacités ci-dessous. Les chiffres des tableaux sont ceux de la conception d'origine. Les valeurs réelles, équilibrées par mesure, sont dans `src/domain/abilities/data/` et leurs cibles dans [equilibrage-capacites.md](equilibrage-capacites.md).
+CAT-01 : le jeu contient les 69 capacités ci-dessous (catalogue refait en novembre 2026). Les valeurs sont celles du jeu au niveau 1, telles que la fiche du joueur les affiche ; elles viennent de `src/domain/abilities/data/`, et les règles d'équilibrage par coût de [equilibrage-capacites.md](equilibrage-capacites.md).
 
-| Rareté | Part des joueurs générés | Coût | Utilisation | Multiplicateur de valeur |
-| --- | --- | --- | --- | --- |
-| Commune | ~70 % | 2 | Une fois par match | ×1 |
-| Rare | ~25 % | 3 | Une fois par match | ×1,5 |
-| Légendaire | ~4,5 % | 5 | Une fois par match | ×3 |
-| Mythique | ~0,5 % | 7 | Une fois par match | ×10 |
+| Rareté | Part des joueurs générés | Coûts rencontrés | Utilisation | Multiplicateur de valeur |
+| --- | ---: | ---: | --- | ---: |
+| Commune | ~70 % | 1 à 7 | Une fois par match | ×1 |
+| Rare | ~25 % | 1 à 3 | Une fois par match | ×1,5 |
+| Légendaire | ~4,5 % | 2 à 5 | Une fois par match | ×3 |
+| Mythique | ~0,5 % | 2 à 7 | Une fois par match | ×10 |
 
-### Communes (29)
+Aucun malus de stats ne dépasse −90 %, à aucun niveau : un joueur ne descend jamais sous 10 % de sa note. Plusieurs malus peuvent se cumuler.
 
-| Capacité | Poste | Cible | Effet |
-| --- | --- | --- | --- |
-| Le Bedonnant | GB | Soi | +60 % d'arrêts, 15 min |
-| Le Bavard | GB | Prochain tir adverse | −60 % de chances de but |
-| Le Danseur | GB | Penalty adverse | +60 % d'arrêt |
-| Le Dégagement de mule | GB | Équipe | +20 % au tir, 8 min |
-| Le Jardinier | DEF | Sa zone | Adversaires à −30 % de vitesse, 15 min |
-| L'Agriculteur | DEF | Soi | +70 % en défense, 23 min |
-| Le Rugbyman reconverti | DEF | Action adverse | Annule l'action en cours |
-| Haleine de Ricard | DEF | 1 adversaire | −30 % de technique, 15 min |
-| Le Mur de saucisses | DEF | Coup franc adverse | −70 % de chances de but |
-| Le Videur de boîte | DEF | 1 attaquant | −60 % au tir, 15 min |
-| Le Lacet fou | MIL | 1 adversaire | Au sol, 5 min |
-| Le Marchand de sable | MIL | 1 adversaire | −40 % de concentration, 15 min |
-| Le Chien de la casse | MIL | Soi | +40 % de physique, 15 min |
-| Le Ruisselant | MIL | Soi | +40 % de technique, 15 min |
-| Les Pigeons | MIL | 2 adversaires au hasard | −30 % de concentration, 8 min |
-| La Mobylette | ATT | Soi | +60 % de vitesse, 8 min |
-| Le Buteur de comptoir | ATT | Soi | +40 % au tir, 15 min |
-| Bière tiède | ATT | Penalty ou coup franc | +40 % de réussite |
-| Le Bulldozer | ATT | 2 défenseurs | Au sol, 3 min |
-| La Frappe de mule | ATT | Prochaine occasion | +40 % de chances de but |
-| Le Chambreur | Tous | 1 adversaire | −30 % à toutes ses stats, 8 min |
-| Short trop court | Tous | 2 adversaires | −25 % de concentration, 8 min |
-| Le Porteur d'eau | Banc | 1 coéquipier | Efface 50 % de sa fatigue |
-| Le DJ du vestiaire | Banc | Équipe | +15 % de vitesse, 15 min |
-| Le Kiné douteux | Banc | 1 coéquipier au sol ou blessé (encore sur le terrain) | Le relève immédiatement ; un blessé reprend le match, sans suite après |
-| Le Regard qui tue | ATT | Penalty pour toi | +réussite du penalty, puis bonus de tir pour le porteur |
-| Le Gardien qui parle | GB | Penalty adverse | Gros bonus d'arrêts pour le gardien, quelques minutes |
-| Le Pied de velours | MIL | Coup franc pour toi | +réussite, seulement en frappe directe |
-| La Tête de pioche | DEF | Coup franc ou corner pour toi | +réussite, seulement sur un centre |
+### Communes (23) : un effet direct, à lancer quand on veut
 
-### Rares (15)
+| Capacité | Poste | Coût | Quand | Cible | Effet au niveau 1 |
+| --- | --- | ---: | --- | --- | --- |
+| Le Clin d’œil | Tous postes | 1 | À tout moment | 1 adversaire au choix | −85 % de concentration (la cible) pendant 14 min |
+| Le Coup d’épaule | Défenseur | 1 | À tout moment | 1 adversaire au choix | −50 % à toutes les stats (la cible) pendant 13 min |
+| Le Crochet | Attaquant | 1 | À tout moment | Lui-même | +9 % de chances de but sur la prochaine occasion |
+| Le Dégagement au pif | Gardien | 1 | À tout moment | Toute son équipe | +33 % au tir (son équipe) pendant 12 min |
+| Le Seau d’eau | Défenseur | 1 | À tout moment | 1 coéquipier au sol ou blessé au choix | Relève la cible immédiatement, ou soigne un blessé resté sur le terrain ; Efface 50 % de la fatigue (la cible) |
+| Le Spray magique | Banc | 1 | À tout moment | 1 coéquipier au choix | Retire tous les malus de la cible ; +70 % à toutes les stats (la cible) pendant 12 min |
+| L’Éponge miracle | Banc | 2 | À tout moment | 3 coéquipiers au sol ou blessé au choix | Relève la cible immédiatement, ou soigne un blessé resté sur le terrain |
+| La Gourde magique | Banc | 2 | À tout moment | Toute son équipe | Efface 60 % de la fatigue (son équipe) |
+| La Mine des 25 mètres | Attaquant | 2 | À tout moment | Lui-même | +23 % de chances de but sur la prochaine occasion |
+| La Sortie aux poings | Gardien | 2 | À tout moment | Lui-même | Annule la prochaine action adverse ; +60 % d'arrêts (lui-même) pendant 15 min |
+| Le Chambreur de gardien | Attaquant | 2 | À tout moment | 1 gardien au choix | −80 % d'arrêts (la cible) pendant 20 min |
+| Le Gardien volant | Gardien | 2 | À tout moment | Lui-même | +320 % d'arrêts (lui-même) pendant 35 min |
+| Le Métronome | Milieu | 2 | À tout moment | Toute son équipe | +25 % de technique (son équipe) pendant 20 min |
+| Le Petit Pont | Milieu | 2 | À tout moment | 1 adversaire au choix | −90 % de concentration (la cible) pendant 25 min |
+| Le Tacle sur gravier | Défenseur | 2 | À tout moment | 1 adversaire au choix | Hors jeu 16 min : la cible |
+| Le Videur | Défenseur | 2 | À tout moment | 2 attaquants au choix | −90 % au tir (la cible) pendant 25 min ; −25 % de technique (la cible) pendant 25 min |
+| Le Béton armé | Défenseur | 3 | À tout moment | Toute son équipe | +350 % en défense (son équipe) pendant 45 min |
+| Le Supporter qui klaxonne | Banc | 3 | À tout moment | Toute l'équipe adverse | +18 de fatigue (l'équipe adverse), le temps du match |
+| Le Terrain labouré | Tous postes | 3 | À tout moment | Sa zone : tu choisis le moment | −70 % de vitesse (adversaires de la zone) pendant 30 min |
+| La Symphonie | Milieu | 5 | À tout moment | Toute son équipe | +72 % à toutes les stats (son équipe) pendant 25 min |
+| Le Ciseau du camping | Attaquant | 5 | À tout moment | Lui-même | Occasion immédiate à 90 % de but ; +20 % à toutes les stats (son équipe) pendant 10 min |
+| Le Sort de la voyante | Tous postes | 5 | À tout moment | Toute l'équipe adverse | −45 % à toutes les stats (l'équipe adverse) pendant 25 min |
+| La Tournée générale | Banc | 7 | À tout moment | 6 adversaires au hasard | Hors jeu 35 min : la cible |
 
-| Capacité | Poste | Cible | Effet et mécanique |
-| --- | --- | --- | --- |
-| Le Gardien kamikaze | GB | 2 prochaines occasions adverses | Les annule et rend 1 point de jauge |
-| Le Gardien fumeur | GB | Soi | +50 % d'arrêts pendant 23 min, +30 % de plus par but encaissé dans ce match |
-| Le Bus de l'amicale | DEF | Équipe | +70 % en défense, 15 min. Sans but encaissé pendant l'effet : +2 points de jauge |
-| Le Boucher du village | DEF | 1 adversaire | Hors jeu 23 min |
-| Le Vomisseur | MIL | Sa zone | Tous les adversaires de la zone au sol, 5 min |
-| Le Retraité de 42 ans | MIL | Équipe | Les 2 prochaines occasions à +40 % |
-| Le Pique-assiette | MIL | Coach adverse | Vole 2 points de jauge |
-| Le Sombrero bourré | ATT | Soi | Prochaine occasion franche. S'il marque, il peut rejouer sa capacité |
-| Le Revenant de la Feria | ATT | Soi | Bonus au tir égal à la minute de jeu pendant 23 min (70e = +70 %) |
-| Le Chef de chant | Tous | Équipe | +20 % à toutes les stats, 15 min. Chaque but marqué prolonge de 5 min |
-| Le Capitaine gueulard | Tous | Équipe | Retire tous les malus en cours. +1 point de jauge si au moins 3 sont retirés |
-| Le Chien du président | Banc | 1 adversaire | Hors jeu 8 min, puis le chien poursuit un autre adversaire 8 min |
-| Le Ballon déplacé | ATT | Coup franc pour toi | Le ballon avance d'un cran (lointain → moyen → proche) et la frappe directe gagne en réussite |
-| La Bousculade dans le mur | DEF | Coup franc adverse | Annule le coup franc ; l'adversaire perd de la concentration |
-| Le Ramasseur de balles | Banc | Penalty adverse | S'il est marqué, le penalty est à retirer ; l'adversaire perd de la concentration |
+### Rares (22) : une mécanique à exploiter : condition, pari, marquage, moment du match
 
-### Légendaires (7)
+| Capacité | Poste | Coût | Quand | Cible | Effet au niveau 1 |
+| --- | --- | ---: | --- | --- | --- |
+| Le Ramasseur lent | Banc | 1 | À tout moment (devant) | Lui-même | 14 minutes sans occasion ni faute, pour personne |
+| L’Horloger du club | Banc | 2 | À tout moment (pas devant, dès la 80e) | Lui-même | +5 minutes de temps additionnel en fin de match ; +40 % au tir (son équipe) pendant 15 min |
+| La Bouteille d’eau bénite | Milieu | 2 | À tout moment | Toute son équipe | Retire tous les malus de son équipe, +10 % à toutes les stats (son équipe) par malus retiré pendant 15 min |
+| La Causerie | Tous postes | 2 | À la mi-temps | Toute son équipe | +17 % à toutes les stats (son équipe) pendant 30 min |
+| La Danse de la victoire | Milieu | 2 | Après un but de son équipe | Toute son équipe | +26 % à toutes les stats (son équipe) pendant 15 min |
+| La Tête de bois | Défenseur | 2 | Sur coup de pied arrêté offensif | Lui-même | +28 % de chances de but sur un centre (coup franc ou corner) |
+| Le Coup franc de kermesse | Milieu | 2 | Sur coup franc pour son équipe | Lui-même | +30 % de chances de but si le coup franc est tiré directement |
+| Le Fayot | Tous postes | 2 | À tout moment | 1 coéquipier au choix | Bouclier (la cible) : 1 la prochaine capacité adverse qui le vise est annulée sur lui, pendant 30 min ; +170 % à toutes les stats (la cible) pendant 25 min |
+| Le Gardien au sifflet | Gardien | 2 | À tout moment | Lui-même | Pari à 72 % : −85 % de réussite pour les 3 prochains tirs adverses. Raté : rien |
+| Le Kiné du dimanche | Banc | 2 | À tout moment | 2 coéquipiers au sol ou blessé au choix | Pari à 75 % : Relève la cible immédiatement, ou soigne un blessé resté sur le terrain, +60 % à toutes les stats (la cible) pendant 20 min. Raté : la cible reste au sol 5 min de plus |
+| Le Marquage à la culotte | Défenseur | 2 | À tout moment | 1 attaquant au choix | Marquage : −90 % à toutes les stats pour la cible pendant 35 min, tant que le marqueur est sur le terrain et debout |
+| Le Mur de parpaings | Gardien | 2 | À tout moment | Lui-même | Annule les 2 prochaines actions adverses |
+| Le Mur qui avance | Défenseur | 2 | Sur coup de pied arrêté adverse | Lui-même | −85 % de réussite pour les 3 prochains tirs adverses |
+| Le Pari du milieu | Milieu | 2 | À tout moment | Lui-même | Pari à 50 % : Occasion immédiate à 45 % de but. Raté : rien |
+| Le Réveil tardif | Attaquant | 2 | À tout moment (dès la 70e) | Lui-même | +140 % au tir (lui-même) pendant 20 min |
+| Le Rouleau compresseur | Défenseur | 2 | À tout moment | 2 adversaires au choix | +32 de fatigue (la cible), le temps du match |
+| Le Ballon crevé | Banc | 3 | Sur penalty adverse | Lui-même | Le prochain penalty adverse marqué est à retirer ; −30 % de réussite pour les 2 prochains tirs adverses |
+| Le Coup de gueule | Tous postes | 3 | À tout moment | Toute son équipe | Retire tous les malus de son équipe, +1 point de Gueulante si au moins 3 sont retirés ; +38 % à toutes les stats (son équipe) pendant 20 min |
+| Le Lob du parking | Attaquant | 3 | À tout moment | Lui-même | +50 % de chances de but sur la prochaine occasion : il la tente lui-même, et s'il marque, il pourra la rejouer |
+| Le Marathonien | Milieu | 3 | À tout moment | Toute l'équipe adverse | +15 de fatigue (l'équipe adverse), le temps du match ; Efface 30 % de la fatigue (son équipe) |
+| Le Plongeur de Séville | Attaquant | 3 | À tout moment | Lui-même | Pari à 55 % : Penalty pour son équipe. Raté : Carton jaune pour lui |
+| Le Tacle à retardement | Défenseur | 3 | À tout moment | 1 adversaire au choix | Pari à 65 % : Hors jeu 45 min : la cible. Raté : Carton jaune pour lui |
 
-| Capacité | Poste | Effet |
-| --- | --- | --- |
-| La Panenka ivre | ATT | Crée immédiatement une occasion à 75 % de but |
-| L'Échange de maillots | Tous | Inverse les niveaux des deux équipes pendant 15 min |
-| La Mêlée générale | Tous | 3 adversaires choisis et le porteur hors jeu, 15 min |
-| La Coupure de courant | Banc | Annule le dernier but adverse s'il date de moins de 5 min |
-| La Malédiction de mémé | Banc | −30 % à toute l'équipe adverse, 23 min |
-| Le Plongeon d'Oscar | Tous | Sur un coup franc pour toi : il devient un penalty, et l'adversaire s'énerve (malus à toute l'équipe) |
-| La Panenka de légende | ATT | Sur un penalty pour toi : réussite quasi sûre, puis toute l'équipe s'envole (bonus à toutes les stats) |
+### Légendaires (16) : plusieurs mécaniques qui se combinent, à préparer
 
-### Mythiques (4)
+| Capacité | Poste | Coût | Quand | Cible | Effet au niveau 1 |
+| --- | --- | ---: | --- | --- | --- |
+| La Célébration interdite | Attaquant | 3 | Après un but de son équipe | Toute son équipe | +20 % à toutes les stats (son équipe) pendant 20 min ; −20 % de concentration (l'équipe adverse) pendant 20 min |
+| Le Car à deux étages | Défenseur | 3 | À tout moment | Toute son équipe | +300 % en défense (son équipe) pendant 45 min ; +3 points de Gueulante si aucun but encaissé pendant 45 min |
+| Le Copieur | Milieu | 3 | À tout moment | Lui-même | Rejoue la dernière capacité utilisée par l'adversaire, pour son équipe ; si elle coûtait moins cher, la différence de Gueulante est rendue ; +15 % à toutes les stats (son équipe) pendant 20 min |
+| Le Gardien libéro | Gardien | 3 | À tout moment | Lui-même | Pari à 60 % : Occasion immédiate à 95 % de but, +30 % à toutes les stats (son équipe) pendant 15 min. Raté : Occasion adverse à 35 % de but |
+| Le Mur humain | Défenseur | 3 | À tout moment | 2 coéquipiers au choix | Bouclier (lui-même) : 1 la prochaine capacité adverse qui le vise est annulée sur lui, pendant 35 min ; Bouclier (la cible) : 1 la prochaine capacité adverse qui le vise est annulée sur lui, pendant 35 min ; +150 % en défense (son équipe) pendant 25 min ; −60 % de réussite pour les 2 prochains tirs adverses |
+| Le Remède de grand-mère | Tous postes | 3 | À la mi-temps | Toute son équipe | Efface 75 % de la fatigue (son équipe) ; Retire tous les malus de son équipe ; Impossible à mettre au sol pendant 15 min (son équipe) |
+| Le Voleur de sifflet | Milieu | 3 | À tout moment | Lui-même | Vole 2 points de Gueulante au coach adverse ; −35 % de concentration (l'équipe adverse) pendant 18 min |
+| Le Gardien-forteresse | Gardien | 4 | À tout moment | 2 coéquipiers au choix | Bouclier (lui-même) : 2 prochaines capacités adverses qui le visent sont annulées sur lui, pendant 45 min ; Bouclier (la cible) : 2 prochaines capacités adverses qui le visent sont annulées sur lui, pendant 45 min ; +900 % d'arrêts (lui-même) pendant 60 min ; +350 % en défense (son équipe) pendant 45 min |
+| La Remontada du dimanche | Attaquant | 5 | À tout moment (mené) | Toute son équipe | +10 % à toutes les stats (son équipe) pendant 40 min, +35 % par but de retard |
+| Le Coup de sifflet tardif | Banc | 5 | À tout moment (pas devant, dès la 80e) | Lui-même | +8 minutes de temps additionnel en fin de match ; +70 % à toutes les stats (son équipe) pendant 20 min |
+| Le Discours de la mi-temps | Tous postes | 5 | À la mi-temps | Toute son équipe | +42 % à toutes les stats (son équipe) pendant 45 min ; Efface 40 % de la fatigue (son équipe) |
+| Le Double ou rien | Attaquant | 5 | À tout moment | Lui-même | Pari à 60 % : Occasion immédiate à 95 % de but, +80 % à toutes les stats (son équipe) pendant 25 min. Raté : Occasion adverse à 40 % de but |
+| Le Marquage de l’enfer | Défenseur | 5 | À tout moment | 2 adversaires au choix | Marquage : −90 % à toutes les stats pour la cible pendant 45 min, tant que le marqueur est sur le terrain et debout |
+| Le Penalty imaginaire | Tous postes | 5 | Sur coup franc pour son équipe | Lui-même | Le coup franc devient un penalty ; −35 % à toutes les stats (l'équipe adverse) pendant 15 min |
+| Le Tifo géant | Banc | 5 | À tout moment | Toute son équipe | Surcharge : vide toute la Gueulante, +11 % à toutes les stats (son équipe) par point dépensé (coût compris) pendant 25 min |
+| Les Plombs qui sautent | Banc | 5 | À tout moment | Lui-même | Annule un but adverse des 5 dernières minutes ; −20 % de concentration (l'équipe adverse) pendant 10 min |
 
-| Capacité | Poste | Effet |
-| --- | --- | --- |
-| Le Transfert du parking | MIL | Le meilleur joueur de champ adverse rejoint ton équipe jusqu'à la fin du match |
-| Le But en or massif | ATT | Pendant 15 min, chaque but compte double et toute l'équipe gagne +30 % à toutes les stats |
-| Le Kebab du siècle | Banc | 6 adversaires au hasard hors jeu pendant 15 min |
-| Le Miracle du kiné | DEF | Tes exclus et tes blessés reviennent, toute l'équipe repart à 100 % d'énergie et gagne +30 % à toutes les stats pendant 15 min |
+### Mythiques (8) : changent les règles du match
+
+| Capacité | Poste | Coût | Quand | Cible | Effet au niveau 1 |
+| --- | --- | ---: | --- | --- | --- |
+| La Coupure pub | Banc | 2 | À tout moment | Toute son équipe | 10 minutes sans occasion ni faute, pour personne ; Efface 50 % de la fatigue (son équipe) |
+| Le Docteur Miracle | Banc | 3 | À tout moment | Toute son équipe | Jusqu'à la fin du match : un joueur de son équipe mis au sol se relève après 2 min, et les malus adverses durent 50 % de leur durée ; Efface 90 % de la fatigue (son équipe) |
+| Le Maillot retourné | Tous postes | 4 | À tout moment | Toute l'équipe adverse | Inverse les niveaux des deux équipes pendant 40 min |
+| Le Recrutement sauvage | Milieu | 6 | À tout moment | Toute l'équipe adverse | Le meilleur joueur de champ adverse rejoint son équipe jusqu'à la fin du match ; +60 % à toutes les stats (son équipe) pendant 30 min |
+| Le Rideau de fer | Défenseur | 6 | À tout moment | 3 coéquipiers au choix | Bouclier (lui-même) : 2 prochaines capacités adverses qui le visent sont annulées sur lui, pendant 45 min ; Bouclier (la cible) : 2 prochaines capacités adverses qui le visent sont annulées sur lui, pendant 45 min ; +800 % en défense (son équipe) pendant 90 min ; −90 % de réussite pour les 10 prochains tirs adverses ; Annule les 3 prochaines actions adverses |
+| La Machine à remonter le temps | Gardien | 7 | À tout moment (mené) | Lui-même | Efface tous les buts des 20 dernières minutes, des deux côtés ; +60 % à toutes les stats (son équipe) pendant 20 min |
+| La Résurrection | Défenseur | 7 | À tout moment | Toute son équipe | Ramène les exclus et les blessés, et remet toute l'équipe à 100 % d'énergie ; +80 % à toutes les stats (son équipe) pendant 25 min |
+| Le But qui compte double | Attaquant | 7 | À tout moment | Toute son équipe | Chaque but de son équipe compte double pendant 25 min ; +100 % à toutes les stats (son équipe) pendant 25 min |
 
 ## Entraînement
 
@@ -222,3 +242,4 @@ Section à compléter.
 | MULTI-07 | Match en direct entre deux coachs, joué par le serveur : vitesse ×1 imposée, 3 pauses de 10 s par coach (seul celui qui a mis pause peut reprendre), 10 s au plus pour chaque fenêtre de choix ou ciblage (une barre se vide) puis choix automatique, l'un après l'autre (le tireur puis le gardien), mi-temps de 20 s ou moins si les deux sont prêts. Pas de semaine suivante tant qu'il n'est pas fini. |
 | MULTI-08 | Le joueur d'un autre coach ne s'achète pas au mercato : on lui fait une offre d'un montant libre (valeur du joueur affichée en repère), valable 2 semaines et tant que le mercato est ouvert. Elle arrive dans le Bureau de l'autre coach, qui l'accepte (le joueur et l'argent changent de club) ou la refuse ; l'acheteur peut la retirer. Chacun est prévenu dans son fil de la semaine. |
 | MULTI-09 | L'accueil propose Solo, Héberger une partie (seulement sur le PC du serveur) et Rejoindre une partie. L'hôte garde jusqu'à 3 ligues : il en ouvre une (reprise ou nouvelle) ou en supprime une (rangée dans parties/corbeille) ; changer de ligue renvoie les joueurs connectés à l'accueil. Le joueur voit la ligue ouverte : « Continuer » s'il y a déjà joué dans ce navigateur, sinon « Rejoindre » avec son nom de coach et de club. L'ancienne ligue unique devient la ligue 1. |
+| MULTI-10 | Le serveur n’envoie à chaque navigateur que ce qui a changé dans la partie. Un match en direct est enregistré avec la ligue : si le serveur s’arrête, il reprend où il en était quand les deux coachs reviennent. L’hôte peut donner à un coach un code de reprise (4 chiffres, dix minutes) pour retrouver son club dans un autre navigateur. |

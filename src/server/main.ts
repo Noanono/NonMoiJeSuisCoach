@@ -8,6 +8,7 @@
  * L'hôte est le navigateur ouvert sur ce PC (http://localhost) : lui seul choisit la ligue ouverte.
  * Le navigateur reçoit la partie en direct (Server-Sent Events) et envoie ses commandes en POST.
  */
+import { diffParts, partsToJson, type Parts } from './patch';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
@@ -129,6 +130,9 @@ function deleteSlot(slot: number): HubResult<null> {
 interface Listener {
   coachId: string | null;
   response: ServerResponse;
+  /** Ce que ce navigateur a déjà reçu de la partie : la suite ne lui envoie que la différence (C8). */
+  parts?: Parts;
+  coaches?: string;
 }
 
 const listeners = new Set<Listener>();
@@ -146,13 +150,31 @@ function closeAll(message: string): void {
   listeners.clear();
 }
 
-/** Chaque coach reçoit la partie de son point de vue. */
+/** Chaque coach reçoit la partie de son point de vue : en entier la première fois, puis seulement ce qui change (C8). */
 function broadcast(): void {
   if (!hub) return;
-  const cache = new Map<string | null, string>();
+  const views = new Map<string | null, ReturnType<MultiplayerHub['gamePartsFor']>>();
+  const lobby = new Map<string | null, string>();
   for (const listener of listeners) {
-    if (!cache.has(listener.coachId)) cache.set(listener.coachId, hub.messageFor(listener.coachId));
-    send(listener, cache.get(listener.coachId)!);
+    const id = listener.coachId;
+    if (!views.has(id)) views.set(id, hub.gamePartsFor(id));
+    const view = views.get(id)!;
+    if (!view) {
+      if (!lobby.has(id)) lobby.set(id, hub.messageFor(id));
+      listener.parts = undefined;
+      send(listener, lobby.get(id)!);
+      continue;
+    }
+    const coaches = JSON.stringify(view.coaches);
+    const you = JSON.stringify(id);
+    if (!listener.parts) {
+      send(listener, `{"type":"game","you":${you},"coaches":${coaches},"game":${partsToJson(view.parts)}}`);
+    } else {
+      const patch = diffParts(listener.parts, view.parts);
+      if (patch !== null || coaches !== listener.coaches) send(listener, `{"type":"gamePatch","you":${you},"coaches":${coaches},"patch":${patch ?? '{"set":{},"remove":[]}'}}`);
+    }
+    listener.parts = view.parts;
+    listener.coaches = coaches;
   }
   scheduleSave();
 }
@@ -170,11 +192,18 @@ function broadcastDuel(coachIds: readonly string[]): void {
 
 /** Horloge des matchs en direct (×1 imposé) : le serveur fait avancer chaque match. */
 const DUEL_CLOCK_MS = 200;
+const DUEL_SAVE_EVERY_MS = 10_000;
+let lastDuelSave = 0;
 setInterval(() => {
   if (!hub) return;
   const { changed, gameChanged } = hub.advanceDuels(Date.now());
   for (const key of changed) broadcastDuel(hub.duelCoaches(key));
   if (gameChanged) broadcast();
+  // Un match en direct qui avance est enregistré avec la ligue, toutes les dix secondes au plus (C9).
+  else if (changed.length > 0 && Date.now() - lastDuelSave >= DUEL_SAVE_EVERY_MS) {
+    lastDuelSave = Date.now();
+    scheduleSave();
+  }
 }, DUEL_CLOCK_MS);
 
 function openEvents(request: IncomingMessage, response: ServerResponse, url: URL): void {
@@ -236,6 +265,35 @@ function isHost(request: IncomingMessage): boolean {
   return address === '127.0.0.1' || address === '::1' || address === '::ffff:127.0.0.1';
 }
 
+// --- Reprise d'un coach dans un autre navigateur (C10) ----------------------------
+
+/** Un code de reprise vaut dix minutes, une seule fois. */
+const CLAIM_CODE_MS = 10 * 60 * 1000;
+const claimCodes = new Map<string, { coachId: string; until: number }>();
+
+/** L'hôte donne un code à un ami : il le tape dans son navigateur et retrouve son club. */
+function createClaimCode(coachId: string): HubResult<{ code: string }> {
+  const open = currentHub();
+  const coach = open?.presence().find((entry) => entry.id === coachId);
+  if (!coach) return { ok: false, message: 'Coach introuvable dans la ligue ouverte.' };
+  const now = Date.now();
+  for (const [code, entry] of claimCodes) if (entry.until < now || entry.coachId === coachId) claimCodes.delete(code);
+  let code = '';
+  do code = String(Math.floor(1000 + Math.random() * 9000));
+  while (claimCodes.has(code));
+  claimCodes.set(code, { coachId, until: now + CLAIM_CODE_MS });
+  return { ok: true, value: { code }, message: `Code de reprise pour ${coach.name} : ${code} (valable dix minutes).` };
+}
+
+function claimCoach(code: string): HubResult<{ coachId: string; name: string; clubName: string }> {
+  const entry = claimCodes.get(code.trim());
+  if (!entry || entry.until < Date.now()) return { ok: false, message: 'Code inconnu ou expiré : demande-en un nouveau à l’hôte.' };
+  claimCodes.delete(code.trim());
+  const coach = currentHub()?.presence().find((candidate) => candidate.id === entry.coachId);
+  if (!coach) return { ok: false, message: 'Ce coach n’est plus dans la ligue ouverte.' };
+  return { ok: true, value: { coachId: coach.id, name: coach.name, clubName: coach.clubName }, message: `Bon retour, ${coach.name} !` };
+}
+
 /** Pour les fonctions qui en ont besoin (TypeScript ne suit pas les `let` à travers les closures). */
 function currentHub(): MultiplayerHub | null {
   return hub;
@@ -252,6 +310,15 @@ async function handleApi(request: IncomingMessage, response: ServerResponse, url
   if (request.method === 'GET' && url.pathname === '/api/host/slots') return reply(response, 200, { slots: SLOTS.map(slotInfo) });
   if (request.method !== 'POST') return reply(response, 405, { ok: false, message: 'Méthode non autorisée.' });
   const body = await readJson(request);
+  if (url.pathname === '/api/host/claim-code') {
+    const result = createClaimCode(text(body.coachId));
+    return reply(response, result.ok ? 200 : 400, result);
+  }
+  if (url.pathname === '/api/claim') {
+    const result = claimCoach(text(body.code));
+    if (result.ok && result.message) console.log(result.message);
+    return reply(response, result.ok ? 200 : 400, result);
+  }
   if (url.pathname === '/api/host/open' || url.pathname === '/api/host/delete') {
     const slot = Number(body.slot);
     const result = url.pathname === '/api/host/open' ? openSlot(slot) : deleteSlot(slot);

@@ -3,6 +3,8 @@ import { CAREER_XP_PER_SEASON, gainXp } from '../abilities/progression';
 import { facilitiesOf, facilityBonus } from '../club/facilities';
 import { leaguePrize } from '../club/finance';
 import { reviewSeason, seasonObjective } from '../club/president';
+import { nextReputation } from '../club/reputation';
+import { AI_STYLE_PLAN, aiStyleOf } from '../club/aiStyle';
 import { createCup, fixtureWinnerId } from '../league/cup';
 import { cupPrizeFor } from './cupPrizes';
 import { autoLineup, EMPTY_SLOT } from '../league/lineup';
@@ -13,6 +15,7 @@ import { computeStandings } from '../league/standings';
 import type { Rng } from '../core/rng';
 import type { Club, StandingRow } from '../types';
 import { developPlayers } from '../world/development';
+import { REPUTATION_BY_TIER } from '../world/generateWorld';
 import { salaryForRating } from '../world/playerGenerator';
 import { generateYouthIntake } from '../world/youthAcademy';
 import { overall } from '../player/rating';
@@ -61,12 +64,12 @@ function resetSeasonCounters(state: GameState): void {
   }
 }
 
-/** Les clubs IA alignent leur meilleur onze disponible chaque semaine. */
+/** Les clubs IA alignent chaque semaine leur meilleur onze disponible, dans la formation de leur style (C6). */
 export function refreshAiLineups(state: GameState): void {
   for (const club of Object.values(state.clubs)) {
     if (club.isHuman) continue;
-    const formation = club.lineup?.formation ?? '4-4-2';
-    club.lineup = autoLineup(clubPlayers(state, club.id), formation, club.lineup?.instructions);
+    const plan = AI_STYLE_PLAN[aiStyleOf(club.id)];
+    club.lineup = autoLineup(clubPlayers(state, club.id), plan.formation, plan.instructions);
   }
 }
 
@@ -115,6 +118,7 @@ export function endSeason(state: GameState, rng: Rng): void {
   const applied = applyDivisionMoves(state.divisions, state.clubs, moves);
   state.divisions = applied.divisions;
   state.clubs = applied.clubs;
+  updateReputations(state, standings, moves);
   forEachCoach(state, () => {
     const clubId = state.humanClubId;
     const review = reviews.get(clubId);
@@ -137,6 +141,33 @@ export function endSeason(state: GameState, rng: Rng): void {
   welcomeYouth(state, rng);
   state.season += 1;
   startSeason(state, rng);
+}
+
+/** La réputation de chaque club suit sa saison (C5) ; chaque coach apprend celle de son club. */
+function updateReputations(state: GameState, standings: Record<string, StandingRow[]>, moves: readonly { clubId: string; kind: 'promotion' | 'relegation' }[]): void {
+  const changes = new Map<string, { before: number; after: number }>();
+  for (const rows of Object.values(standings)) {
+    rows.forEach((row, index) => {
+      const club = state.clubs[row.clubId];
+      if (!club) return;
+      const tier = state.divisions.find((division) => division.id === club.divisionId)?.tier ?? 1;
+      const before = club.reputation;
+      club.reputation = nextReputation(before, {
+        position: index + 1,
+        clubCount: rows.length,
+        move: moves.find((move) => move.clubId === club.id)?.kind ?? null,
+        cupRoundsWon: cupRoundsWon(state, club.id),
+        nextTier: REPUTATION_BY_TIER[tier - 1] ?? REPUTATION_BY_TIER[REPUTATION_BY_TIER.length - 1]!,
+      });
+      changes.set(club.id, { before, after: club.reputation });
+    });
+  }
+  forEachCoach(state, () => {
+    const change = changes.get(state.humanClubId);
+    if (!change || change.after === change.before) return;
+    const verb = change.after > change.before ? 'monte' : 'baisse';
+    state.news.push(`Réputation du club : elle ${verb} de ${change.before} à ${change.after}. Elle décide du niveau des jeunes et des ambitions du président.`);
+  });
 }
 
 /**

@@ -9,7 +9,7 @@ import { dismissEventWindow, tick } from '../match';
 import { overall } from '../player/rating';
 import { salaryForRating } from '../world/playerGenerator';
 import { generateYouthIntake } from '../world/youthAcademy';
-import { ABILITIES } from '../abilities/catalog';
+import { ABILITIES, getAbility } from '../abilities/catalog';
 import { XP_THRESHOLDS } from '../abilities/progression';
 import { answerDialogue, autoPickLineup, upgradeFacility } from './actions';
 import { acceptJob } from './career';
@@ -217,6 +217,27 @@ describe('sauvegardes (TECH-03)', () => {
     expect(migrated.players[mine.id]!.ability).toMatchObject({ level: 3, xp: XP_THRESHOLDS[2] });
     expect(migrated.players[veteran.id]!.ability.level).toBeGreaterThan(1);
   });
+
+  test('une sauvegarde de la version 5 passe au nouveau catalogue : même rareté, même niveau, effectif sans doublon', () => {
+    const state = newGame({ seed: 45 });
+    const squad = humanSquad(state);
+    const legacy = ['le-bulldozer', 'le-chef-de-chant', 'le-but-en-or-massif'] as const;
+    squad.slice(0, 3).forEach((player, index) => {
+      player.ability = { abilityId: legacy[index]!, level: 4, xp: 3000, revealed: true };
+    });
+    state.abilityReroll = { playerId: squad[0]!.id, abilityIds: ['la-mobylette', 'le-crochet'], price: 500 };
+    const migrated = migrateGame(JSON.parse(JSON.stringify(state)), 5)!;
+    const ids = new Set(ABILITIES.map((ability) => ability.id));
+    for (const player of Object.values(migrated.players)) expect(ids.has(player.ability.abilityId)).toBe(true);
+    const rarities = squad.slice(0, 3).map((player) => getAbility(migrated.players[player.id]!.ability.abilityId).rarity);
+    expect(rarities).toEqual(['common', 'rare', 'mythic']);
+    expect(migrated.players[squad[0]!.id]!.ability).toMatchObject({ level: 4, xp: 3000 });
+    const mine = humanSquad(migrated).map((player) => player.ability.abilityId);
+    expect(new Set(mine).size).toBe(mine.length);
+    expect(migrated.abilityReroll!.abilityIds.every((id) => ids.has(id))).toBe(true);
+    expect(migrated.abilityReroll!.abilityIds).toContain('le-crochet');
+    expect(migrated.version).toBe(6);
+  });
 });
 
 describe('niveau des capacités dans le monde (CAP-10)', () => {
@@ -294,5 +315,22 @@ describe('primes de coupe selon le tour atteint (CLUB-01)', () => {
     const expected = humanIsHome ? cupStagePrize(state.cup.totalRounds, state.cup.currentRound) : 0;
     expect(humanClub(state).budget).toBe(before + expected);
     if (humanIsHome) expect(state.lastFinance.at(-1)).toEqual({ label: 'Prime de coupe', amount: expected });
+  });
+});
+
+describe('réputation en fin de saison (C5)', () => {
+  test('les clubs promus gagnent de la réputation, les relégués en perdent', () => {
+    const state = newGame({ seed: 47 });
+    const before = new Map(Object.values(state.clubs).map((club) => [club.id, { reputation: club.reputation, divisionId: club.divisionId }]));
+    const tierOf = (divisionId: string) => state.divisions.find((division) => division.id === divisionId)!.tier;
+    const tiersBefore = new Map([...before].map(([id, entry]) => [id, tierOf(entry.divisionId)]));
+    withRng(state, (rng) => endSeason(state, rng));
+    const changed = Object.values(state.clubs).filter((club) => club.reputation !== before.get(club.id)!.reputation);
+    expect(changed.length).toBeGreaterThan(0);
+    for (const club of Object.values(state.clubs)) {
+      const moved = tierOf(club.divisionId) - tiersBefore.get(club.id)!;
+      if (moved < 0) expect(club.reputation).toBeGreaterThan(before.get(club.id)!.reputation);
+      if (moved > 0) expect(club.reputation).toBeLessThan(before.get(club.id)!.reputation);
+    }
   });
 });

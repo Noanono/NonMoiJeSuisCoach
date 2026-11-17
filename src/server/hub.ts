@@ -12,6 +12,8 @@ import {
   canAdvanceWeek,
   advanceWeek,
   focusCoach,
+  GAME_VERSION,
+  migrateGame,
   isCommandName,
   joinMidGame,
   newMultiplayerGame,
@@ -26,7 +28,8 @@ import {
 } from '../domain/game';
 import { summarize, type MatchState } from '../domain/match';
 import type { Fixture } from '../domain/types';
-import { LiveDuel, type DuelView } from './duel';
+import { LiveDuel, type DuelSnapshot, type DuelView } from './duel';
+import { toParts, type GamePatch, type Parts } from './patch';
 
 /** Ce que le serveur sauvegarde sur le disque de l'hôte. */
 export interface HubSnapshot {
@@ -35,6 +38,8 @@ export interface HubSnapshot {
   signups: CoachSignup[];
   game: GameState | null;
   ready: string[];
+  /** Matchs en direct en cours, enregistrés avec la ligue (C9). */
+  duels?: { fixtureId: string; duel: DuelSnapshot }[];
 }
 
 /** Un coach vu par les autres : en ligne, prêt, ce qui le retient. */
@@ -51,6 +56,8 @@ export interface CoachPresence {
 export type ServerMessage =
   | { type: 'lobby'; phase: 'lobby' | 'playing'; you: string | null; coaches: CoachPresence[] }
   | { type: 'game'; you: string; coaches: CoachPresence[]; game: GameState }
+  /** Seulement ce qui a changé depuis le dernier envoi à ce navigateur (C8). */
+  | { type: 'gamePatch'; you: string; coaches: CoachPresence[]; patch: GamePatch }
   | { type: 'duel'; view: DuelView; match: MatchState }
   | { type: 'notice'; message: string }
   /** L'hôte a fermé la ligue ou en a ouvert une autre : retour à l'accueil. */
@@ -108,8 +115,22 @@ export class MultiplayerHub {
 
   constructor(snapshot: HubSnapshot) {
     this.snapshot = snapshot;
+    // Ligue enregistrée par une version précédente du jeu : mise à niveau avant de la rouvrir.
+    if (snapshot.game && snapshot.game.version < GAME_VERSION) {
+      const migrated = migrateGame(snapshot.game, snapshot.game.version);
+      if (!migrated) throw new Error(`Ligue trop ancienne (version ${snapshot.game.version}) : impossible de la rouvrir.`);
+      snapshot.game = migrated;
+    }
     // Anciennes ligues : chaque coach connaît les capacités de son effectif (CLUB-10).
     if (snapshot.game) revealOwnSquads(snapshot.game);
+    // Matchs en direct interrompus par un arrêt du serveur : ils reprennent où ils en étaient (C9).
+    const game = snapshot.game;
+    for (const saved of snapshot.duels ?? []) {
+      const fixture = game ? [...game.fixtures, ...game.cup.fixtures].find((candidate) => candidate.id === saved.fixtureId) : undefined;
+      if (!fixture || fixture.result) continue;
+      this.duels.set(saved.duel.key, { duel: LiveDuel.restore(saved.duel), fixture, applied: false });
+    }
+    delete snapshot.duels;
   }
 
   static create(seed: number, difficulty: Difficulty = 'normal'): MultiplayerHub {
@@ -120,10 +141,11 @@ export class MultiplayerHub {
     return this.snapshot.game ? 'playing' : 'lobby';
   }
 
-  /** État à écrire sur le disque. */
+  /** État à écrire sur le disque, matchs en direct compris (C9). */
   save(): HubSnapshot {
     if (this.snapshot.game) syncFocus(this.snapshot.game);
-    return this.snapshot;
+    const duels = [...this.duels.values()].filter((entry) => !entry.applied).map((entry) => ({ fixtureId: entry.fixture.id, duel: entry.duel.toSnapshot() }));
+    return duels.length > 0 ? { ...this.snapshot, duels } : this.snapshot;
   }
 
   connect(coachId: string): void {
@@ -226,6 +248,14 @@ export class MultiplayerHub {
     }
     focusCoach(game, coachId);
     return JSON.stringify({ type: 'game', you: coachId, coaches, game } satisfies ServerMessage);
+  }
+
+  /** Partie du point de vue d'un coach, découpée en morceaux pour l'envoi partiel (C8) ; `null` hors partie. */
+  gamePartsFor(coachId: string | null): { coaches: CoachPresence[]; parts: Parts } | null {
+    const game = this.snapshot.game;
+    if (!game || !coachId || !this.isCoach(coachId)) return null;
+    focusCoach(game, coachId);
+    return { coaches: this.presence(), parts: toParts(game as unknown as Record<string, unknown>) };
   }
 
   presence(): CoachPresence[] {

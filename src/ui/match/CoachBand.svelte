@@ -7,6 +7,7 @@
     FREE_KICK_DISTANCE_LABEL,
     KEEPER_HABIT_LABEL,
     keeperHabit,
+    keeperReplacements,
     penaltyChances,
     type FreeKickOption,
     type KeeperDive,
@@ -62,6 +63,7 @@
         kind: 'window' as const,
         title: windowTitle(window, play),
         hasAbilities: window.eligiblePlayerIds.length > 0,
+        keeper: window.keeper ? keeperPrompt(window.keeper.injuredId) : null,
         freeKick:
           window.freeKick && play && distance
             ? {
@@ -92,6 +94,18 @@
     { id: 'right', label: 'Plonger à droite', hint: 'pari sur le côté' },
     { id: 'center', label: 'Rester au centre', hint: 'piège la Panenka et la frappe en force, battu par une frappe placée' },
   ];
+
+  /** Gardien blessé : les remplaçants possibles, gardiens d'abord. */
+  function keeperPrompt(injuredId: string) {
+    const match = controller.match;
+    const team = controller.coachSide === 'home' ? match.home : match.away;
+    const injured = team.players.find((player) => player.id === injuredId);
+    return {
+      injuredId,
+      name: injured?.name ?? 'Ton gardien',
+      options: keeperReplacements(team).map((player) => ({ id: player.id, name: player.name, keeper: player.profile.position === 'GK', rating: Math.round(player.rating) })),
+    };
+  }
 
   /** Penalty : chances exactes (tireur, gardien, capacités) ; en attaque, ce qu'on sait du gardien adverse. */
   function penaltyPrompt(role: 'attack' | 'defense', shootingSide: Side) {
@@ -147,6 +161,25 @@
       <div class="actions">
         <Button variant="primary" size="s" disabled={!complete} onclick={() => controller.confirm()}>Valider</Button>
         <Button variant="secondary" size="s" onclick={() => controller.cancel()}>Laisser tomber</Button>
+      </div>
+    {:else if prompt.keeper}
+      {@const keeper = prompt.keeper}
+      <div class="coup-franc">
+        <p class="consigne" aria-live="assertive">
+          <span class="banderole-titre">{prompt.title}</span>
+          <span class="texte-s">{keeper.name} ne peut plus jouer. Choisis qui le remplace, sinon le jeu fait entrer le meilleur gardien du banc.</span>
+        </p>
+        <div class="choix" role="group" aria-label="Remplaçant du gardien">
+          {#each keeper.options as option (option.id)}
+            <button class="carte" type="button" onclick={() => controller.substitute(keeper.injuredId, option.id)}>
+              <span class="texte-fort">{option.name}</span>
+              <span class="texte-s mono">{option.keeper ? 'gardien' : 'joueur de champ'} · note {option.rating}</span>
+            </button>
+          {/each}
+        </div>
+        <div class="actions">
+          <Button variant="primary" size="s" onclick={() => controller.dismissWindow()}>Laisser le jeu choisir</Button>
+        </div>
       </div>
     {:else if prompt.freeKick}
       {@const freeKick = prompt.freeKick}

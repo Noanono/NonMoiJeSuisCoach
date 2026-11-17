@@ -1,22 +1,27 @@
 import { describe, expect, test } from 'bun:test';
 import { ABILITIES } from '../abilities/catalog';
-import { IMPACT_TARGETS, measureAbility, SITUATIONAL_ABILITIES } from './impactBench';
+import { impactTarget, measureAbility, playablePoints } from './impactBench';
 
 /**
- * Garde-fou de l'équilibrage (docs/equilibrage-capacites.md). Le rapport complet, sur 1 000 matchs
- * par capacité : `bun run impact`. Ici, 250 matchs par capacité : la mesure est bruitée (environ ±0,06 point), d'où la marge.
+ * Garde-fou de l'équilibrage (docs/equilibrage-capacites.md) : chaque capacité rapporte ce que vaut son coût
+ * en Gueulante. Le rapport complet, sur 1 000 matchs par capacité : `bun run impact`. Ici, 400 matchs par
+ * capacité : la marge suit l'erreur de mesure (2,5 erreurs types), pour ne signaler qu'un vrai déséquilibre.
  */
-const RUNS = 250;
-const NOISE_MARGIN = 0.2;
+const RUNS = 400;
+const ERRORS_ALLOWED = 2.5;
+const BASE_MARGIN = 0.03;
 
 describe('impact des capacités en match (CAP-09)', () => {
-  test.each(ABILITIES.map((ability) => [ability.id] as const))('%s reste dans la fourchette de sa rareté', (id) => {
+  test.each(ABILITIES.map((ability) => [ability.id] as const))('%s reste dans la fourchette de son coût', (id) => {
     const ability = ABILITIES.find((entry) => entry.id === id)!;
     const report = measureAbility(id, RUNS);
-    const target = IMPACT_TARGETS[ability.rarity];
-    // Un déclencheur rare (penalty adverse…) ne se présente pas à chaque match.
-    expect(report.activationRate).toBeGreaterThan(ability.trigger === 'anytime' ? 0.9 : 0);
-    expect(report.pointsDelta).toBeGreaterThan(target.min - NOISE_MARGIN);
-    if (!SITUATIONAL_ABILITIES.includes(id)) expect(report.pointsDelta).toBeLessThan(target.max + NOISE_MARGIN);
+    const target = impactTarget(report.cost);
+    // Une condition (score, minute) ou un déclencheur rare ne se présente pas à chaque match.
+    expect(report.activationRate).toBeGreaterThan(ability.trigger === 'anytime' && !ability.condition ? 0.9 : 0);
+    const points = playablePoints(report);
+    const share = report.pointsDelta === 0 ? 1 : points / report.pointsDelta;
+    const margin = BASE_MARGIN + ERRORS_ALLOWED * report.pointsStdError * share;
+    expect(points).toBeGreaterThan(target.min - margin);
+    expect(points).toBeLessThan(target.max + margin);
   });
 });

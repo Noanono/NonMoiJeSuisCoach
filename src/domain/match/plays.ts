@@ -7,6 +7,7 @@ import type { Rng } from '../core/rng';
 import { clamp } from '../core/rng';
 import { injuryRisk } from '../player/rating';
 import { bookPlayer, injurePlayer, recordGoal } from './actions';
+import { cardChances, FOULER_WEIGHTS, foulRate } from './discipline';
 import { comment } from './commentary';
 import { creditActive, IMPACT } from './impact';
 import { isActive, opponentSide, pushEvent, teamOf, type Run } from './state';
@@ -104,14 +105,9 @@ const HEADER_WEIGHTS: Record<Position, number> = { GK: 0, DEF: 2, MID: 1.5, ATT:
 
 // --- Fautes et blessures ---------------------------------------------------
 
-const FOUL_RATE = 0.11;
-const HIGH_PRESS_FOULS = 1.25;
-const YELLOW_ON_FOUL = 0.13;
-const RED_ON_FOUL = 0.006;
 const PENALTY_ON_FOUL = 0.012;
 const DANGEROUS_FREE_KICK = 0.18;
 const FOUL_COMMENT_CHANCE = 0.3;
-const FOULER_WEIGHTS: Record<Position, number> = { GK: 0.1, DEF: 3, MID: 2, ATT: 1 };
 
 /** Un tireur en forme (capacité active) reçoit plus de ballons : +40 % au tir = 1,8 fois plus souvent le tireur. */
 const SHOOTER_BOOST_WEIGHT = 2;
@@ -472,7 +468,7 @@ function chooseTaker(run: Run, team: TeamState, kind: 'freeKick' | 'corner' | 'p
   return bestShooter(team, elapsed);
 }
 
-function bestShooter(team: TeamState, elapsed: number): MatchPlayer | undefined {
+export function bestShooter(team: TeamState, elapsed: number): MatchPlayer | undefined {
   let best: MatchPlayer | undefined;
   let bestValue = -1;
   for (const player of team.players) {
@@ -641,13 +637,21 @@ export function penaltyChances(state: MatchState): PenaltyChances | null {
 
 export function playFouls(run: Run): void {
   const { state, rng } = run;
-  if (rng.chance(foulRate(state.home))) commitFoul(run, state.home);
-  if (rng.chance(foulRate(state.away))) commitFoul(run, state.away);
+  if (rng.chance(teamFoulRate(state.home))) commitFoul(run, state.home);
+  if (rng.chance(teamFoulRate(state.away))) commitFoul(run, state.away);
 }
 
-function foulRate(team: TeamState): number {
-  const press = team.instructions.highPress ? HIGH_PRESS_FOULS : 1;
-  return clamp(FOUL_RATE * press, 0, 1);
+function teamFoulRate(team: TeamState): number {
+  return foulRate(team.instructions.highPress);
+}
+
+/** Malus de concentration en cours sur le joueur (toutes stats comprises). */
+function distractionOf(player: MatchPlayer, elapsed: number): number {
+  let total = 0;
+  for (const effect of player.effects) {
+    if (effect.value < 0 && effect.endsAt >= elapsed && (effect.stat === 'concentration' || effect.stat === 'all')) total -= effect.value;
+  }
+  return total;
 }
 
 function commitFoul(run: Run, team: TeamState): void {
@@ -655,8 +659,9 @@ function commitFoul(run: Run, team: TeamState): void {
   const fouler = pickWeighted(rng, team, state.elapsed, FOULER_WEIGHTS);
   if (!fouler) return;
   const vars = { player: fouler.name, team: team.name };
+  const chances = cardChances({ fatigue: fouler.profile.fatigue, distraction: distractionOf(fouler, state.elapsed), derby: state.derby, booked: fouler.yellowCards > 0 });
   const cardRoll = rng.next();
-  const card = cardRoll < RED_ON_FOUL ? 'red' : cardRoll < RED_ON_FOUL + YELLOW_ON_FOUL ? 'yellow' : null;
+  const card = cardRoll < chances.red ? 'red' : cardRoll < chances.red + chances.yellow ? 'yellow' : null;
   const booked = card ? bookPlayer(run, fouler, card) : null;
   const victim = opponentSide(team.side);
   const outcome = rng.next();
