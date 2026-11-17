@@ -156,7 +156,7 @@ Aucun malus de stats ne dépasse −90 %, à aucun niveau : un joueur ne descend
 | La Symphonie | Milieu | 5 | À tout moment | Toute son équipe | +72 % à toutes les stats (son équipe) pendant 25 min |
 | Le Ciseau du camping | Attaquant | 5 | À tout moment | Lui-même | Occasion immédiate à 90 % de but ; +20 % à toutes les stats (son équipe) pendant 10 min |
 | Le Sort de la voyante | Tous postes | 5 | À tout moment | Toute l'équipe adverse | −45 % à toutes les stats (l'équipe adverse) pendant 25 min |
-| La Tournée générale | Banc | 7 | À tout moment | 6 adversaires au hasard | Hors jeu 35 min : la cible |
+| La Tournée générale | Banc | 3 | À tout moment | 3 adversaires au hasard | Hors jeu 22 min : la cible |
 
 ### Rares (22) : une mécanique à exploiter : condition, pari, marquage, moment du match
 
