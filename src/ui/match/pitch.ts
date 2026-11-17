@@ -128,7 +128,7 @@ export interface TokenView {
   label: string;
 }
 
-const RARITY_WORD: Record<Rarity, string> = { common: 'commune', rare: 'rare', legendary: 'légendaire', mythic: 'mythique' };
+const RARITY_WORD: Record<Rarity, string> = { common: 'commune', rare: 'rare', legendary: 'légendaire', mythic: 'mythique', foreign: 'étrangère' };
 
 const BENCH_REASON = 'Banc';
 const SUBBED_REASON = 'Sorti';
@@ -147,7 +147,7 @@ export function tokenView(state: MatchState, player: MatchPlayer, coachSide: Sid
   const halo = chips.some((chip) => chip.tone === 'malus') ? 'malus' : chips.length > 0 ? 'bonus' : null;
   const known = player.ability !== null && (player.abilityRevealed || !player.ability.hidden);
   const opponentRarity = !own && known ? player.ability!.rarity : null;
-  const avatar = { id: player.id, age: player.profile.age, clubId: player.profile.clubId, position: player.profile.position };
+  const avatar = { id: player.id, age: player.profile.age, clubId: player.profile.clubId, position: player.profile.position, nationality: player.profile.nationality };
   const rating = Math.round(ratingAtPosition(player.profile, player.line ?? player.profile.position));
   const energy = Math.round(100 - player.profile.fatigue);
   const position = POSITION_SHORT[player.profile.position];

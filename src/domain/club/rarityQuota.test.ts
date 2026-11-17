@@ -14,10 +14,10 @@ const firstOf = (rarity: string) => ABILITIES.filter((ability) => ability.rarity
 
 describe('quotas de rareté sur la feuille de match (CAP-24)', () => {
   test('barème souple : plus on monte, plus on peut aligner de raretés', () => {
-    expect(rarityLimits(4)).toEqual({ rare: 3, legendary: 0, mythic: 0 });
-    expect(rarityLimits(3)).toEqual({ rare: 5, legendary: 2, mythic: 0 });
-    expect(rarityLimits(2)).toEqual({ rare: 6, legendary: 3, mythic: 1 });
-    expect(rarityLimits(1)).toEqual({ rare: 9, legendary: 4, mythic: 2 });
+    expect(rarityLimits(4)).toEqual({ rare: 3, legendary: 0, mythic: 0, foreign: 1 });
+    expect(rarityLimits(3)).toEqual({ rare: 5, legendary: 2, mythic: 0, foreign: 1 });
+    expect(rarityLimits(2)).toEqual({ rare: 6, legendary: 3, mythic: 1, foreign: 2 });
+    expect(rarityLimits(1)).toEqual({ rare: 9, legendary: 4, mythic: 2, foreign: 3 });
   });
 
   test('une compo qui dépasse ne peut pas jouer ; l’adjoint en refait une dans les quotas', () => {

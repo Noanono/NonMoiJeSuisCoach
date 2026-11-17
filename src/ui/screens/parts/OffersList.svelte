@@ -38,7 +38,7 @@
           player: {
             id: player.id,
             name: fullName(player),
-            avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position },
+            avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position, nationality: player.nationality },
             position: POSITION_LABEL[player.position],
             age: player.age,
             overall: overall(player),

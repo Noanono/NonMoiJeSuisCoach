@@ -14,6 +14,7 @@ export const COACH_FIELDS = [
   'dialogue',
   'recentDialogueIds',
   'abilityReroll',
+  'friendly',
   'scouting',
   'lastFinance',
   'lastAppearances',

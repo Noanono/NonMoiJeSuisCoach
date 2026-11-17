@@ -20,7 +20,7 @@
   import { sortRows, type SortDirection } from './views';
 
   /** Tableau de l'effectif (EFF-01 à EFF-08, CLUB-08) et accès à la fiche joueur. */
-  const RARITY_ORDER: Record<Rarity, number> = { common: 1, rare: 2, legendary: 3, mythic: 4 };
+  const RARITY_ORDER: Record<Rarity, number> = { common: 1, rare: 2, legendary: 3, mythic: 4, foreign: 5 };
   const UNKNOWN_ABILITY = '???';
 
   interface SquadRow {
@@ -91,7 +91,7 @@
           evolution: overall(player) - player.overallAtSeasonStart,
           fatigue: player.fatigue,
           availability: availabilityLabel(player),
-          avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position },
+          avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position, nationality: player.nationality },
           abilityName: known ? ability.name : UNKNOWN_ABILITY,
           rarity: known ? RARITY_LABEL[ability.rarity] : '',
           rarityKey: known ? ability.rarity : null,

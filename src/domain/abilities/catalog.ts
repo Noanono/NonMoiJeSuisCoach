@@ -1,11 +1,12 @@
 import type { Ability, Rarity } from '../types';
 import { COMMON_ABILITIES } from './data/common';
+import { FOREIGN_ABILITIES } from './data/foreign';
 import { LEGENDARY_ABILITIES } from './data/legendary';
 import { MYTHIC_ABILITIES } from './data/mythic';
 import { RARE_ABILITIES } from './data/rare';
 
 /** Catalogue complet des capacités (CAT-01). */
-export const ABILITIES: readonly Ability[] = [...COMMON_ABILITIES, ...RARE_ABILITIES, ...LEGENDARY_ABILITIES, ...MYTHIC_ABILITIES];
+export const ABILITIES: readonly Ability[] = [...COMMON_ABILITIES, ...RARE_ABILITIES, ...LEGENDARY_ABILITIES, ...MYTHIC_ABILITIES, ...FOREIGN_ABILITIES];
 
 const ABILITY_BY_ID = new Map(ABILITIES.map((ability) => [ability.id, ability]));
 

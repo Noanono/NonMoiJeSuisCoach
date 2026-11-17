@@ -104,7 +104,7 @@ function toVersion6(state: GameState): void {
 
 /** Nouvelle capacité de cette rareté pour ce joueur ; à défaut, la plus proche disponible. */
 function replacementFor(rng: Rng, player: Player, rarity: Rarity, excluded: ReadonlySet<string>): Ability {
-  const compatible = ABILITIES.filter((ability) => isAbilityCompatible(ability, player.position));
+  const compatible = ABILITIES.filter((ability) => ability.rarity !== 'foreign' && isAbilityCompatible(ability, player.position));
   const free = compatible.filter((ability) => !excluded.has(ability.id));
   const sameRarity = free.filter((ability) => ability.rarity === rarity);
   return rng.pick(sameRarity.length > 0 ? sameRarity : free.length > 0 ? free : compatible);

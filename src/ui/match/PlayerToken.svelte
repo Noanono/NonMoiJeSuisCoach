@@ -119,6 +119,9 @@
   .lisere[data-rarity='mythic'] {
     --lisere: var(--mythique);
   }
+  .lisere[data-rarity='foreign'] {
+    --lisere: var(--etranger);
+  }
   .hors-jeu {
     filter: grayscale(1);
     opacity: 0.6;
@@ -213,6 +216,10 @@
   }
   .pret.rare {
     background: var(--scotch);
+  }
+  .pret.foreign {
+    background: var(--etranger);
+    color: #fbfaf2;
   }
   .pret.mythic {
     background: var(--mythique);

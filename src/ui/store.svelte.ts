@@ -10,6 +10,7 @@ import {
   revealOwnSquads,
   runCommand,
   saveMeta,
+  startFriendlyMatch,
   startHumanMatch,
   withRng,
   type CommandArgs,
@@ -220,8 +221,21 @@ class AppStore {
     });
   }
 
+  /** Le match en cours est l'amical de la saison contre une équipe étrangère (UNIV-10). */
+  friendlyMatch = false;
+
   kickOff(): void {
     this.match = this.run((game) => withRng(game, (rng) => startHumanMatch(game, rng)));
+    this.friendlyMatch = false;
+    this.lastSummary = null;
+    this.matchVersion += 1;
+    this.go('match');
+  }
+
+  /** Coup d'envoi de l'amical contre l'équipe étrangère de la semaine. */
+  kickOffFriendly(): void {
+    this.match = this.run((game) => withRng(game, (rng) => startFriendlyMatch(game, rng)));
+    this.friendlyMatch = true;
     this.lastSummary = null;
     this.matchVersion += 1;
     this.go('match');
@@ -237,7 +251,9 @@ class AppStore {
     if (!match) throw new Error('Pas de match en cours');
     const summary = summarize(match);
     // Match en direct entre coachs : le serveur l'a déjà reporté sur la partie.
-    if (!this.duelKey) this.command('submitMatch', summary);
+    if (this.friendlyMatch) this.command('submitFriendly', summary);
+    else if (!this.duelKey) this.command('submitMatch', summary);
+    this.friendlyMatch = false;
     this.lastSummary = summary;
     this.saveNow();
     return summary;

@@ -12,7 +12,7 @@ import { playerValue } from './valuation';
 /** Changement de capacité (CAP-23) : fermé pour l'instant, le code reste prêt à rouvrir. */
 export const ABILITY_REROLL_OPEN = false;
 
-export const REROLL_PRICE_RATIO: Record<Rarity, number> = { common: 0.05, rare: 0.08, legendary: 0.15, mythic: 0.25 };
+export const REROLL_PRICE_RATIO: Record<Rarity, number> = { common: 0.05, rare: 0.08, legendary: 0.15, mythic: 0.25, foreign: 0.25 };
 /** Prix plancher au District, multiplié comme le reste des finances à chaque division plus haut. */
 export const REROLL_MIN_PRICE = 300;
 const REROLL_MIN_PRICE_TIER = 4;
@@ -21,9 +21,9 @@ export const REROLL_OPTIONS = 3;
 /** Chance, pour chaque proposition, d'être d'un rang de rareté au-dessus. */
 export const REROLL_UPGRADE_CHANCE = 0.04;
 
-const NEXT_RARITY: Record<Rarity, Rarity | null> = { common: 'rare', rare: 'legendary', legendary: 'mythic', mythic: null };
+const NEXT_RARITY: Record<Rarity, Rarity | null> = { common: 'rare', rare: 'legendary', legendary: 'mythic', mythic: null, foreign: null };
 /** Si une rareté est épuisée pour ce poste, on descend d'un rang (il n'y a que 4 mythiques). */
-const LOWER_RARITIES: Record<Rarity, Rarity[]> = { common: [], rare: ['common'], legendary: ['rare', 'common'], mythic: ['legendary', 'rare', 'common'] };
+const LOWER_RARITIES: Record<Rarity, Rarity[]> = { common: [], rare: ['common'], legendary: ['rare', 'common'], mythic: ['legendary', 'rare', 'common'], foreign: ['legendary', 'rare', 'common'] };
 
 /** Prix d'un reroll : une part de la valeur du joueur, jamais sous le plancher de la division. */
 export function rerollPrice(player: Player, rarity: Rarity, divisionTier: number): number {

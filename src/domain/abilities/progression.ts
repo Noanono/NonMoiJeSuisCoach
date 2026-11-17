@@ -20,9 +20,9 @@ export const CAREER_START_AGE = 18;
  * Coût par défaut selon la rareté, pour une capacité sans coût propre (capacités de test). Celles du catalogue
  * ont chacune leur coût (`Ability.cost`), qui suit leur puissance mesurée et non leur rareté.
  */
-export const RARITY_COST: Record<Rarity, number> = { common: 2, rare: 3, legendary: 5, mythic: 7 };
+export const RARITY_COST: Record<Rarity, number> = { common: 2, rare: 3, legendary: 5, mythic: 7, foreign: 4 };
 /** Plus de recharge : chaque capacité ne sert qu'une fois par match (CAP-04). */
-export const RARITY_COOLDOWN: Record<Rarity, number> = { common: 0, rare: 0, legendary: 0, mythic: 0 };
+export const RARITY_COOLDOWN: Record<Rarity, number> = { common: 0, rare: 0, legendary: 0, mythic: 0, foreign: 0 };
 
 /** Gain d'effet par niveau au-delà du premier (CAP-11). */
 const EFFECT_GAIN_PER_LEVEL = 0.1;
@@ -46,27 +46,27 @@ export const MAX_MALUS = -0.9;
 const BASE_ACTIVATION_XP = 10;
 
 /** Multiplicateur de valeur marchande par rareté (CLUB-08). */
-export const RARITY_VALUE_MULTIPLIER: Record<Rarity, number> = { common: 1, rare: 1.5, legendary: 3, mythic: 10 };
+export const RARITY_VALUE_MULTIPLIER: Record<Rarity, number> = { common: 1, rare: 1.5, legendary: 3, mythic: 10, foreign: 4 };
 
 /** Part des joueurs générés par rareté (CAP-12), en moyenne sur le monde. */
-export const RARITY_GENERATION_WEIGHTS: Record<Rarity, number> = { common: 0.7, rare: 0.25, legendary: 0.045, mythic: 0.005 };
+export const RARITY_GENERATION_WEIGHTS: Record<Rarity, number> = { common: 0.7, rare: 0.25, legendary: 0.045, mythic: 0.005, foreign: 0 };
 
 /**
  * Part des joueurs générés par rareté selon la division (1 = élite, 4 = district) : un effectif type
  * de 18 joueurs a à peu près ce que les quotas de sa division lui permettent d'aligner (CAP-24).
  */
 export const RARITY_WEIGHTS_BY_TIER: Record<number, Record<Rarity, number>> = {
-  1: { common: 0.5, rare: 0.38, legendary: 0.1, mythic: 0.02 },
-  2: { common: 0.6, rare: 0.3, legendary: 0.08, mythic: 0.02 },
-  3: { common: 0.68, rare: 0.26, legendary: 0.06, mythic: 0 },
-  4: { common: 0.84, rare: 0.15, legendary: 0.01, mythic: 0 },
+  1: { common: 0.5, rare: 0.38, legendary: 0.1, mythic: 0.02, foreign: 0 },
+  2: { common: 0.6, rare: 0.3, legendary: 0.08, mythic: 0.02, foreign: 0 },
+  3: { common: 0.68, rare: 0.26, legendary: 0.06, mythic: 0, foreign: 0 },
+  4: { common: 0.84, rare: 0.15, legendary: 0.01, mythic: 0, foreign: 0 },
 };
 
 export function rarityWeightsForTier(tier: number): Record<Rarity, number> {
   return RARITY_WEIGHTS_BY_TIER[tier] ?? RARITY_GENERATION_WEIGHTS;
 }
 
-export const RARITY_LABEL: Record<Rarity, string> = { common: 'Commune', rare: 'Rare', legendary: 'Légendaire', mythic: 'Mythique' };
+export const RARITY_LABEL: Record<Rarity, string> = { common: 'Commune', rare: 'Rare', legendary: 'Légendaire', mythic: 'Mythique', foreign: 'Étrangère' };
 
 export function levelForXp(xp: number): number {
   let level = 1;

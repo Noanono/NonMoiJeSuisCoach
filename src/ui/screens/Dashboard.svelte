@@ -12,7 +12,8 @@
   import { balanceTotal } from '../../domain/club/finance';
   import { DIALOGUES } from '../../domain/club/dialogues';
   import Sticker from '../kit/Sticker.svelte';
-  import { canAdvanceWeek, isHumanDuel, clubPlayers, currentWeek, divisionOf, humanDivision, humanFixture, humanLineupErrors, isDerby, outcomeFor } from '../../domain/game';
+  import { NATIONS } from '../../domain/world/nations';
+  import { pendingFriendly, canAdvanceWeek, isHumanDuel, clubPlayers, currentWeek, divisionOf, humanDivision, humanFixture, humanLineupErrors, isDerby, outcomeFor } from '../../domain/game';
   import { overall } from '../../domain/player/rating';
   import { AI_STYLE_HINT, AI_STYLE_LABEL, aiStyleOf } from '../../domain/club/aiStyle';
   import { recentForm, weekLabel, type FormLetter } from './views';
@@ -59,6 +60,12 @@
         weekLabel: weekLabel(currentWeek(game), game.cup),
         match,
         lineupErrors: humanLineupErrors(game).map((error) => error.message),
+        friendly: (() => {
+          const friendly = pendingFriendly(game);
+          if (!friendly) return null;
+          const nation = NATIONS[friendly.nationId];
+          return { club: nation.clubName, country: nation.country, motto: nation.motto };
+        })(),
         advance: canAdvanceWeek(game),
         news: [...game.news],
         dialogueKey: pending ? `${game.season}-${game.week}-${pending.dialogueId}` : null,
@@ -191,6 +198,22 @@
             </div>
           {:else}
             <p class="texte-s">Pas de match pour toi cette semaine. Profites-en pour régler le vestiaire.</p>
+          {/if}
+
+          {#if desk.friendly && !matchToPlay}
+            <div class="affiche amical">
+              <p class="tampon discret">Match amical · à domicile · aucun point en jeu</p>
+              <p class="banderole-m">Contre {desk.friendly.club}</p>
+              <p class="texte-s"><span class="tampon">{desk.friendly.country}</span> {desk.friendly.motto}</p>
+              <p class="texte-s">Ils sont un peu plus forts que ton onze. Gagne, et ils t'offrent un de leurs jeunes, avec une capacité de leur pays.</p>
+              {#if desk.lineupErrors.length > 0}
+                <ul class="texte-s malus">{#each desk.lineupErrors as error, index (index)}<li>{error}</li>{/each}</ul>
+              {/if}
+              <div class="ligne-actions">
+                <Button variant="primary" disabled={desk.lineupErrors.length > 0} onclick={() => store.kickOffFriendly()}>Jouer l'amical</Button>
+                <Button variant="ghost" onclick={() => { store.command('declineFriendly'); store.notify('Amical annulé : ils repartent avec leurs valises.'); }}>Décliner</Button>
+              </div>
+            </div>
           {/if}
 
           {#if matchToPlay}
