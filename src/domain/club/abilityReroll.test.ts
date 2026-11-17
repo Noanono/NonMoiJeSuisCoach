@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { ABILITIES, getAbility } from '../abilities/catalog';
 import { createRng } from '../core/rng';
-import { chooseRerolledAbility, rerollAbility } from '../game/actions';
+import { chooseRerolledAbility, payAbilityReroll, rerollAbility } from '../game/actions';
 import { newGame } from '../game/newGame';
 import { humanClub, humanDivision, humanSquad } from '../game/selectors';
 import { makePlayer } from '../testing/fixtures';
@@ -9,6 +9,17 @@ import { isAbilityCompatible } from '../world/playerGenerator';
 import { drawRerollOptions, REROLL_MIN_PRICE, REROLL_OPTIONS, REROLL_PRICE_RATIO, rerollPrice } from './abilityReroll';
 import { moneyFactorBetween } from './finance';
 import { playerValue } from './valuation';
+
+describe('changement de capacité fermé', () => {
+  test('la commande du coach est refusée tant que le changement est fermé', () => {
+    const state = newGame({ seed: 90 });
+    const player = humanSquad(state)[0]!;
+    const budget = humanClub(state).budget;
+    const result = rerollAbility(state, player.id);
+    expect(result.ok).toBe(false);
+    expect(humanClub(state).budget).toBe(budget);
+  });
+});
 
 describe('reroll de capacité (CAP-23)', () => {
   test('le prix suit la valeur du joueur et la rareté, avec un plancher par division', () => {
@@ -50,12 +61,12 @@ describe('reroll de capacité (CAP-23)', () => {
     const club = humanClub(state);
     club.budget = 1_000_000;
     const price = rerollPrice(player, getAbility(player.ability.abilityId).rarity, humanDivision(state).tier);
-    expect(rerollAbility(state, player.id).ok).toBe(true);
+    expect(payAbilityReroll(state, player.id).ok).toBe(true);
     expect(club.budget).toBe(1_000_000 - price);
     const offer = state.abilityReroll!;
     expect(offer.abilityIds.length).toBe(3);
     // Pas de second tirage tant que le choix n'est pas fait.
-    expect(rerollAbility(state, player.id).ok).toBe(false);
+    expect(payAbilityReroll(state, player.id).ok).toBe(false);
     expect(chooseRerolledAbility(state, 'pas-une-option').ok).toBe(false);
     expect(chooseRerolledAbility(state, offer.abilityIds[1]!).ok).toBe(true);
     expect(state.players[player.id]!.ability).toEqual({ abilityId: offer.abilityIds[1]!, level: 1, xp: 0, revealed: true });
@@ -68,7 +79,7 @@ describe('reroll de capacité (CAP-23)', () => {
     player.ability.revealed = true;
     const before = { ...player.ability };
     humanClub(state).budget = 1_000_000;
-    rerollAbility(state, player.id);
+    payAbilityReroll(state, player.id);
     expect(chooseRerolledAbility(state, null).ok).toBe(true);
     expect(state.players[player.id]!.ability).toEqual(before);
     expect(humanClub(state).budget).toBeLessThan(1_000_000);
@@ -78,10 +89,10 @@ describe('reroll de capacité (CAP-23)', () => {
     const state = newGame({ seed: 5, clubName: 'Test' });
     const player = humanSquad(state)[0]!;
     player.ability.revealed = false;
-    expect(rerollAbility(state, player.id).ok).toBe(false);
+    expect(payAbilityReroll(state, player.id).ok).toBe(false);
     player.ability.revealed = true;
     humanClub(state).budget = 0;
-    expect(rerollAbility(state, player.id).ok).toBe(false);
+    expect(payAbilityReroll(state, player.id).ok).toBe(false);
     expect(state.abilityReroll ?? null).toBeNull();
   });
 });

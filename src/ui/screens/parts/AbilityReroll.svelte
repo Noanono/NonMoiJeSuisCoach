@@ -5,7 +5,7 @@
   import { formatEuros } from '../../format';
   import { getAbility } from '../../../domain/abilities/catalog';
   import { RARITY_LABEL, statsAtLevel } from '../../../domain/abilities/progression';
-  import { REROLL_UPGRADE_CHANCE } from '../../../domain/club/abilityReroll';
+  import { ABILITY_REROLL_OPEN, REROLL_UPGRADE_CHANCE } from '../../../domain/club/abilityReroll';
   import { abilityRerollPrice, humanClub, pendingReroll, type ActionResult } from '../../../domain/game';
   import type { Rarity } from '../../../domain/types';
   import { ABILITY_POSITION_LABEL, describeEffect, describeTargeting, describeTrigger } from '../describe';
@@ -49,6 +49,8 @@
   }
 </script>
 
+<!-- Fermé pour l'instant : seul un changement déjà payé (ancienne sauvegarde) peut encore être choisi. -->
+{#if ABILITY_REROLL_OPEN || view.options}
 <section class="reroll" aria-label="Changer de capacité">
   <h3 class="tampon">Changer de capacité</h3>
   {#if view.options}
@@ -94,6 +96,7 @@
   {/if}
   <p class="texte-s texte-fort" role="status">{feedback ?? ''}</p>
 </section>
+{/if}
 
 <style>
   .reroll {

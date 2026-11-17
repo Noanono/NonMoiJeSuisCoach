@@ -3,7 +3,8 @@
  * et renvoie un message lisible pour l'interface.
  */
 import { ABILITIES, getAbility } from '../abilities/catalog';
-import { drawRerollOptions, rerollPrice } from '../club/abilityReroll';
+import { quotaFilter } from '../club/rarityQuota';
+import { ABILITY_REROLL_OPEN, drawRerollOptions, rerollPrice } from '../club/abilityReroll';
 import { applyDialogueChoice, DIALOGUES, localizeDialogue } from '../club/dialogues';
 import { acceptOffer, askingPrice, buyPlayer, marketListings, sellPlayer, type MarketListing, type TransferResult } from '../club/transfers';
 import { askingSalary } from '../club/valuation';
@@ -13,10 +14,11 @@ import { FORMATION_SLOTS, isAvailable, overall, ratingAtPosition } from '../play
 import { defaultTrainingFocus } from '../club/training';
 import { FACILITIES, facilitiesOf, upgradeCost } from '../club/facilities';
 import type { FacilityId, Instructions, Lineup, TrainingFocus } from '../types';
-import { humanClub, humanDivision, humanSquad, outlookOf, replacePlayers, writeOutlook } from './selectors';
+import { divisionOf, humanClub, humanDivision, humanSquad, outlookOf, replacePlayers, writeOutlook } from './selectors';
 import type { CoachOffer, GameState } from './state';
 import { asCoachOfClub, coachOfClub, isMultiplayer } from './coaches';
 import { withRng } from './week';
+import { callUpStandIns } from './standIns';
 
 /** Une vente express rapporte moins que la valeur du joueur. */
 const QUICK_SALE_RATIO = 0.8;
@@ -34,8 +36,12 @@ export function setLineup(state: GameState, lineup: Lineup): LineupError[] {
 
 /** L'adjoint compose le meilleur onze disponible dans la formation actuelle (EFF-03). */
 export function autoPickLineup(state: GameState): LineupError[] {
+  // Pas assez de joueurs alignables (blessures, quotas de rareté) : des dépanneurs signent d'abord.
+  const calledUp = withRng(state, (rng) => callUpStandIns(state, state.humanClubId, rng));
+  if (calledUp > 0) state.news.push(`${calledUp} dépanneur(s) appelé(s) pour compléter la feuille de match.`);
   const current = humanClub(state).lineup;
-  return setLineup(state, autoLineup(humanSquad(state), current?.formation ?? '4-4-2', current?.instructions));
+  const fits = quotaFilter(divisionOf(state, state.humanClubId).tier, (id) => getAbility(id).rarity);
+  return setLineup(state, autoLineup(humanSquad(state), current?.formation ?? '4-4-2', current?.instructions, fits));
 }
 
 /** Consignes tactiques (MATCH-05). */
@@ -129,23 +135,30 @@ export function answerOffer(state: GameState, offerId: string, accept: boolean):
 function refillLineup(state: GameState, previous: Lineup | null, departedId: string): void {
   const squad = humanSquad(state);
   if (!previous) {
-    setLineup(state, autoLineup(squad, '4-4-2'));
+    setLineup(state, autoLineup(squad, '4-4-2', undefined, quotaFilter(divisionOf(state, state.humanClubId).tier, (id) => getAbility(id).rarity)));
     return;
   }
   const byId = new Map(squad.map((player) => [player.id, player]));
   const starters = [...previous.starters];
   let bench = previous.bench.filter((id) => id !== departedId && byId.has(id));
   const slot = starters.indexOf(departedId);
+  // Quotas de rareté (CAP-24) : le remplaçant choisi ne fait pas dépasser la feuille de match.
+  const fits = quotaFilter(divisionOf(state, state.humanClubId).tier, (id) => getAbility(id).rarity);
+  for (const id of [...starters, ...bench]) {
+    const kept = byId.get(id);
+    if (kept && id !== departedId) fits(kept);
+  }
   if (slot >= 0) {
     const position = FORMATION_SLOTS[previous.formation][slot]!;
     const replacement = squad
       .filter((player) => !starters.includes(player.id) && isAvailable(player))
-      .sort((a, b) => ratingAtPosition(b, position) - ratingAtPosition(a, position))[0];
+      .sort((a, b) => ratingAtPosition(b, position) - ratingAtPosition(a, position))
+      .find((player) => bench.includes(player.id) || fits(player));
     starters[slot] = replacement?.id ?? '';
     bench = bench.filter((id) => id !== replacement?.id);
   }
   const used = new Set([...starters, ...bench]);
-  const stands = squad.filter((player) => !used.has(player.id) && isAvailable(player)).sort((a, b) => overall(b) - overall(a));
+  const stands = squad.filter((player) => !used.has(player.id) && isAvailable(player)).sort((a, b) => overall(b) - overall(a)).filter(fits);
   while (bench.length < Math.min(previous.bench.length, MAX_BENCH_SIZE) && stands.length > 0) bench.push(stands.shift()!.id);
   setLineup(state, { ...previous, starters, bench });
 }
@@ -283,8 +296,14 @@ export function abilityRerollPrice(state: GameState, playerId: string): number |
   return rerollPrice(player, getAbility(player.ability.abilityId).rarity, humanDivision(state).tier);
 }
 
-/** Paie le reroll (CAP-23) : 3 capacités sont tirées, le coach choisit ensuite avec `chooseRerolledAbility`. */
+/** Commande du coach : refusée tant que le changement de capacité est fermé (`ABILITY_REROLL_OPEN`). */
 export function rerollAbility(state: GameState, playerId: string): ActionResult {
+  if (!ABILITY_REROLL_OPEN) return refused('Le changement de capacité est fermé pour l’instant.');
+  return payAbilityReroll(state, playerId);
+}
+
+/** Paie le reroll (CAP-23) : 3 capacités sont tirées, le coach choisit ensuite avec `chooseRerolledAbility`. */
+export function payAbilityReroll(state: GameState, playerId: string): ActionResult {
   const player = state.players[playerId];
   if (!player || player.clubId !== state.humanClubId) return refused('Ce joueur n’est pas chez toi.');
   const pending = pendingReroll(state);

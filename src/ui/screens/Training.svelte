@@ -8,7 +8,7 @@
   import RatingBadge from '../kit/RatingBadge.svelte';
   import { store } from '../store.svelte';
   import { getAbility } from '../../domain/abilities/catalog';
-  import { abilityTrainingXp, trainingMatchBonus, trainingRate } from '../../domain/club/training';
+  import { abilityTrainingXp, passiveAbilityXp, trainingMatchBonus, trainingRate } from '../../domain/club/training';
   import { facilitiesOf, facilityBonus } from '../../domain/club/facilities';
   import { XP_THRESHOLDS } from '../../domain/abilities/progression';
   import { humanClub, humanSquad } from '../../domain/game';
@@ -44,7 +44,10 @@
             bonus: bonus ? `+${percent(bonus.value)} au prochain match` : 'XP de capacité',
             injured: player.injuryWeeks > 0,
             abilityName: player.ability.revealed ? getAbility(player.ability.abilityId).name : '???',
-            abilityXp: nextThreshold === undefined ? 'Niveau max' : `+${weeklyXp} XP/sem. · niv. ${player.ability.level}`,
+            abilityXp:
+              nextThreshold === undefined
+                ? 'Niveau max'
+                : `+${focus === 'ability' ? weeklyXp : Math.round(passiveAbilityXp(player) * facilityBonus.trainingRate(facilitiesOf(humanClub(game))))} XP/sem. · niv. ${player.ability.level}`,
             abilityGauge:
               nextThreshold === undefined
                 ? null
@@ -78,7 +81,7 @@
       <Button size="s" onclick={reset}>Programme de l'adjoint</Button>
     {/snippet}
     <p class="texte-s discret intro">
-      Chaque joueur travaille un axe toutes les semaines. Les jeunes progressent vite, les vétérans peu. Passé son potentiel, un joueur progresse encore, plus lentement et de 5 points au maximum. Travailler sa capacité la fait monter bien plus vite qu’en match, à tout âge, mais le joueur ne progresse alors sur aucun attribut.
+      Chaque joueur travaille un axe toutes les semaines. Les jeunes progressent vite, les vétérans peu. Passé son potentiel, un joueur progresse encore, plus lentement et de 5 points au maximum. Travailler sa capacité la fait monter bien plus vite qu’en match, à tout âge. Hors de son programme, chaque joueur progresse quand même un peu : ses stats de poste au quart de son rythme, et sa capacité de quelques XP par semaine.
     </p>
     <div class="defilant">
       <table class="tableau">

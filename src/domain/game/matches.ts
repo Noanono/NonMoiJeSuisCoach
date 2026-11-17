@@ -7,11 +7,13 @@ import { overall } from '../player/rating';
 import type { Fixture, MatchResult, Player } from '../types';
 import { facilitiesOf, facilityBonus } from '../club/facilities';
 import { DIFFICULTIES } from './difficulty';
-import { clubPlayers, humanFixture, humanSquad, isDerby } from './selectors';
+import { clubPlayers, divisionOf, humanFixture, humanSquad, isDerby } from './selectors';
 import type { GameState } from './state';
 import { asCoachOfClub } from './coaches';
 import { isScouted, scoutOpponents } from './scouting';
 import { autoPickLineup } from './actions';
+import { getAbility } from '../abilities/catalog';
+import { quotaErrors } from '../club/rarityQuota';
 import { aiStyleOf } from '../club/aiStyle';
 
 /** Fatigue d'un match simulé rapidement (matchs IA contre IA). */
@@ -72,7 +74,12 @@ export function playAiFixture(state: GameState, fixture: Fixture, rng: Rng): voi
 export function humanLineupErrors(state: GameState): LineupError[] {
   const lineup = state.clubs[state.humanClubId]?.lineup;
   if (!lineup) return [{ code: 'notEnoughStarters', message: 'Pas de composition. Même au foot à 7, il faut quelqu’un.' }];
-  return validateLineup(lineup, humanSquad(state));
+  const errors = validateLineup(lineup, humanSquad(state));
+  // Quotas de rareté (CAP-24) : titulaires et remplaçants de la feuille de match.
+  const listed = [...lineup.starters, ...lineup.bench].map((id) => state.players[id]).filter((player): player is Player => player !== undefined);
+  const tier = divisionOf(state, state.humanClubId).tier;
+  for (const message of quotaErrors(listed, tier, (id) => getAbility(id).rarity)) errors.push({ code: 'rarityQuota', message });
+  return errors;
 }
 
 /** Prépare le match du coach de la semaine (MATCH-01). */

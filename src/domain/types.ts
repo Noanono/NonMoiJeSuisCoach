@@ -30,6 +30,8 @@ export interface PlayerTraining {
   focus: TrainingFocus;
   /** Fraction du prochain point d'attribut, de 0 à 1. */
   progress: number;
+  /** Fraction du prochain point gagné hors programme (absente des anciennes sauvegardes). */
+  passive?: number;
 }
 
 export interface Player {

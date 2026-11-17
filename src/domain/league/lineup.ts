@@ -18,13 +18,18 @@ export function autoLineup(
   players: readonly Player[],
   formation: Formation,
   instructions: Instructions = DEFAULT_INSTRUCTIONS,
+  /** Quotas de rareté (CAP-24) : appelé une fois par joueur retenu, `false` = il ne peut pas entrer. */
+  fits: (player: Player) => boolean = () => true,
 ): Lineup {
   const slots = FORMATION_SLOTS[formation];
   const remaining = players.filter(isAvailable);
+  const takeBest = (pool: Player[], position: Position, naturalOnly: boolean) => takeBestFitting(pool, position, naturalOnly, fits);
   const starters: (Player | null)[] = slots.map((position) => takeBest(remaining, position, true));
-  const filled = starters.map((player, index) => player ?? takeBest(remaining, slots[index]!, false));
+  // Dernier recours : un poste ne reste jamais vide, quitte à dépasser un quota (la compo le signalera).
+  const filled = starters.map((player, index) => player ?? takeBest(remaining, slots[index]!, false) ?? takeBestFitting(remaining, slots[index]!, false, () => true));
   const bench = [...remaining]
     .sort((a, b) => effectiveRating(b, b.position) - effectiveRating(a, a.position))
+    .filter(fits)
     .slice(0, MAX_BENCH_SIZE);
 
   return {
@@ -35,19 +40,17 @@ export function autoLineup(
   };
 }
 
-/** Retire de `pool` le meilleur joueur pour `position` et le renvoie (null si aucun candidat). */
-function takeBest(pool: Player[], position: Position, naturalOnly: boolean): Player | null {
-  let bestIndex = -1;
-  let bestRating = -Infinity;
-  pool.forEach((player, index) => {
-    if (naturalOnly && player.position !== position) return;
-    const rating = effectiveRating(player, position);
-    if (rating > bestRating) {
-      bestRating = rating;
-      bestIndex = index;
-    }
-  });
-  return bestIndex === -1 ? null : pool.splice(bestIndex, 1)[0]!;
+/** Retire de `pool` le meilleur joueur pour `position` qui passe le filtre, et le renvoie (null si aucun). */
+function takeBestFitting(pool: Player[], position: Position, naturalOnly: boolean, fits: (player: Player) => boolean): Player | null {
+  const candidates = pool
+    .filter((player) => !naturalOnly || player.position === position)
+    .sort((a, b) => effectiveRating(b, position) - effectiveRating(a, position));
+  for (const player of candidates) {
+    if (!fits(player)) continue;
+    pool.splice(pool.indexOf(player), 1);
+    return player;
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -61,7 +64,8 @@ export type LineupErrorCode =
   | 'unknownPlayer'
   | 'unavailablePlayer'
   | 'noGoalkeeper'
-  | 'benchTooLarge';
+  | 'benchTooLarge'
+  | 'rarityQuota';
 
 export interface LineupError {
   code: LineupErrorCode;

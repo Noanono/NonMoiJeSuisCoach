@@ -7,7 +7,8 @@
   import type { CardPlayer } from './parts/PlayerCard.svelte';
   import { store } from '../store.svelte';
   import { getAbility } from '../../domain/abilities/catalog';
-  import { humanClub, humanLineupErrors, humanSquad } from '../../domain/game';
+  import { divisionOf, humanClub, humanLineupErrors, humanSquad } from '../../domain/game';
+  import { countRarities, RARITY_QUOTA_LABEL, rarityLimits, type RarityLimits } from '../../domain/club/rarityQuota';
   import { EMPTY_SLOT, MAX_BENCH_SIZE, STARTERS_COUNT } from '../../domain/league/lineup';
   import { FORMATIONS, isAvailable, overall, ratingAtPosition } from '../../domain/player/rating';
   import type { Formation, Instructions, Mentality } from '../../domain/types';
@@ -50,6 +51,13 @@
         lineup: lineup ? { ...lineup, starters: [...lineup.starters], bench: [...lineup.bench] } : null,
         squad,
         errors: humanLineupErrors(game).map((error) => error.message),
+        // Quotas de rareté de la feuille de match (CAP-24), selon la division.
+        quotas: (() => {
+          const limits = rarityLimits(divisionOf(game, game.humanClubId).tier);
+          const listed = lineup ? [...lineup.starters, ...lineup.bench].map((id) => game.players[id]).filter((player) => player !== undefined) : [];
+          const counts = countRarities(listed, (id) => getAbility(id).rarity);
+          return (Object.keys(limits) as (keyof RarityLimits)[]).map((rarity) => ({ label: RARITY_QUOTA_LABEL[rarity], used: counts[rarity], max: limits[rarity] }));
+        })(),
       };
     }),
   );
@@ -115,7 +123,11 @@
               <p class="texte-s texte-fort">Compo valide : {placed} / {STARTERS_COUNT} titulaires et {bench.length} remplaçants.</p>
             {/if}
           </div>
-          <p class="texte-s discret">Glisse les cartes. Le « i » ouvre la fiche du joueur.</p>
+          <p class="texte-s">
+            <span class="tampon">Raretés sur la feuille</span>
+            {#each view.quotas as quota, index (quota.label)}{index > 0 ? ' · ' : ' '}<span class="mono" class:depasse={quota.used > quota.max}>{quota.label} {quota.used}/{quota.max}</span>{/each}
+          </p>
+          <p class="texte-s discret">Glisse les cartes. Le « i » ouvre la fiche du joueur. Titulaires et remplaçants comptent dans les quotas de ta division.</p>
         </div>
       </Card>
 
@@ -209,5 +221,9 @@
   }
   p {
     margin: 0;
+  }
+  .depasse {
+    color: var(--carton);
+    font-weight: 700;
   }
 </style>

@@ -1,3 +1,4 @@
+import { quotaFilter } from '../club/rarityQuota';
 import type { Ability, Club, Division, Formation, Player } from '../types';
 import { createRng, type Rng } from '../core/rng';
 import { autoLineup } from '../league/lineup';
@@ -144,6 +145,7 @@ function createClub({ rng, id, identity, division, isHuman, stadium, abilityPool
   const middle = Math.round((range.min + range.max) / 2);
   const reputation = isHuman ? rng.int(middle - HUMAN_REPUTATION_MARGIN, middle) : rng.int(range.min, range.max);
   const squad = generateSquad({ rng, reputation, clubId: id, abilityPool });
+  const rarityById = new Map(abilityPool.map((ability) => [ability.id, ability.rarity]));
   const club: Club = {
     id,
     name: identity.name,
@@ -152,7 +154,7 @@ function createClub({ rng, id, identity, division, isHuman, stadium, abilityPool
     reputation,
     budget: startingBudget(rng, squad),
     playerIds: squad.map((player) => player.id),
-    lineup: autoLineup(squad, DEFAULT_FORMATION),
+    lineup: autoLineup(squad, DEFAULT_FORMATION, undefined, quotaFilter(division.tier, (abilityId) => rarityById.get(abilityId) ?? 'common')),
     isHuman,
     stadium,
   };

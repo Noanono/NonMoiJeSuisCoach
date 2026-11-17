@@ -12,9 +12,16 @@ const REFERENCE_VALUE = 2_000;
 const REFERENCE_RATING = 40;
 /** Chaque point de note multiplie la valeur par ce facteur (un joueur de 80 vaut ~0,9 M€). */
 const VALUE_GROWTH_PER_RATING_POINT = 1.17;
-/** Bonus par point d'écart entre potentiel et note, réservé aux jeunes. */
-const POTENTIAL_GAP_BONUS = 0.03;
-const YOUNG_MAX_AGE = 23;
+/**
+ * Bonus par point d'écart entre potentiel et note : fort chez les jeunes, il s'efface vers 28 ans,
+ * quand le joueur a fini de progresser. Plafonné pour qu'un pari reste un pari.
+ */
+const POTENTIAL_GAP_BONUS_BY_AGE: readonly { maxAge: number; bonus: number }[] = [
+  { maxAge: 21, bonus: 0.06 },
+  { maxAge: 24, bonus: 0.045 },
+  { maxAge: 27, bonus: 0.025 },
+];
+const MAX_POTENTIAL_FACTOR = 2.5;
 /** Chaque niveau de capacité au-delà du premier ajoute 20 % à la valeur (niveau 5 : ×1,8). */
 export const ABILITY_LEVEL_VALUE_BONUS = 0.2;
 const MIN_VALUE = 500;
@@ -37,9 +44,9 @@ function ageFactor(age: number): number {
   return AGE_BRACKETS.find((bracket) => age <= bracket.maxAge)?.factor ?? 1;
 }
 
-function potentialFactor(player: Player, rating: number): number {
-  if (player.age > YOUNG_MAX_AGE) return 1;
-  return 1 + Math.max(0, player.potential - rating) * POTENTIAL_GAP_BONUS;
+export function potentialFactor(player: Player, rating = overall(player)): number {
+  const bonus = POTENTIAL_GAP_BONUS_BY_AGE.find((entry) => player.age <= entry.maxAge)?.bonus ?? 0;
+  return Math.min(MAX_POTENTIAL_FACTOR, 1 + Math.max(0, player.potential - rating) * bonus);
 }
 
 function roundTo(value: number, step: number): number {

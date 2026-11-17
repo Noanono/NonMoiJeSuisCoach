@@ -4,6 +4,8 @@ import { facilitiesOf, facilityBonus } from '../club/facilities';
 import { leaguePrize } from '../club/finance';
 import { reviewSeason, seasonObjective } from '../club/president';
 import { nextReputation } from '../club/reputation';
+import { quotaFilter } from '../club/rarityQuota';
+import { getAbility } from '../abilities/catalog';
 import { AI_STYLE_PLAN, aiStyleOf } from '../club/aiStyle';
 import { createCup, fixtureWinnerId } from '../league/cup';
 import { cupPrizeFor } from './cupPrizes';
@@ -19,7 +21,7 @@ import { REPUTATION_BY_TIER } from '../world/generateWorld';
 import { salaryForRating } from '../world/playerGenerator';
 import { generateYouthIntake } from '../world/youthAcademy';
 import { overall } from '../player/rating';
-import { clubPlayers, humanClub, humanDivision } from './selectors';
+import { clubPlayers, divisionOf, humanClub, humanDivision } from './selectors';
 import type { GameState } from './state';
 import { asCoachOfClub, forEachCoach } from './coaches';
 import { seasonAwards } from './stats';
@@ -69,7 +71,8 @@ export function refreshAiLineups(state: GameState): void {
   for (const club of Object.values(state.clubs)) {
     if (club.isHuman) continue;
     const plan = AI_STYLE_PLAN[aiStyleOf(club.id)];
-    club.lineup = autoLineup(clubPlayers(state, club.id), plan.formation, plan.instructions);
+    const fits = quotaFilter(divisionOf(state, club.id).tier, (id) => getAbility(id).rarity);
+    club.lineup = autoLineup(clubPlayers(state, club.id), plan.formation, plan.instructions, fits);
   }
 }
 
@@ -224,7 +227,7 @@ function retirePlayers(state: GameState, rng: Rng): void {
     state.offers = state.offers.filter((offer) => state.players[offer.playerId]);
     const human = humanClub(state);
     if (human.lineup && human.lineup.starters.some((id) => id === EMPTY_SLOT)) {
-      human.lineup = autoLineup(clubPlayers(state, human.id), human.lineup.formation, human.lineup.instructions);
+      human.lineup = autoLineup(clubPlayers(state, human.id), human.lineup.formation, human.lineup.instructions, quotaFilter(divisionOf(state, human.id).tier, (id) => getAbility(id).rarity));
     }
     const names = retired.get(human.id) ?? [];
     if (names.length > 0) state.news.push(`Retraite : ${names.join(', ')} raccroche(nt) les crampons. Pot de départ à la buvette.`);

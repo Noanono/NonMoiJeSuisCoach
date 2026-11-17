@@ -9,6 +9,9 @@ import { moneyFactorBetween } from './finance';
 import { playerValue } from './valuation';
 
 /** Part de la valeur du joueur, selon la rareté de sa capacité actuelle. */
+/** Changement de capacité (CAP-23) : fermé pour l'instant, le code reste prêt à rouvrir. */
+export const ABILITY_REROLL_OPEN = false;
+
 export const REROLL_PRICE_RATIO: Record<Rarity, number> = { common: 0.05, rare: 0.08, legendary: 0.15, mythic: 0.25 };
 /** Prix plancher au District, multiplié comme le reste des finances à chaque division plus haut. */
 export const REROLL_MIN_PRICE = 300;
