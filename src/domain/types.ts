@@ -54,6 +54,8 @@ export interface Player {
   ability: AbilityProgress;
   /** Salaire hebdomadaire en euros. */
   salary: number;
+  /** Dépanneur : son contrat prend fin à l'ouverture du prochain mercato, sauf si le club le garde. */
+  standIn?: boolean;
   clubId: string | null;
   seasonStats: { matches: number; goals: number; assists: number; yellowCards: number; redCards: number };
 }

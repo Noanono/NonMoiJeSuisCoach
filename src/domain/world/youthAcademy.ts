@@ -1,4 +1,4 @@
-import type { Ability, Club, Player, Position } from '../types';
+import type { Ability, Club, Player, Position, Rarity } from '../types';
 import { clamp, type Rng } from '../core/rng';
 import { overall } from '../player/rating';
 import { generatePlayer } from './playerGenerator';
@@ -29,10 +29,12 @@ export interface YouthIntakeOptions {
   count?: number;
   /** Bonus du centre de formation (CLUB-09) : note de départ et potentiel plus élevés. */
   boost?: { rating: number; potential: number };
+  /** Part des raretés, selon la division du club. */
+  rarityWeights?: Record<Rarity, number>;
 }
 
 /** Promotion annuelle du centre de formation (CLUB-07) : 2 à 4 jeunes, note basse, gros potentiel. */
-export function generateYouthIntake({ rng, club, abilityPool, excludedAbilityIds, count, boost = NO_BOOST }: YouthIntakeOptions): Player[] {
+export function generateYouthIntake({ rng, club, abilityPool, excludedAbilityIds, count, boost = NO_BOOST, rarityWeights }: YouthIntakeOptions): Player[] {
   const usedAbilityIds = new Set(excludedAbilityIds);
   const size = count ?? rng.int(MIN_INTAKE, MAX_INTAKE);
   const intake: Player[] = [];
@@ -45,6 +47,7 @@ export function generateYouthIntake({ rng, club, abilityPool, excludedAbilityIds
       abilityPool,
       excludedAbilityIds: usedAbilityIds,
       age: rng.int(MIN_YOUTH_AGE, MAX_YOUTH_AGE),
+      ...(rarityWeights ? { rarityWeights } : {}),
     });
     usedAbilityIds.add(player.ability.abilityId);
     intake.push(asYouthProspect(rng, player, boost.potential));

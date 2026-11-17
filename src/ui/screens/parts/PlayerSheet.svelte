@@ -12,7 +12,7 @@
   import { getAbility } from '../../../domain/abilities/catalog';
   import { RARITY_LABEL } from '../../../domain/abilities/progression';
   import { playerValue } from '../../../domain/club/valuation';
-  import { abilityKnown, isScouted, potentialView, scoutingOf, transferWindowOpen } from '../../../domain/game';
+  import { abilityKnown, isScouted, potentialView, scoutingOf, seenByCoach, transferWindowOpen } from '../../../domain/game';
   import { potentialLabel } from '../views';
   import { overall } from '../../../domain/player/rating';
   import type { AttributeName } from '../../../domain/types';
@@ -37,6 +37,7 @@
       const own = player.clubId === game.humanClubId;
       return {
         own,
+        standIn: own && player.standIn === true,
         club: own ? null : player.clubId ? (game.clubs[player.clubId]?.name ?? 'Club inconnu') : 'Sans club',
         name: fullName(player),
         avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position },
@@ -56,7 +57,8 @@
         attributes: ATTRIBUTES.map((name) => ({ name, value: player.attributes[name] })),
         ability,
         progress: { ...player.ability },
-        value: playerValue(player, ability.rarity),
+        // Valeur telle que le coach la connaît : sans le potentiel d'un joueur qu'il n'a pas scouté.
+        value: playerValue(seenByCoach(game, player), ability.rarity),
         windowOpen: transferWindowOpen(game),
       };
     }),
@@ -143,6 +145,13 @@
     {/if}
 
     {#if view.own}
+    {#if view.standIn}
+      <section class="actions" aria-label="Contrat de dépanneur">
+        <h3 class="tampon">Dépanneur</h3>
+        <p class="texte-s">Son contrat prend fin à l'ouverture du prochain mercato, si le club n'a plus besoin de lui.</p>
+        <Button size="s" variant="ghost" onclick={() => store.notify(store.command('keepStandIn', playerId).message)}>Lui faire signer un vrai contrat</Button>
+      </section>
+    {/if}
     <AbilityReroll {playerId} />
     <section class="actions" aria-label="Transfert">
       <h3 class="tampon">Vente express</h3>

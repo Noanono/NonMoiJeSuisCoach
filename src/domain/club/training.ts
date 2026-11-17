@@ -1,6 +1,8 @@
 import type { AttributeName, MatchStat, Player, Position, TrainingFocus } from '../types';
 import { gainXp, MAX_LEVEL } from '../abilities/progression';
-import { focusRaisesOverall, overall } from '../player/rating';
+import { focusRaisesOverall, mainStatWeight, overall } from '../player/rating';
+import { SEASON_WEEKS } from '../league/calendar';
+import { seasonsToPeak } from '../world/development';
 
 /**
  * Entraînement hebdomadaire (TRAIN-01 à TRAIN-05) : chaque joueur suit un programme.
@@ -14,6 +16,15 @@ const AGE_RATES: readonly { maxAge: number; rate: number }[] = [
   { maxAge: 31, rate: 0.1 },
   { maxAge: Number.POSITIVE_INFINITY, rate: 0.04 },
 ];
+
+/**
+ * Sous son potentiel, l'entraînement suit le même calendrier que la progression naturelle (pic vers 25 ans) :
+ * travailler la stat principale du poste fournit cette part de la progression de la saison, l'intersaison
+ * et la progression hors programme font le reste. Travailler une stat secondaire fait monter la note moins vite.
+ */
+export const TRAINING_SHARE = 0.75;
+/** Rythme plancher sous le potentiel, en points d'attribut par semaine. */
+const MIN_RATE_BELOW_POTENTIAL = 0.02;
 
 /** Au-delà de son potentiel, un joueur progresse quatre fois moins vite, et jamais de plus de 5 points. */
 const BEYOND_POTENTIAL_RATE = 0.25;
@@ -63,7 +74,12 @@ export function defaultTrainingFocus(position: Position): TrainingFocus {
 export function trainingRate(player: Player, focus: TrainingFocus = player.training.focus): number {
   const rate = AGE_RATES.find((entry) => player.age <= entry.maxAge)!.rate;
   const rating = overall(player);
-  if (rating < player.potential) return rate;
+  if (rating < player.potential) {
+    // Points de note à prendre cette saison (depuis la note du début de saison : rythme constant), ramenés en points de la stat principale par semaine.
+    const start = Math.min(player.overallAtSeasonStart, rating);
+    const seasonNeed = (player.potential - start) / seasonsToPeak(player.age);
+    return Math.max(MIN_RATE_BELOW_POTENTIAL, (seasonNeed * TRAINING_SHARE) / SEASON_WEEKS / mainStatWeight(player.position));
+  }
   const capped = focus !== 'ability' && focusRaisesOverall(player.position, focus) && rating >= player.potential + MAX_POINTS_BEYOND_POTENTIAL;
   return capped ? 0 : rate * BEYOND_POTENTIAL_RATE;
 }
@@ -134,6 +150,8 @@ function trainAbility(player: Player, facilityFactor: number): Player {
 }
 
 function trainAttribute(player: Player, focus: AttributeName, rate: number): Player {
+  // Stat déjà au maximum : le travail profite aux autres stats du poste.
+  if (player.attributes[focus] >= MAX_ATTRIBUTE) return { ...player, training: { ...player.training, passive: (player.training.passive ?? 0) + rate } };
   let progress = player.training.progress + rate;
   let value = player.attributes[focus];
   while (progress >= 1 && value < MAX_ATTRIBUTE) {

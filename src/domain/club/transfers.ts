@@ -160,7 +160,7 @@ export function askingPrice(player: Player, rarity: Rarity): number {
  * Joueurs que le club `buyerId` peut recruter : joueurs libres et joueurs des clubs
  * qui peuvent se permettre de vendre, du meilleur au moins bon.
  */
-export function marketListings(world: TransferWorld, buyerId: string, abilityOf: AbilityLookup): MarketListing[] {
+export function marketListings(world: TransferWorld, buyerId: string, abilityOf: AbilityLookup, seen: (player: Player) => Player = (player) => player): MarketListing[] {
   const listings: MarketListing[] = [];
   for (const player of Object.values(world.players)) {
     if (player.clubId === buyerId) continue;
@@ -171,8 +171,9 @@ export function marketListings(world: TransferWorld, buyerId: string, abilityOf:
       playerId: player.id,
       clubId: player.clubId,
       overall: overall(player),
-      price: askingPrice(player, rarity),
-      askingSalary: askingSalary(player, rarity),
+      // Prix tel que l'acheteur le connaît : sans le vrai potentiel d'un joueur qu'il n'a pas scouté.
+      price: askingPrice(seen(player), rarity),
+      askingSalary: askingSalary(seen(player), rarity),
       // La rareté se voit toujours ; le nom et l'effet dépendent du scout du coach (CLUB-10).
       ability: { abilityId: player.ability.abilityId, rarity },
     });

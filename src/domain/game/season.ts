@@ -1,5 +1,5 @@
 import { ABILITIES } from '../abilities/catalog';
-import { CAREER_XP_PER_SEASON, gainXp } from '../abilities/progression';
+import { CAREER_XP_PER_SEASON, gainXp, rarityWeightsForTier } from '../abilities/progression';
 import { facilitiesOf, facilityBonus } from '../club/facilities';
 import { leaguePrize } from '../club/finance';
 import { reviewSeason, seasonObjective } from '../club/president';
@@ -15,7 +15,7 @@ import { applyDivisionMoves, computeDivisionMoves } from '../league/promotion';
 import { generateLeagueFixtures } from '../league/schedule';
 import { computeStandings } from '../league/standings';
 import type { Rng } from '../core/rng';
-import type { Club, StandingRow } from '../types';
+import type { Club, Player, StandingRow } from '../types';
 import { developPlayers } from '../world/development';
 import { REPUTATION_BY_TIER } from '../world/generateWorld';
 import { salaryForRating } from '../world/playerGenerator';
@@ -134,9 +134,12 @@ export function endSeason(state: GameState, rng: Rng): void {
     }
   });
 
+// Les joueurs des coachs progressent surtout à l'entraînement : l'intersaison ne rattrape qu'une part de leur retard.
+  const seasonStart = new Map(Object.values(state.players).map((player) => [player.id, player.overallAtSeasonStart]));
+  const coached = (player: Player) => (player.clubId && state.clubs[player.clubId]?.isHuman ? { seasonStart: seasonStart.get(player.id) ?? overall(player) } : undefined);
   // La référence est prise avant la progression d'intersaison : elle apparaît dans l'évolution de la saison suivante.
   for (const player of Object.values(state.players)) player.overallAtSeasonStart = overall(player);
-  for (const player of developPlayers(Object.values(state.players), rng)) state.players[player.id] = player;
+  for (const player of developPlayers(Object.values(state.players), rng, coached)) state.players[player.id] = player;
   growAiAbilities(state, rng);
   // Le salaire suit la note : il monte quand le joueur progresse, baisse quand il décline (EFF-10).
   for (const player of Object.values(state.players)) player.salary = salaryForRating(overall(player));
@@ -255,6 +258,7 @@ function welcomeYouth(state: GameState, rng: Rng): void {
       excludedAbilityIds: excluded,
       count: club.isHuman ? HUMAN_YOUTH_PER_SEASON : AI_YOUTH_PER_SEASON,
       boost: facilityBonus.youth(facilitiesOf(club)),
+      rarityWeights: rarityWeightsForTier(divisionOf(state, club.id).tier),
     });
     for (const youngster of youngsters) {
       state.players[youngster.id] = youngster;

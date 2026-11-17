@@ -19,7 +19,7 @@ import { pickJobOffers } from './jobs';
 import { playAiFixture } from './matches';
 import { pruneCoachOffers } from './actions';
 import { refillScoutReports, revealOwnSquads } from './scouting';
-import { callUpStandIns } from './standIns';
+import { callUpStandIns, releaseStandIns } from './standIns';
 import { divisionStandings, endSeason, refreshAiLineups } from './season';
 import { clubPlayers, humanClub, humanDivision, humanFixture, humanFixtureAt, humanSquad, isDerby, replacePlayers, weekFixtures } from './selectors';
 import type { GameState } from './state';
@@ -107,6 +107,12 @@ export function finishWeek(state: GameState, rng: Rng): void {
   state.week += 1;
   if (state.week > SEASON_WEEKS) endSeason(state, rng);
   else if (seasonWeek(state.week).kind === 'playoff') schedulePlayoffs(state);
+  // Ouverture du mercato : les dépanneurs dont on n'a plus besoin s'en vont.
+  if (isTransferWindowOpen(state.week) && !isTransferWindowOpen(state.week - 1)) {
+    for (const [clubId, names] of releaseStandIns(state)) {
+      asCoachOfClub(state, clubId, () => state.news.push(`Fin de contrat pour les dépanneurs : ${names.join(', ')} rend(ent) le maillot.`));
+    }
+  }
   callUpAllStandIns(state, rng);
   refreshAiLineups(state);
   // Jeunes promus et dépanneurs arrivent avec leur capacité connue de leur coach.

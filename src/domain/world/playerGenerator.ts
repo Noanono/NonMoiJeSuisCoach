@@ -56,6 +56,8 @@ export interface GeneratePlayerOptions {
   /** Capacités déjà présentes dans l'effectif (CAP-02). */
   excludedAbilityIds: Iterable<string>;
   age?: number;
+  /** Part des raretés, selon la division du club ; par défaut, celle de tout le monde. */
+  rarityWeights?: Record<Rarity, number>;
 }
 
 /** Génère un joueur complet, avec sa capacité personnelle (CAP-01, CAP-12, CAP-13). */
@@ -71,6 +73,7 @@ export function generatePlayer(options: GeneratePlayerOptions): Player {
     position,
     abilityPool: options.abilityPool,
     excludedAbilityIds: new Set(options.excludedAbilityIds),
+    ...(options.rarityWeights ? { rarityWeights: options.rarityWeights } : {}),
   });
   // Un vétéran a déjà fait progresser sa capacité : plus il est âgé, plus elle est haute.
   const xp = careerXpAtAge(rng, age);
@@ -135,17 +138,18 @@ interface PickAbilityOptions {
   position: Position;
   abilityPool: readonly Ability[];
   excludedAbilityIds: ReadonlySet<string>;
+  rarityWeights?: Record<Rarity, number>;
 }
 
 /**
  * Rareté tirée selon RARITY_GENERATION_WEIGHTS (CAP-12), puis capacité compatible avec le poste
  * et absente de l'effectif (CAP-02). Si la rareté tirée est épuisée, on se replie sur une autre.
  */
-export function pickAbility({ rng, position, abilityPool, excludedAbilityIds }: PickAbilityOptions): Ability {
+export function pickAbility({ rng, position, abilityPool, excludedAbilityIds, rarityWeights = RARITY_GENERATION_WEIGHTS }: PickAbilityOptions): Ability {
   const candidates = abilityPool.filter(
     (ability) => isAbilityCompatible(ability, position) && !excludedAbilityIds.has(ability.id),
   );
-  const drawnRarity = pickWeighted(rng, RARITY_GENERATION_WEIGHTS);
+  const drawnRarity = pickWeighted(rng, rarityWeights);
   for (const rarity of RARITY_FALLBACK[drawnRarity]) {
     const ofRarity = candidates.filter((ability) => ability.rarity === rarity);
     if (ofRarity.length > 0) return rng.pick(ofRarity);
@@ -166,15 +170,16 @@ export interface GenerateSquadOptions {
   clubId: string;
   abilityPool: readonly Ability[];
   excludedAbilityIds?: Iterable<string>;
+  rarityWeights?: Record<Rarity, number>;
 }
 
 /** Génère un effectif complet dont toutes les capacités sont différentes (CAP-02). */
-export function generateSquad({ rng, reputation, clubId, abilityPool, excludedAbilityIds = [] }: GenerateSquadOptions): Player[] {
+export function generateSquad({ rng, reputation, clubId, abilityPool, excludedAbilityIds = [], rarityWeights }: GenerateSquadOptions): Player[] {
   const usedAbilityIds = new Set(excludedAbilityIds);
   const squad: Player[] = [];
   for (const position of Object.keys(SQUAD_COMPOSITION) as Position[]) {
     for (let i = 0; i < SQUAD_COMPOSITION[position]; i++) {
-      const player = generatePlayer({ rng, position, reputation, clubId, abilityPool, excludedAbilityIds: usedAbilityIds });
+      const player = generatePlayer({ rng, position, reputation, clubId, abilityPool, excludedAbilityIds: usedAbilityIds, ...(rarityWeights ? { rarityWeights } : {}) });
       usedAbilityIds.add(player.ability.abilityId);
       squad.push(player);
     }

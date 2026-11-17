@@ -1,9 +1,9 @@
 <script lang="ts">
-  import type { ActiveStat } from '../../domain/match';
+  import type { EffectStat } from '../../domain/match';
 
   /** Picto d'un effet : trait épais, coins carrés, monochrome (design system). */
   interface Props {
-    stat: ActiveStat;
+    stat: EffectStat;
     size?: number;
   }
 
@@ -27,6 +27,10 @@
     <path d="M1 6c2-4 8-4 10 0-2 4-8 4-10 0z" /><path d="M6 5.5v1" />
   {:else if stat === 'knockout'}
     <path d="M2 2l8 8M10 2l-8 8" />
+  {:else if stat === 'shield'}
+    <path d="M2 2h8v5l-4 3.5L2 7z" /><path d="M4.5 5.5l1.5 1.5 2-2.5" stroke-width="1.5" />
+  {:else if stat === 'steady'}
+    <path d="M6 1v9M3 10.5h6M2 7l4 3.5 4-3.5" stroke-width="1.5" />
   {:else if stat === 'swap'}
     <path d="M1 4h9M7 1l3 3-3 3M11 8H2M5 5L2 8l3 3" stroke-width="1.5" />
   {:else}

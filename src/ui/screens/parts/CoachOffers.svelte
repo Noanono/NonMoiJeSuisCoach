@@ -4,7 +4,7 @@
   import { formatEuros } from '../../format';
   import { getAbility } from '../../../domain/abilities/catalog';
   import { playerValue } from '../../../domain/club/valuation';
-  import { coachOfClub, coachOffersReceived, coachOffersSent, transferWindowOpen, type CoachOffer, type GameState } from '../../../domain/game';
+  import { coachOfClub, coachOffersReceived, coachOffersSent, seenByCoach, transferWindowOpen, type CoachOffer, type GameState } from '../../../domain/game';
   import { fullName } from '../describe';
 
   /** Offres entre coachs de la ligue (MULTI-08) : celles reçues, à accepter ou refuser, et celles envoyées. */
@@ -12,7 +12,7 @@
     const player = game.players[offer.playerId];
     const coachId = coachOfClub(game, otherClubId);
     const coach = game.coaches?.find((entry) => entry.id === coachId)?.name ?? 'Un coach';
-    const value = player ? playerValue(player, getAbility(player.ability.abilityId).rarity) : 0;
+    const value = player ? playerValue(seenByCoach(game, player), getAbility(player.ability.abilityId).rarity) : 0;
     return {
       id: offer.id,
       coach,

@@ -48,8 +48,23 @@ const BASE_ACTIVATION_XP = 10;
 /** Multiplicateur de valeur marchande par rareté (CLUB-08). */
 export const RARITY_VALUE_MULTIPLIER: Record<Rarity, number> = { common: 1, rare: 1.5, legendary: 3, mythic: 10 };
 
-/** Part des joueurs générés par rareté (CAP-12). */
+/** Part des joueurs générés par rareté (CAP-12), en moyenne sur le monde. */
 export const RARITY_GENERATION_WEIGHTS: Record<Rarity, number> = { common: 0.7, rare: 0.25, legendary: 0.045, mythic: 0.005 };
+
+/**
+ * Part des joueurs générés par rareté selon la division (1 = élite, 4 = district) : un effectif type
+ * de 18 joueurs a à peu près ce que les quotas de sa division lui permettent d'aligner (CAP-24).
+ */
+export const RARITY_WEIGHTS_BY_TIER: Record<number, Record<Rarity, number>> = {
+  1: { common: 0.5, rare: 0.38, legendary: 0.1, mythic: 0.02 },
+  2: { common: 0.6, rare: 0.3, legendary: 0.08, mythic: 0.02 },
+  3: { common: 0.68, rare: 0.26, legendary: 0.06, mythic: 0 },
+  4: { common: 0.84, rare: 0.15, legendary: 0.01, mythic: 0 },
+};
+
+export function rarityWeightsForTier(tier: number): Record<Rarity, number> {
+  return RARITY_WEIGHTS_BY_TIER[tier] ?? RARITY_GENERATION_WEIGHTS;
+}
 
 export const RARITY_LABEL: Record<Rarity, string> = { common: 'Commune', rare: 'Rare', legendary: 'Légendaire', mythic: 'Mythique' };
 

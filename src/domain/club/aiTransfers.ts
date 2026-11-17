@@ -7,6 +7,7 @@ import type { Rng } from '../core/rng';
 import { overall } from '../player/rating';
 import type { Club, Player, Position, Rarity } from '../types';
 import { SQUAD_COMPOSITION } from '../world/playerGenerator';
+import { countRarities, rarityLimits } from './rarityQuota';
 import { askingPrice, buyPlayer, MAX_SQUAD_SIZE, type TransferWorld } from './transfers';
 
 /** Transferts tentés par semaine de fenêtre, pour tout le monde. */
@@ -79,6 +80,13 @@ function findDeal(world: TransferWorld, buyer: Club, input: AiTransferInput): Om
   const { position, level } = weakestPosition(squad);
   const abilities = new Set(squad.map((player) => player.ability.abilityId));
   const buyerTier = input.tierOf(buyer.id);
+  // Quotas de rareté (CAP-24) : il n'achète pas un joueur de plus d'une rareté qu'il ne pourrait pas aligner.
+  const limits = rarityLimits(buyerTier);
+  const owned = countRarities(squad, (id) => input.abilityOf(id).rarity);
+  const alignable = (player: Player) => {
+    const rarity = input.abilityOf(player.ability.abilityId).rarity;
+    return rarity === 'common' || owned[rarity] < limits[rarity];
+  };
   const budget = buyer.budget * MAX_BUDGET_SHARE;
   const candidates: { player: Player; price: number; gain: number }[] = [];
   for (const seller of Object.values(world.clubs)) {
@@ -87,7 +95,7 @@ function findDeal(world: TransferWorld, buyer: Club, input: AiTransferInput): Om
     // Le vendeur ne se sépare pas d'un joueur s'il n'en a plus assez à ce poste.
     if (sellerSquad.filter((player) => player.position === position).length <= SELLER_KEEPS[position]) continue;
     for (const player of sellerSquad) {
-      if (player.position !== position || abilities.has(player.ability.abilityId) || player.injuryWeeks > 0) continue;
+      if (player.position !== position || abilities.has(player.ability.abilityId) || player.injuryWeeks > 0 || !alignable(player)) continue;
       const gain = overall(player) - level;
       if (gain < MIN_UPGRADE) continue;
       const price = askingPrice(player, input.abilityOf(player.ability.abilityId).rarity);

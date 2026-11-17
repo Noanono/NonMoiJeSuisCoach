@@ -1,3 +1,4 @@
+import { rarityWeightsForTier } from '../abilities/progression';
 import { quotaFilter } from '../club/rarityQuota';
 import type { Ability, Club, Division, Formation, Player } from '../types';
 import { createRng, type Rng } from '../core/rng';
@@ -144,7 +145,7 @@ function createClub({ rng, id, identity, division, isHuman, stadium, abilityPool
   // Le club du coach est dans la moitié basse du district : battable, mais pas condamné (UNIV-02).
   const middle = Math.round((range.min + range.max) / 2);
   const reputation = isHuman ? rng.int(middle - HUMAN_REPUTATION_MARGIN, middle) : rng.int(range.min, range.max);
-  const squad = generateSquad({ rng, reputation, clubId: id, abilityPool });
+  const squad = generateSquad({ rng, reputation, clubId: id, abilityPool, rarityWeights: rarityWeightsForTier(division.tier) });
   const rarityById = new Map(abilityPool.map((ability) => [ability.id, ability.rarity]));
   const club: Club = {
     id,

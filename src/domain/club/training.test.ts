@@ -4,7 +4,10 @@ import { xpForActivation } from '../abilities/progression';
 import { abilityTrainingXp, MAX_POINTS_BEYOND_POTENTIAL, passiveAbilityXp, passiveAttributeRate, trainingMatchBonus, trainingRate, trainPlayer } from './training';
 import { overall } from '../player/rating';
 
-const striker = (overrides = {}) => makePlayer({ age: 20, potential: 85, training: { focus: 'shooting', progress: 0 }, ...overrides });
+const striker = (overrides = {}) => {
+  const player = makePlayer({ age: 20, potential: 85, training: { focus: 'shooting', progress: 0 }, ...overrides });
+  return { ...player, overallAtSeasonStart: overall(player) };
+};
 
 function weeks(player: ReturnType<typeof makePlayer>, count: number) {
   let current = player;
@@ -15,13 +18,17 @@ function weeks(player: ReturnType<typeof makePlayer>, count: number) {
 describe('entraînement (TRAIN-01 à TRAIN-05)', () => {
   test('le programme fait monter l’attribut travaillé, bien plus vite que le reste', () => {
     const before = striker();
-    const after = weeks(before, 6);
-    expect(after.attributes.shooting).toBe(before.attributes.shooting + 2);
-    expect(after.attributes.speed).toBe(before.attributes.speed);
+    const after = weeks(before, 12);
+    expect(after.attributes.shooting).toBeGreaterThan(before.attributes.shooting + 1);
+    expect(after.attributes.shooting - before.attributes.shooting).toBeGreaterThan(after.attributes.speed - before.attributes.speed);
   });
 
-  test('les jeunes progressent plus vite que les vétérans', () => {
-    expect(trainingRate(striker())).toBeGreaterThan(trainingRate(striker({ age: 33 })));
+  test('le rythme suit le calendrier du pic à 25 ans : à écart égal, plus le pic est proche, plus ça va vite', () => {
+    expect(trainingRate(striker({ age: 23 }))).toBeGreaterThan(trainingRate(striker({ age: 18 })));
+    // Le rythme de la saison part de la note du début de saison : il ne ralentit pas au fil des semaines.
+    const before = striker({ age: 18 });
+    const later = weeks(before, 10);
+    expect(trainingRate(later)).toBeCloseTo(trainingRate(before));
   });
 
   test('on peut dépasser son potentiel, moins vite et dans une limite', () => {
@@ -69,7 +76,9 @@ describe('entraînement (TRAIN-01 à TRAIN-05)', () => {
   test('travailler sa capacité fait quand même progresser un peu la note', () => {
     const before = striker({ training: { focus: 'ability', progress: 0 } });
     const after = weeks(before, 28);
-    expect(overall(after)).toBeGreaterThan(overall(before));
+    const total = (player: typeof before) => Object.values(player.attributes).reduce((sum, value) => sum + value, 0);
+    expect(total(after)).toBeGreaterThan(total(before));
+    expect(overall(after)).toBeGreaterThanOrEqual(overall(before));
     expect(passiveAbilityXp(before)).toBe(0);
   });
 

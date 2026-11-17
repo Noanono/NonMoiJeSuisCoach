@@ -30,6 +30,6 @@ export { canEnter, canLeave, canMoveToLine, canReposition, canSwapPositions, kee
 export { expectedAgainstDive, expectedPenaltyChance, KEEPER_HABIT_LABEL, KEEPER_STAY_CHANCE, keeperHabit, PENALTY_STYLE_LABEL } from './penaltyKick';
 export { summarize, toMatchResult } from './summary';
 export { simulateQuick } from './quick';
-export { activeEffects, type ActiveEffectView } from './queries';
+export { activeEffects, type ActiveEffectView, type EffectStat } from './queries';
 export { GAUGE_MAX, GAUGE_START } from './state';
 export type * from './types';

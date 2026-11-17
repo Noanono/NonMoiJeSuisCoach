@@ -32,9 +32,9 @@ describe('mercato entre clubs IA (C7)', () => {
       const abilities = club.playerIds.map((id) => world.players[id]!.ability.abilityId);
       if (!club.isHuman) expect(new Set(abilities).size).toBe(abilities.length);
     }
-    // L'argent passe de l'acheteur au vendeur.
-    const first = all[0]!;
-    expect(world.clubs[first.toClubId]!.budget).toBeLessThan(budgets.get(first.toClubId)!);
+    // L'argent passe de l'acheteur au vendeur : il n'en apparaît ni n'en disparaît.
+    const total = (clubs: typeof world.clubs) => Object.values(clubs).reduce((sum, club) => sum + club.budget, 0);
+    expect(total(world.clubs)).toBe([...budgets.values()].reduce((sum, budget) => sum + budget, 0));
     // Un renfort est meilleur que ce qu'avait le club à ce poste… au moins en moyenne.
     expect(all.every((transfer) => overall(world.players[transfer.playerId]!) > 0)).toBe(true);
   });

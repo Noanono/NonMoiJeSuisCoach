@@ -32,6 +32,11 @@ export function ratingFor(attributes: Attributes, position: Position): number {
   return Math.round(total);
 }
 
+/** Poids de la stat la plus importante du poste dans la note globale. */
+export function mainStatWeight(position: Position): number {
+  return Math.max(...Object.values(WEIGHTS[position]).map((weight) => weight ?? 0));
+}
+
 /** Travailler cet attribut fait-il monter la note de ce poste ? */
 export function focusRaisesOverall(position: Position, attribute: AttributeName): boolean {
   return (WEIGHTS[position][attribute] ?? 0) > 0;

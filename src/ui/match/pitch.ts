@@ -198,6 +198,8 @@ const STAT_LABEL: Record<ActiveEffectView['stat'], string> = {
   concentration: 'concentration',
   knockout: 'hors jeu',
   swap: 'niveaux inversés',
+  shield: 'bouclier',
+  steady: 'impossible à mettre au sol',
 };
 
 const PERCENT = 100;
@@ -222,13 +224,18 @@ export function toChip(effect: ActiveEffectView): EffectChip {
   const bonus = effect.value > 0;
   const sign = bonus ? '+' : '−';
   const countdown = effect.remaining === null ? 'fin' : `${effect.remaining}'`;
-  const amount = effect.stat === 'knockout' || effect.stat === 'swap' ? '' : ` ${Math.round(Math.abs(effect.value) * PERCENT)} %`;
   const duration = effect.remaining === null ? "jusqu'au coup de sifflet" : `encore ${effect.remaining} min`;
+  if (effect.stat === 'shield' || effect.stat === 'steady') {
+    const what = effect.stat === 'shield' ? `annule ${effect.value > 1 ? `les ${effect.value} prochaines capacités adverses` : 'la prochaine capacité adverse'} qui le visent` : 'impossible à mettre au sol';
+    return { stat: effect.stat, tone: 'bonus', sign: '+', countdown, detail: `${effect.label} : ${what}, ${duration}` };
+  }
+  const amount = effect.stat === 'knockout' || effect.stat === 'swap' ? '' : ` ${Math.round(Math.abs(effect.value) * PERCENT)} %`;
+  const marked = effect.markedBy ? ` (marqué par ${effect.markedBy}, tant qu'il est debout)` : '';
   return {
     stat: effect.stat,
     tone: bonus ? 'bonus' : 'malus',
     sign,
     countdown,
-    detail: `${effect.label} : ${sign}${amount} ${STAT_LABEL[effect.stat]}, ${duration}`,
+    detail: `${effect.label} : ${sign}${amount} ${STAT_LABEL[effect.stat]}${marked}, ${duration}`,
   };
 }

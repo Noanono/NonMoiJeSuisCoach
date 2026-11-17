@@ -13,13 +13,22 @@ import { chosenTargetCount, validTargets } from './targets';
 import type { MatchPlayer, MatchState, Side, TeamState } from './types';
 import { triggerIsOpen } from './windows';
 
-/** Chance que l'IA envisage une activation à une minute donnée. */
-const THINK_CHANCE = 0.1;
-/** En fin de match, l'IA se lâche. */
-const LATE_GAME_MINUTE = 70;
-const LATE_GAME_THINK_CHANCE = 0.2;
-/** Chance d'utiliser une capacité d'événement disponible (CAP-19). */
-const TRIGGER_USE_CHANCE = 0.6;
+/**
+ * L'IA estime la valeur de chaque capacité disponible à cette minute (situation du score, temps qui reste,
+ * contexte : blessés, malus, menace adverse…) et lance la meilleure si elle vaut le coup.
+ */
+export const AI_ACTIVATION_THRESHOLD = 1;
+/** En fin de match, la jauge qui reste ne sert plus à rien : l'IA se lâche. */
+const LATE_GAME_MINUTE = 75;
+const LATE_GAME_URGENCY = 1.6;
+/** Jauge presque pleine : ce qui se recharge serait perdu. */
+const FULL_GAUGE_URGENCY = 1.6;
+const GAUGE_ALMOST_FULL = 9;
+/** Un peu d'imprévu, pour que l'IA ne soit pas réglée comme une horloge. */
+const DECISION_JITTER = 0.3;
+const MATCH_END_MINUTE = 93;
+/** Capacité d'occasion (penalty, coup franc, corner) qui convient : l'IA la joue presque toujours. */
+const TRIGGER_USE_CHANCE = 0.9;
 
 /** En dessous, une résurrection ne vaut pas son prix. */
 const MIRACLE_FATIGUE = 45;
@@ -57,23 +66,81 @@ export function aiTakeTurn(run: Run, side: Side): void {
   aiReplaceInjured(run, team);
   adjustTactics(run, team);
   restTiredPlayer(run, team);
-  const think = state.minute >= LATE_GAME_MINUTE ? LATE_GAME_THINK_CHANCE : THINK_CHANCE;
-  if (!rng.chance(think)) return;
-  const weights = CATEGORY_WEIGHTS[situationOf(state, side)];
+  chaseWithSubstitution(run, team);
   const saving = isSavingForBigAbility(state, side);
   let best: MatchPlayer | undefined;
   let bestScore = 0;
   for (const player of team.players) {
     if (!player.ability || checkAvailability(state, side, player) !== null || wouldBackfire(state, side, player)) continue;
     if (saving && player.ability.cost < BIG_ABILITY_COST) continue;
-    const taste = team.aiStyle ? AI_STYLE_PLAN[team.aiStyle].taste[player.ability.category] : 1;
-    const score = weights[player.ability.category] * taste * rng.next();
+    const score = abilityValue(state, team, player);
     if (score > bestScore) {
       best = player;
       bestScore = score;
     }
   }
-  if (best) activate(run, side, best);
+  if (!best) return;
+  const late = state.minute >= LATE_GAME_MINUTE ? LATE_GAME_URGENCY : 1;
+  const full = team.gauge >= GAUGE_ALMOST_FULL ? FULL_GAUGE_URGENCY : 1;
+  const jitter = 1 - DECISION_JITTER / 2 + rng.next() * DECISION_JITTER;
+  if (bestScore * late * full * jitter >= AI_ACTIVATION_THRESHOLD) activate(run, side, best);
+}
+
+/** Durée pendant laquelle la capacité agit (0 pour un effet immédiat). */
+function usefulMinutes(effects: readonly Effect[]): number {
+  let minutes = 0;
+  for (const effect of effects) if ('duration' in effect && !('scope' in effect && effect.scope === 'self' && effect.type === 'knockout')) minutes = Math.max(minutes, effect.duration);
+  return minutes;
+}
+
+/**
+ * Ce que vaut la capacité maintenant : la catégorie selon le score et le style du coach, réduite si son effet
+ * déborderait le coup de sifflet, renforcée quand le contexte la rend précieuse.
+ */
+function abilityValue(state: MatchState, team: TeamState, player: MatchPlayer): number {
+  const ability = player.ability!;
+  const situation = situationOf(state, team.side);
+  const taste = team.aiStyle ? AI_STYLE_PLAN[team.aiStyle].taste[ability.category] : 1;
+  let value = CATEGORY_WEIGHTS[situation][ability.category] * taste;
+  const span = usefulMinutes(ability.effects);
+  if (span > 0) value *= Math.min(1, Math.max(1, MATCH_END_MINUTE - state.minute) / span);
+  return value * contextBonus(state, team, ability.effects, situation);
+}
+
+function contextBonus(state: MatchState, team: TeamState, effects: readonly Effect[], situation: Situation): number {
+  const opponents = teamOf(state, opponentSide(team.side));
+  let bonus = 1;
+  for (const effect of effects) {
+    switch (effect.type) {
+      case 'revive':
+        // Un joueur au sol ou blessé : le relever vaut tout de suite.
+        bonus = Math.max(bonus, 2.5);
+        break;
+      case 'clearMaluses': {
+        const maluses = team.players.reduce((count, member) => count + member.effects.filter((active) => active.value < 0 && active.stat !== 'knockout').length, 0);
+        bonus = Math.max(bonus, maluses >= 2 ? 2 : 1);
+        break;
+      }
+      case 'shield': {
+        // Bouclier : utile tant que l'adversaire a encore des capacités de sabotage à lancer.
+        const threats = opponents.players.filter((member) => member.ability?.category === 'sabotage' && !member.usedAbility && !member.subbedOff).length;
+        bonus = Math.max(bonus, threats > 0 ? 1.5 : 0.6);
+        break;
+      }
+      case 'gamble':
+        bonus *= situation === 'trailing' ? 1.3 : situation === 'leading' ? 0.7 : 1;
+        break;
+      case 'copyLast':
+        bonus = Math.max(bonus, 1.3);
+        break;
+      case 'energy':
+        if (effect.scope === 'team') bonus = Math.max(bonus, averageFatigue(team) / 40);
+        break;
+      default:
+        break;
+    }
+  }
+  return bonus;
 }
 
 /** Le coach IA change de plan selon le score et la minute, à la manière de son style (C6). */
@@ -92,6 +159,20 @@ function adjustTactics(run: Run, team: TeamState): void {
         ? `${team.name} ferme la boutique : tout le monde derrière.`
         : `${team.name} revient à son plan de jeu.`;
   pushEvent(run, 'substitution', team.side, text);
+}
+
+/** Mené en fin de match : un défenseur sort pour un attaquant de plus. */
+const CHASE_SUB_MINUTE = 65;
+function chaseWithSubstitution(run: Run, team: TeamState): void {
+  const { state } = run;
+  if (state.minute < CHASE_SUB_MINUTE || team.goals >= teamOf(state, opponentSide(team.side)).goals || substitutionsLeft(team) <= SUBS_KEPT_FOR_INJURIES - 1) return;
+  if (team.players.filter((player) => player.line === 'ATT' && !player.sentOff && !player.injured).length >= 3) return;
+  const entering = team.players.filter(canEnter).find((player) => player.profile.position === 'ATT');
+  const defenders = team.players.filter((player) => player.line === 'DEF' && !player.sentOff && !player.injured);
+  if (!entering || defenders.length <= 3) return;
+  const leaving = defenders.sort((a, b) => a.rating - b.rating)[0]!;
+  performSubstitution(run, team, leaving, entering);
+  entering.line = 'ATT';
 }
 
 /** Un joueur cuit est remplacé par un remplaçant du même poste, en gardant des changements pour les blessés. */
@@ -175,6 +256,15 @@ function activate(run: Run, side: Side, player: MatchPlayer): void {
   performActivation(run, { side, player, targets: chooseTargets(run.state, player), byAi: true });
 }
 
+/** Le joueur visé est-il celui que l'effet touche le plus ? (arrêts → gardien, tir → attaquant, défense → défenseur) */
+function statFit(target: MatchPlayer, effects: readonly Effect[]): number {
+  const stats = effects.flatMap((effect) => ('stat' in effect ? [effect.stat] : []));
+  if (stats.includes('goalkeeping')) return target.line === 'GK' ? 2 : 0.2;
+  if (stats.includes('shooting')) return target.line === 'ATT' ? 1.5 : target.line === 'MID' ? 1 : 0.5;
+  if (stats.includes('defense')) return target.line === 'DEF' ? 1.5 : 0.7;
+  return 1;
+}
+
 /**
  * Adversaires : les plus dangereux d'abord. Coéquipiers : les plus fatigués pour une capacité d'énergie,
  * ceux qui ont des malus pour un soin, les meilleurs sinon (bouclier, bonus).
@@ -186,7 +276,13 @@ function chooseTargets(state: MatchState, player: MatchPlayer): MatchPlayer[] {
   const candidates = validTargets(state, player, ability);
   const effects = ability.effects;
   const maluses = (member: MatchPlayer) => member.effects.filter((effect) => effect.value < 0).length;
-  if (ability.targeting.kind !== 'teammate') candidates.sort((a, b) => b.rating - a.rating);
+  // Un adversaire sous bouclier (ou indéboulonnable, pour une mise au sol) passe en dernier : la capacité serait perdue.
+  const knocks = effects.some((effect) => effect.type === 'knockout');
+  const protectedFrom = (target: MatchPlayer) =>
+    (target.shield !== undefined && target.shield.charges > 0 && target.shield.until >= state.elapsed) || (knocks && target.steadyUntil >= state.elapsed);
+  // Un adversaire en forme (bonus en cours) est la cible prioritaire ; un malus d'arrêts vise le gardien, de tir les attaquants.
+  const threat = (target: MatchPlayer) => target.rating * (target.effects.some((active) => active.value > 0) ? 1.25 : 1) * statFit(target, effects);
+  if (ability.targeting.kind !== 'teammate') candidates.sort((a, b) => Number(protectedFrom(a)) - Number(protectedFrom(b)) || threat(b) - threat(a));
   else if (effects.some((effect) => effect.type === 'energy')) candidates.sort((a, b) => b.profile.fatigue - a.profile.fatigue);
   else if (effects.some((effect) => effect.type === 'clearMaluses')) candidates.sort((a, b) => maluses(b) - maluses(a) || b.rating - a.rating);
   else candidates.sort((a, b) => b.rating - a.rating);

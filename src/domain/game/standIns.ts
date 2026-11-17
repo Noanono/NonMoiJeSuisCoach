@@ -40,7 +40,7 @@ export function callUpStandIns(state: GameState, clubId: string, rng: Rng): numb
       excludedAbilityIds: free ? [...taken] : [],
       age: STAND_IN_AGE,
     });
-    state.players[standIn.id] = standIn;
+    state.players[standIn.id] = { ...standIn, standIn: true };
     club.playerIds.push(standIn.id);
     calledUp += 1;
   }
@@ -61,6 +61,34 @@ function alignableCount(state: GameState, clubId: string): { count: number; keep
     return rarity === 'common' || limits[rarity] > 0;
   });
   return { count, keeper };
+}
+
+/**
+ * Fin des contrats de dépanneur, à l'ouverture d'un mercato : ceux dont le club n'a plus besoin
+ * deviennent joueurs libres. Rend les dépanneurs partis, par club.
+ */
+export function releaseStandIns(state: GameState): Map<string, string[]> {
+  const released = new Map<string, string[]>();
+  for (const club of Object.values(state.clubs)) {
+    for (const player of clubPlayers(state, club.id).filter((member) => member.standIn)) {
+      club.playerIds = club.playerIds.filter((id) => id !== player.id);
+      // Le club en a encore besoin (blessures, quotas) : il reste.
+      if (needsStandIn(state, club.id)) {
+        club.playerIds.push(player.id);
+        continue;
+      }
+      if (club.lineup) {
+        club.lineup = {
+          ...club.lineup,
+          starters: club.lineup.starters.map((id) => (id === player.id ? '' : id)),
+          bench: club.lineup.bench.filter((id) => id !== player.id),
+        };
+      }
+      state.players[player.id] = { ...player, clubId: null, standIn: false };
+      released.set(club.id, [...(released.get(club.id) ?? []), `${player.firstName} ${player.lastName}`]);
+    }
+  }
+  return released;
 }
 
 function needsStandIn(state: GameState, clubId: string): boolean {

@@ -2,6 +2,7 @@
  * Commandes du coach entre deux matchs. Chacune modifie la partie en place
  * et renvoie un message lisible pour l'interface.
  */
+import { seenByCoach } from './scouting';
 import { ABILITIES, getAbility } from '../abilities/catalog';
 import { quotaFilter } from '../club/rarityQuota';
 import { ABILITY_REROLL_OPEN, drawRerollOptions, rerollPrice } from '../club/abilityReroll';
@@ -57,6 +58,15 @@ export function setTrainingFocus(state: GameState, playerId: string, focus: Trai
   state.players[playerId] = { ...player, training: { focus, progress: 0 } };
 }
 
+/** Le coach garde un dépanneur : contrat normal, il ne partira plus au prochain mercato. */
+export function keepStandIn(state: GameState, playerId: string): ActionResult {
+  const player = state.players[playerId];
+  if (!player || player.clubId !== state.humanClubId) return refused('Ce joueur n’est pas chez toi.');
+  if (!player.standIn) return refused('Il a déjà un vrai contrat.');
+  state.players[playerId] = { ...player, standIn: false };
+  return done(`${player.firstName} ${player.lastName} signe un vrai contrat. Le cousin du président est ému.`);
+}
+
 /** Remet à chacun le programme de son poste. */
 export function resetTrainingFocus(state: GameState): void {
   for (const player of humanSquad(state)) setTrainingFocus(state, player.id, defaultTrainingFocus(player.position));
@@ -67,7 +77,7 @@ export function transferWindowOpen(state: GameState): boolean {
 }
 
 export function market(state: GameState): MarketListing[] {
-  return marketListings({ clubs: state.clubs, players: state.players }, state.humanClubId, getAbility);
+  return marketListings({ clubs: state.clubs, players: state.players }, state.humanClubId, getAbility, (player) => seenByCoach(state, player));
 }
 
 function applyTransfer(state: GameState, result: TransferResult): ActionResult {
@@ -90,8 +100,8 @@ export function buy(state: GameState, playerId: string): ActionResult {
       {
         buyerId: state.humanClubId,
         playerId,
-        price: askingPrice(player, rarity),
-        salary: askingSalary(player, rarity),
+        price: askingPrice(seenByCoach(state, player), rarity),
+        salary: askingSalary(seenByCoach(state, player), rarity),
         windowOpen: transferWindowOpen(state),
       },
     ),

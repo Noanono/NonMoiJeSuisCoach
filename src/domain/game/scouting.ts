@@ -7,6 +7,7 @@
  * - les joueurs affrontés en match sont connus.
  * Chaque coach a ses propres connaissances : en multi, ce que l'un a scouté, l'autre ne le sait pas.
  */
+import { overall } from '../player/rating';
 import { facilitiesOf, facilityBonus } from '../club/facilities';
 import type { Player } from '../types';
 import { humanClub } from './selectors';
@@ -61,6 +62,22 @@ function knownByDefault(state: GameState, playerId: string): boolean {
 export function isScouted(state: GameState, player: Player): boolean {
   if (player.clubId === state.humanClubId) return true;
   return (scoutingOf(state).known[player.id] ?? 0) > 0 || knownByDefault(state, player.id);
+}
+
+/** En moyenne, un jeune garde deux points de marge par année avant 24 ans, plus 9 (voir la génération des joueurs). */
+const ESTIMATE_MATURITY_AGE = 24;
+const ESTIMATE_GAP_PER_YEAR = 2;
+const ESTIMATE_BASE_GAP = 9;
+
+/**
+ * Joueur tel que le coach le connaît : un joueur non scouté a le potentiel moyen de son âge, pas le vrai.
+ * Les prix et valeurs affichés au coach partent de là, pour ne pas trahir une pépite cachée.
+ */
+export function seenByCoach(state: GameState, player: Player): Player {
+  if (isScouted(state, player)) return player;
+  const rating = overall(player);
+  const gap = player.age < ESTIMATE_MATURITY_AGE ? (ESTIMATE_MATURITY_AGE - player.age) * ESTIMATE_GAP_PER_YEAR + ESTIMATE_BASE_GAP : 0;
+  return { ...player, potential: rating + gap };
 }
 
 /** Le nom et l'effet de la capacité sont-ils connus ? Toujours chez soi ; ailleurs, s'il a été scouté. */
