@@ -91,6 +91,19 @@ function nationPlayer(rng: Rng, nation: Nation, position: Position, level: numbe
   return { ...base, id, ...nationName(rng, nation), attributes, nationality: nation.id };
 }
 
+/**
+ * Capacité du pays pour ce joueur : sur le banc, celle qui se joue depuis le banc si la nation en a une ;
+ * sur le terrain, celle de son poste, sinon celle de tous postes, sinon l'autre (pas une capacité de banc).
+ */
+function nationAbilityFor(nation: Nation, player: Player, onBench: boolean): string {
+  const abilities = nation.abilityIds.map((id) => getAbility(id));
+  const benchAbility = abilities.find((ability) => ability.position === 'BENCH');
+  const fieldAbilities = abilities.filter((ability) => ability.position !== 'BENCH');
+  if (onBench && benchAbility) return benchAbility.id;
+  const fitting = fieldAbilities.find((ability) => ability.position === player.position) ?? fieldAbilities.find((ability) => ability.position === 'ANY') ?? fieldAbilities[0];
+  return (fitting ?? abilities[0]!).id;
+}
+
 /** L'équipe étrangère, construite pour ce match : à hauteur du coach, plus 5 à 8 points. */
 export function foreignTeamSheet(state: GameState, nationId: NationId, rng: Rng): TeamSheet {
   const nation = NATIONS[nationId];
@@ -107,15 +120,11 @@ export function foreignTeamSheet(state: GameState, nationId: NationId, rng: Rng)
   const byId = new Map(players.map((player) => [player.id, player]));
   const starters = lineup.starters.map((id) => byId.get(id)!).filter(Boolean);
   const bench = lineup.bench.map((id) => byId.get(id)!).filter(Boolean);
-  // Les deux capacités du pays, chacune sur un joueur qui peut la porter.
-  const taken = new Set<string>();
-  for (const abilityId of nation.abilityIds) {
-    const ability = getAbility(abilityId);
-    const pool = ability.position === 'BENCH' ? bench : ability.position === 'ANY' ? starters.filter((player) => player.position !== 'GK') : starters.filter((player) => player.position === ability.position);
-    const bearer = pool.find((player) => !taken.has(player.id));
-    if (!bearer) continue;
-    taken.add(bearer.id);
-    bearer.ability = { abilityId, level: 1, xp: 0, revealed: true };
+  // Tous les joueurs, remplaçants compris, portent une capacité de leur pays, et seulement celles-là.
+  const benchIds = new Set(bench.map((player) => player.id));
+  for (const player of [...starters, ...bench]) {
+    const abilityId = nationAbilityFor(nation, player, benchIds.has(player.id));
+    player.ability = { abilityId, level: 1, xp: 0, revealed: true };
   }
   const captain = starters.reduce((best, player) => (overall(player) > overall(best) ? player : best), starters[0]!);
   return { clubId, name: nation.clubName, starters, bench, formation: lineup.formation, instructions: lineup.instructions, captainId: captain.id, isHuman: false, aiStyle: nation.style };
