@@ -30,3 +30,5 @@ Thumbs.db
 
 # Ligues multijoueur sauvegardées par le serveur local
 parties/
+# Local Netlify folder
+.netlify
