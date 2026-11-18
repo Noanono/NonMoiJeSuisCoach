@@ -7,6 +7,8 @@
   import { peerHost } from './net/peerHost.svelte';
   import { crazyGames } from './platform/crazygames.svelte';
   import LinkBanner from './online/LinkBanner.svelte';
+  import { GAME_VERSION } from '../domain/game';
+  import { formatNetLog, netLog } from './net/netLog';
 
   /**
    * Salle d'attente de la ligue entre amis (MULTI-02, MULTI-03) : chacun crée son club, puis l'un d'eux
@@ -83,6 +85,23 @@
     busy = false;
   }
 
+  /**
+   * Journal réseau (MULTI-18) : quand ça ne se connecte pas, le coach l'envoie à l'hôte plutôt que « ça marche pas ».
+   * Version du jeu, navigateur et événements réseau, sans pseudo ni code serveur complet.
+   */
+  let logCopied = $state(false);
+  async function copyLog(): Promise<void> {
+    const status = client ? STATUS_LABEL[client.status] : STATUS_LABEL.idle;
+    const text = formatNetLog(netLog.entries(), { version: GAME_VERSION, userAgent: navigator.userAgent, status });
+    try {
+      await navigator.clipboard.writeText(text);
+      logCopied = true;
+      setTimeout(() => (logCopied = false), 2000);
+    } catch {
+      feedback = 'Copie impossible : ton navigateur refuse l’accès au presse-papiers.';
+    }
+  }
+
   const STATUS_LABEL = { idle: 'Déconnecté', connecting: 'Connexion à l’hôte…', online: 'Connecté à l’hôte', offline: 'Hôte injoignable', blocked: 'Réseau bloqué' } as const;
 </script>
 
@@ -99,6 +118,12 @@
         L'hôte est bien là, mais vos deux réseaux refusent de se relier directement (box en mode strict, 4G, réseau d'école ou
         d'entreprise). Essayez depuis un autre réseau, par exemple le partage de connexion d'un téléphone. On continue d'essayer.
       </p>
+    {/if}
+    {#if client?.status !== 'online'}
+      <div class="row">
+        <Button size="s" variant="ghost" onclick={copyLog}>{logCopied ? 'Journal copié !' : 'Copier le journal'}</Button>
+      </div>
+      <p class="texte-s">Envoie-le à l'hôte : il dit ce qui a coincé sur ton réseau, sans ton pseudo ni le code complet.</p>
     {/if}
     {#if shareCode}
       <p class="texte-s">Code du serveur : <span class="code">{shareCode}</span></p>

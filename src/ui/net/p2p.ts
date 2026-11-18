@@ -4,6 +4,7 @@
  * Chargé à la demande : le solo n'en a pas besoin.
  */
 import type { MessageAction, RelayConfig, RequestAction, Room, TurnServerConfig } from 'trystero';
+import { netLog } from './netLog';
 
 export const APP_ID = 'non-moi-je-suis-coach';
 /** Salle commune où les serveurs publics s'annoncent (MULTI-13). */
@@ -44,7 +45,7 @@ export interface LeagueRoom {
  * de l'appId) : qu'un ou deux soient lents ou filtrent nos annonces, et l'hôte devient introuvable. Avec 10, il
  * suffit qu'un seul relais commun aux deux joueurs fonctionne.
  */
-const RELAY_REDUNDANCY = 10;
+export const RELAY_REDUNDANCY = 10;
 
 /**
  * Relais TURN (MULTI-16) : sans lui, deux joueurs derrière des box ou réseaux stricts (4G, CGNAT, école,
@@ -142,6 +143,28 @@ function releaseWarmRoom(): void {
   void room.then((joined) => joined?.leave()).catch(() => {});
 }
 
+/** Test réseau (MULTI-18) : le temps laissé aux relais pour ouvrir leur connexion. */
+const RELAY_PROBE_MS = 6_000;
+
+/**
+ * Combien des relais Nostr de la ligue répondent : on ouvre la salle de préchauffage (mêmes relais que la ligue),
+ * puis on compte les connexions ouvertes, jusqu'à ce qu'elles le soient toutes ou que le délai soit passé.
+ */
+export async function probeRelays(waitMs = RELAY_PROBE_MS): Promise<{ open: number; total: number }> {
+  const release = prewarm();
+  try {
+    const [{ getRelaySockets }] = await Promise.all([import('trystero'), prewarmed()]);
+    const deadline = Date.now() + waitMs;
+    for (;;) {
+      const open = Object.values(getRelaySockets()).filter((socket) => socket.readyState === WebSocket.OPEN).length;
+      if (open >= RELAY_REDUNDANCY || Date.now() >= deadline) return { open: Math.min(open, RELAY_REDUNDANCY), total: RELAY_REDUNDANCY };
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  } finally {
+    release();
+  }
+}
+
 /** Deux pairs se sont trouvés mais la connexion directe a échoué (NAT strict des deux côtés, pas de TURN). */
 export type PeerFailure = { peerId: string; turnConfigured: boolean };
 
@@ -172,6 +195,8 @@ export async function joinLeagueRoom(options: {
   releaseWarmRoom();
   room.onError((error) => {
     console.warn(`[p2p] ${error.code} : ${error.message}`);
+    // Journal (MULTI-18) : le code d'erreur seul, le message peut contenir des identifiants de pairs.
+    netLog.add('erreur', `${error.code} (${options.host ? 'hôte' : 'coach'}, TURN ${turnConfig.length > 0 ? 'configuré' : 'absent'})`);
     if (error.code === 'peer-connect-failed') options.onPeerFailure?.({ peerId: error.peerId, turnConfigured: error.turnConfigured });
   });
   return {
