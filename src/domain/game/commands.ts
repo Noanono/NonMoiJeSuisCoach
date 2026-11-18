@@ -3,6 +3,8 @@
  * en multi, il les envoie au serveur, qui les exécute du point de vue du coach qui les a envoyées.
  * Seules ces commandes peuvent modifier une partie partagée.
  */
+import { applyFriendlySummary, declineFriendly } from './friendly';
+import { withRng } from './week';
 import type { MatchSummary } from '../match/types';
 import type { FacilityId, Instructions, Lineup, TrainingFocus } from '../types';
 import {
@@ -44,6 +46,8 @@ export const GAME_COMMANDS = {
   chooseRerolledAbility: (state: GameState, abilityId: string | null) => chooseRerolledAbility(state, abilityId),
   acceptJob: (state: GameState, clubId: string) => acceptJob(state, clubId),
   submitMatch: (state: GameState, summary: MatchSummary) => applyHumanMatchSummary(state, summary),
+  submitFriendly: (state: GameState, summary: MatchSummary) => withRng(state, (rng) => applyFriendlySummary(state, summary, rng)),
+  declineFriendly: (state: GameState) => declineFriendly(state),
   makeCoachOffer: (state: GameState, playerId: string, amount: number) => makeCoachOffer(state, playerId, amount),
   cancelCoachOffer: (state: GameState, offerId: string) => cancelCoachOffer(state, offerId),
   answerCoachOffer: (state: GameState, offerId: string, accept: boolean) => answerCoachOffer(state, offerId, accept),

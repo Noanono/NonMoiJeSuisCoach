@@ -39,6 +39,10 @@
     color: var(--scotch);
     border-color: var(--scotch);
   }
+  .foreign {
+    background: var(--etranger);
+    color: #fbfaf2;
+  }
   .inconnue {
     background: none;
     border-color: var(--encre-pale);

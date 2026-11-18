@@ -325,11 +325,11 @@ export class MatchController {
     }
     const team = record.side === 'home' ? this.match.home : this.match.away;
     const player = team.players.find((candidate) => candidate.id === record.playerId)!;
-    const { age, clubId, position } = player.profile;
+    const { age, clubId, position, nationality } = player.profile;
     this.fx = {
       record,
       playerName: player.name,
-      avatar: { id: player.id, age, clubId, position },
+      avatar: { id: player.id, age, clubId, position, nationality },
       own: record.side === this.coachSide,
       description: player.ability?.description ?? '',
       effects: player.ability?.effects.map(describeEffect) ?? [],

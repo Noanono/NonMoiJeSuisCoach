@@ -1,3 +1,4 @@
+import type { FriendlyMatch } from './friendly';
 import type { FinanceLine } from '../club/finance';
 import type { ClubOutlook } from '../club/model';
 import type { SeasonObjective } from '../club/president';
@@ -68,6 +69,8 @@ export interface GameState {
   jobOffers: string[];
   /** Rival de la saison (UNIV-09). */
   rivalId: string | null;
+  /** Match amical de la saison contre une équipe étrangère (UNIV-10). Absent des anciennes sauvegardes. */
+  friendly?: FriendlyMatch | null;
   /** Reroll de capacité payé, en attente du choix du coach (CAP-23). Absent des anciennes sauvegardes. */
   abilityReroll?: AbilityRerollOffer | null;
   /** Ce que la cellule de scouts du coach sait des joueurs des autres clubs (CLUB-10). Absent des anciennes sauvegardes. */

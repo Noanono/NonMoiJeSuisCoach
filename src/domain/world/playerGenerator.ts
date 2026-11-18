@@ -44,6 +44,7 @@ const RARITY_FALLBACK: Record<Rarity, Rarity[]> = {
   rare: ['rare', 'common', 'legendary', 'mythic'],
   legendary: ['legendary', 'rare', 'common', 'mythic'],
   mythic: ['mythic', 'legendary', 'rare', 'common'],
+  foreign: ['common', 'rare', 'legendary', 'mythic'],
 };
 
 export interface GeneratePlayerOptions {
@@ -146,8 +147,9 @@ interface PickAbilityOptions {
  * et absente de l'effectif (CAP-02). Si la rareté tirée est épuisée, on se replie sur une autre.
  */
 export function pickAbility({ rng, position, abilityPool, excludedAbilityIds, rarityWeights = RARITY_GENERATION_WEIGHTS }: PickAbilityOptions): Ability {
+  // Les capacités étrangères ne se tirent jamais au hasard : seuls les joueurs des nations étrangères les ont.
   const candidates = abilityPool.filter(
-    (ability) => isAbilityCompatible(ability, position) && !excludedAbilityIds.has(ability.id),
+    (ability) => ability.rarity !== 'foreign' && isAbilityCompatible(ability, position) && !excludedAbilityIds.has(ability.id),
   );
   const drawnRarity = pickWeighted(rng, rarityWeights);
   for (const rarity of RARITY_FALLBACK[drawnRarity]) {

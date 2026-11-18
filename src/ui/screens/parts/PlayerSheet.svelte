@@ -40,7 +40,7 @@
         standIn: own && player.standIn === true,
         club: own ? null : player.clubId ? (game.clubs[player.clubId]?.name ?? 'Club inconnu') : 'Sans club',
         name: fullName(player),
-        avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position },
+        avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position, nationality: player.nationality },
         position: POSITION_LABEL[player.position],
         age: player.age,
         overall: overall(player),

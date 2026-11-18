@@ -1,3 +1,4 @@
+import { scheduleFriendly } from './friendly';
 import { ABILITIES } from '../abilities/catalog';
 import { CAREER_XP_PER_SEASON, gainXp, rarityWeightsForTier } from '../abilities/progression';
 import { facilitiesOf, facilityBonus } from '../club/facilities';
@@ -47,6 +48,7 @@ export function startSeason(state: GameState, rng: Rng): void {
   });
   resetSeasonCounters(state);
   refreshAiLineups(state);
+  forEachCoach(state, () => scheduleFriendly(state, rng));
   forEachCoach(state, () => {
     state.news.push(`Le président : « ${state.objective.speech} »`);
     const rival = state.rivalId ? state.clubs[state.rivalId] : undefined;

@@ -87,6 +87,7 @@ Le jeu mêle une vraie couche de gestion (effectif, tactique, mercato, budget) e
 | UNIV-07 | Trois niveaux de difficulté au choix en début de partie (facile, normal, difficile) : budget de départ, patience du président et niveau des adversaires. |
 | UNIV-08 | Un écran de statistiques classe les buteurs, passeurs et joueurs les plus sanctionnés de chaque division, avec une équipe type ; les meilleurs sont récompensés en fin de saison. |
 | UNIV-09 | Chaque saison, un rival est tiré au sort dans la division du coach : les derbys comptent double pour le président et les sponsors, et amènent leurs propres dialogues. |
+| UNIV-10 | Quatre équipes étrangères, caricaturées avec tendresse : Grande Muraille FC (Chine), Les Fennecs de la Casbah (Algérie), Les Lions de la Teranga (Sénégal), Samba Caipirinha FC (Brésil). Chacune a ses noms, ses trombines (teint, cheveux, barbe, accessoires du pays), ses couleurs, un style de coach et deux capacités typiques de rareté Étrangère : tous ses joueurs, remplaçants compris, portent l'une de ces deux capacités et aucune autre (celle de banc pour les remplaçants quand la nation en a une). Chaque saison, le coach reçoit l'une d'elles, tirée au sort, en match amical la première semaine de mercato sans match : elle a 2 à 4 points de plus que son onze, réglé par nation (Chine −2, Algérie +3, Sénégal +3, Brésil −3) pour qu'un coach qui joue ses capacités gagne environ 40 % de ces amicaux (mesuré : 37 à 41 % contre chaque nation, 26 % de nuls). Aucun point en jeu ; la fatigue, les blessures et l'XP de capacité comptent. Une victoire lui rapporte un jeune du pays (17 à 19 ans, un peu meilleur qu'un jeune du centre de formation) avec l'une des deux capacités de sa nation. L'amical peut être décliné ; non joué, il est annulé à la fin de la semaine. |
 
 ## Capacités spéciales : règles générales
 
@@ -114,7 +115,7 @@ Le gameplay repose sur les capacités : chaque joueur en a une, personnelle, que
 | CAP-20 | Le coach peut annuler une activation tant qu'il n'a pas validé la cible : la capacité n'est alors pas consommée. |
 | CAP-21 | Une activation, du coach comme de l'adversaire, s'annonce au centre de l'écran pendant 5 secondes avec l'avatar du joueur et la description de l'effet, match en pause. Flèches vers les cibles, zone colorée et textes s'affichent sur le terrain. |
 | CAP-23 | **Fermé pour l'instant** (`ABILITY_REROLL_OPEN`), le code reste prêt à rouvrir. Reroll de capacité depuis la fiche d'un joueur du coach dont la capacité est découverte : on paie d'abord (5 % de la valeur du joueur pour une commune, 8 % rare, 15 % légendaire, 25 % mythique ; au moins 300 € au District, ×2,5 par division), puis on choisit parmi 3 capacités compatibles avec le poste et absentes de l'effectif, ou on garde l'ancienne (l'argent est perdu). Chaque proposition a 4 % de chances d'être d'une rareté au-dessus. La nouvelle capacité repart au niveau 1, XP à zéro. |
-| CAP-24 | Quotas de rareté sur la feuille de match (titulaires + remplaçants), selon la division. District : 3 rares, 0 légendaire, 0 mythique ; division 3 : 5 / 2 / 0 ; division 2 : 6 / 3 / 1 ; élite : 9 / 4 / 2. Acheter reste permis ; une compo qui dépasse ne peut pas lancer de match. L’écran Tactique affiche le compte, la compo de l’adjoint et celle des clubs IA respectent les quotas, et un club qui n’a plus assez de joueurs alignables dans les quotas fait signer des dépanneurs à capacité commune. |
+| CAP-24 | Quotas de rareté sur la feuille de match (titulaires + remplaçants), selon la division. District : 3 rares, 0 légendaire, 0 mythique ; division 3 : 5 / 2 / 0 ; division 2 : 6 / 3 / 1 ; élite : 9 / 4 / 2. Capacités étrangères : 1 en District et en division 3, 2 en division 2, 3 en élite. Acheter reste permis ; une compo qui dépasse ne peut pas lancer de match. L’écran Tactique affiche le compte, la compo de l’adjoint et celle des clubs IA respectent les quotas, et un club qui n’a plus assez de joueurs alignables dans les quotas fait signer des dépanneurs à capacité commune. |
 
 ## Catalogue des capacités
 
@@ -155,7 +156,7 @@ Aucun malus de stats ne dépasse −90 %, à aucun niveau : un joueur ne descend
 | La Symphonie | Milieu | 5 | À tout moment | Toute son équipe | +72 % à toutes les stats (son équipe) pendant 25 min |
 | Le Ciseau du camping | Attaquant | 5 | À tout moment | Lui-même | Occasion immédiate à 90 % de but ; +20 % à toutes les stats (son équipe) pendant 10 min |
 | Le Sort de la voyante | Tous postes | 5 | À tout moment | Toute l'équipe adverse | −45 % à toutes les stats (l'équipe adverse) pendant 25 min |
-| La Tournée générale | Banc | 7 | À tout moment | 6 adversaires au hasard | Hors jeu 35 min : la cible |
+| La Tournée générale | Banc | 3 | À tout moment | 3 adversaires au hasard | Hors jeu 22 min : la cible |
 
 ### Rares (22) : une mécanique à exploiter : condition, pari, marquage, moment du match
 
@@ -217,6 +218,19 @@ Aucun malus de stats ne dépasse −90 %, à aucun niveau : un joueur ne descend
 | La Machine à remonter le temps | Gardien | 7 | À tout moment (mené) | Lui-même | Efface tous les buts des 20 dernières minutes, des deux côtés ; +60 % à toutes les stats (son équipe) pendant 20 min |
 | La Résurrection | Défenseur | 7 | À tout moment | Toute son équipe | Ramène les exclus et les blessés, et remet toute l'équipe à 100 % d'énergie ; +80 % à toutes les stats (son équipe) pendant 25 min |
 | Le But qui compte double | Attaquant | 7 | À tout moment | Toute son équipe | Chaque but de son équipe compte double pendant 25 min ; +100 % à toutes les stats (son équipe) pendant 25 min |
+
+### Étrangères (8) : portées seulement par les joueurs des nations étrangères
+
+| Capacité | Nation | Poste | Coût |
+| --- | --- | --- | ---: |
+| La Grande Muraille | Chine | Défenseur | 5 |
+| Made in China | Chine | Milieu | 4 |
+| Le Thé à la menthe | Algérie | Banc | 4 |
+| Le Sirocco | Algérie | Tous postes | 4 |
+| La Lutte sénégalaise | Sénégal | Défenseur | 5 |
+| La Teranga | Sénégal | Banc | 4 |
+| Le Jogo Bonito | Brésil | Attaquant | 4 |
+| Le Carnaval | Brésil | Tous postes | 5 |
 
 ## Entraînement
 

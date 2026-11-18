@@ -1,3 +1,4 @@
+import { declineFriendly } from './friendly';
 import { runAiTransfers } from '../club/aiTransfers';
 import { getAbility } from '../abilities/catalog';
 import { pickWeeklyDialogue } from '../club/dialogues';
@@ -56,6 +57,8 @@ export function advanceWeek(state: GameState): void {
     if (!check.ok) throw new Error(check.reason);
   });
   withRng(state, (rng) => {
+    // Un amical non joué avant la fin de sa semaine est annulé (UNIV-10).
+    forEachCoach(state, () => declineFriendly(state));
     forEachCoach(state, () => (state.news = []));
     for (const fixture of weekFixtures(state)) if (!fixture.result) playAiFixture(state, fixture, rng);
     forEachCoach(state, () => updateHumanSquad(state, humanFixture(state)));

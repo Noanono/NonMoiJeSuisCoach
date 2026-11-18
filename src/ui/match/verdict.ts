@@ -110,12 +110,12 @@ export function goalAlert(state: MatchState, goal: GoalRecord, coachSide: Side):
   const [coach, other] = coachSide === 'home' ? [state.home, state.away] : [state.away, state.home];
   const scoringTeam = own ? coach : other;
   const scorer = scoringTeam.players.find((player) => player.id === goal.playerId)!;
-  const { age, clubId, position } = scorer.profile;
+  const { age, clubId, position, nationality } = scorer.profile;
   return {
     own,
     title: goal.value > 1 ? (own ? 'But en or !' : 'But en or encaissé') : own ? 'But !' : 'But encaissé',
     scorer: scorer.name,
-    avatar: { id: scorer.id, age, clubId, position },
+    avatar: { id: scorer.id, age, clubId, position, nationality },
     team: scoringTeam.name,
     minute: minuteLabel(goal.minute, goal.addedMinute),
     penalty: goal.penalty,

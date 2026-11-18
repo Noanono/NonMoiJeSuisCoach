@@ -370,7 +370,7 @@ function standardError(sum: number, sumOfSquares: number, count: number): number
   return Math.sqrt(variance / count);
 }
 
-const RARITY_LABEL: Record<Ability['rarity'], string> = { common: 'Commune', rare: 'Rare', legendary: 'Légendaire', mythic: 'Mythique' };
+const RARITY_LABEL: Record<Ability['rarity'], string> = { common: 'Commune', rare: 'Rare', legendary: 'Légendaire', mythic: 'Mythique', foreign: 'Étrangère' };
 
 const signed = (value: number) => `${value >= 0 ? '+' : '−'}${Math.abs(value).toFixed(2)}`;
 const percent = (value: number) => `${Math.round(value * 100)} %`;

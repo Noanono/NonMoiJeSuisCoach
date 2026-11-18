@@ -4,6 +4,7 @@
  * l'âge fait grisonner et dégarnir, le club habille le maillot.
  */
 import type { Player } from '../../domain/types';
+import { nationOfClub, type NationId } from '../../domain/world/nations';
 
 export type HairStyle = 'bald' | 'crew' | 'side' | 'mullet' | 'curly' | 'mohawk' | 'combover';
 export type FacialHair = 'none' | 'moustache' | 'beard' | 'goatee' | 'stubble';
@@ -32,7 +33,52 @@ export interface AvatarTraits {
   backdrop: string;
 }
 
-export type AvatarPlayer = Pick<Player, 'id' | 'age' | 'clubId' | 'position'>;
+export type AvatarPlayer = Pick<Player, 'id' | 'age' | 'clubId' | 'position'> & { nationality?: NationId | undefined };
+
+/** Trombines des nations étrangères (UNIV-10) : teints, cheveux et accessoires du pays, sans forcer les traits. */
+interface NationLook {
+  skins: readonly string[];
+  hairColors: readonly string[];
+  hair: readonly HairStyle[];
+  facial: readonly FacialHair[];
+  extras: readonly Extra[];
+  mouths: readonly Mouth[];
+}
+
+const NATION_LOOKS: Record<NationId, NationLook> = {
+  cn: {
+    skins: ['#f3d6b8', '#ecc8a2', '#e2b98f'],
+    hairColors: ['#14110f', '#1f1a16'],
+    hair: ['crew', 'side', 'side', 'mullet', 'crew'],
+    facial: ['none', 'none', 'none', 'stubble'],
+    extras: ['none', 'none', 'none', 'headband'],
+    mouths: ['flat', 'smile', 'smile'],
+  },
+  dz: {
+    skins: ['#e8b98e', '#d9a47a', '#c68a5e'],
+    hairColors: ['#14110f', '#1f1a16', '#3c2a1c'],
+    hair: ['curly', 'crew', 'side', 'crew', 'mohawk'],
+    facial: ['beard', 'stubble', 'moustache', 'none', 'beard'],
+    extras: ['none', 'none', 'none', 'earring'],
+    mouths: ['smile', 'flat', 'gap'],
+  },
+  sn: {
+    skins: ['#6f4530', '#5a3624', '#4a2c1d', '#7d4f36'],
+    hairColors: ['#14110f'],
+    hair: ['bald', 'crew', 'crew', 'mohawk', 'curly'],
+    facial: ['none', 'none', 'goatee', 'stubble'],
+    extras: ['none', 'none', 'headband', 'earring'],
+    mouths: ['smile', 'smile', 'gap', 'flat'],
+  },
+  br: {
+    skins: ['#f6d3b3', '#e0a97e', '#c68a5e', '#9a6340', '#6f4530'],
+    hairColors: ['#1f1a16', '#3c2a1c', '#6b4526'],
+    hair: ['curly', 'curly', 'mohawk', 'crew', 'mullet'],
+    facial: ['none', 'none', 'goatee', 'stubble'],
+    extras: ['headband', 'headband', 'none', 'earring'],
+    mouths: ['smile', 'smile', 'gap'],
+  },
+};
 
 const SKINS = ['#f6d3b3', '#eec19a', '#e0a97e', '#c68a5e', '#9a6340', '#6f4530'];
 const HAIR_COLORS = ['#1f1a16', '#3c2a1c', '#6b4526', '#b9863d', '#a6452a'];
@@ -79,26 +125,30 @@ export function hashSeed(text: string): number {
 const cache = new Map<string, AvatarTraits>();
 
 export function avatarTraits(player: AvatarPlayer): AvatarTraits {
-  const key = `${player.id}|${player.age}|${player.clubId ?? ''}|${player.position}`;
+  const key = `${player.id}|${player.age}|${player.clubId ?? ''}|${player.position}|${player.nationality ?? ''}`;
   const known = cache.get(key);
   if (known) return known;
   const pick = <T>(salt: string, list: readonly T[]): T => list[hashSeed(player.id + salt) % list.length]!;
-  const [jerseyColor, trimColor, backdrop] = player.clubId
-    ? CLUB_COLORS[hashSeed(player.clubId) % CLUB_COLORS.length]!
-    : FREE_AGENT_COLORS;
+  const nation = nationOfClub(player.clubId);
+  const [jerseyColor, trimColor, backdrop] = nation
+    ? nation.colors
+    : player.clubId
+      ? CLUB_COLORS[hashSeed(player.clubId) % CLUB_COLORS.length]!
+      : FREE_AGENT_COLORS;
+  const look = player.nationality ? NATION_LOOKS[player.nationality] : null;
   const veteran = player.age >= GREYING_AGE && hashSeed(player.id + 'grey') % 2 === 0;
   const receding = player.age >= BALDING_AGE && hashSeed(player.id + 'bald') % 2 === 0;
   const traits: AvatarTraits = {
     face: pick('face', FACES),
-    skin: pick('skin', SKINS),
-    hair: receding ? pick('receding', ['bald', 'combover'] as const) : pick('hair', WEIGHTED_HAIR),
-    hairColor: veteran ? GREY_HAIR : pick('hairColor', HAIR_COLORS),
-    facialHair: pick('facial', FACIAL),
+    skin: pick('skin', look?.skins ?? SKINS),
+    hair: receding ? pick('receding', ['bald', 'combover'] as const) : pick('hair', look?.hair ?? WEIGHTED_HAIR),
+    hairColor: veteran ? GREY_HAIR : pick('hairColor', look?.hairColors ?? HAIR_COLORS),
+    facialHair: pick('facial', look?.facial ?? FACIAL),
     nose: pick('nose', NOSES),
     eyes: pick('eyes', EYES),
     brows: pick('brows', BROWS),
-    mouth: pick('mouth', MOUTHS),
-    extra: pick('extra', EXTRAS),
+    mouth: pick('mouth', look?.mouths ?? MOUTHS),
+    extra: pick('extra', look?.extras ?? EXTRAS),
     // Le maillot rayé est un motif de club, le gardien porte sa couleur.
     jersey: player.clubId ? JERSEYS[hashSeed(player.clubId + 'jersey') % JERSEYS.length]! : 'plain',
     jerseyColor: player.position === 'GK' ? KEEPER_JERSEY : jerseyColor,
