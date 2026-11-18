@@ -23,6 +23,10 @@ import type { MatchState, MatchSummary } from '../domain/match/types';
 import type { DuelView } from '../server/duel';
 import { MultiClient } from './multiClient.svelte';
 import type { Transport } from './net/transport';
+import { peerHost } from './net/peerHost.svelte';
+import { PeerTransport } from './net/peerTransport';
+import { formatCode, parseCode } from './net/serverCode';
+import { crazyGames } from './platform/crazygames.svelte';
 import type { SaveSlot, SlotSummary } from '../domain/save/saveSlots';
 
 export type Screen = 'title' | 'lobby' | 'dashboard' | 'squad' | 'tactics' | 'training' | 'market' | 'club' | 'competitions' | 'stats' | 'match';
@@ -30,7 +34,15 @@ export type Screen = 'title' | 'lobby' | 'dashboard' | 'squad' | 'tactics' | 'tr
 /** Délai d'écriture après une action de gestion : on regroupe les clics (green code). */
 const AUTOSAVE_DELAY_MS = 1500;
 
-const saves = createGameSaves(globalThis.localStorage);
+/** Écrans de menu : tout le reste est du jeu, signalé à CrazyGames (PLAT-04). */
+const MENU_SCREENS: ReadonlySet<Screen> = new Set(['title', 'lobby']);
+
+/** Créées au premier usage : sur CrazyGames, le stockage du compte n'est prêt qu'après l'initialisation du SDK. */
+let gameSaves: ReturnType<typeof createGameSaves> | null = null;
+function saves(): ReturnType<typeof createGameSaves> {
+  gameSaves ??= createGameSaves(crazyGames.storage());
+  return gameSaves;
+}
 
 class AppStore {
   game = $state.raw<GameState | null>(null);
@@ -84,6 +96,7 @@ class AppStore {
   go(screen: Screen): void {
     this.screen = screen;
     document.documentElement.dataset.theme = screen === 'match' ? 'dark' : 'light';
+    crazyGames.setGameplay(!MENU_SCREENS.has(screen));
   }
 
   // --- Ligue entre amis (MULTI-01 à MULTI-05) ---------------------------------------
@@ -113,6 +126,37 @@ class AppStore {
     this.slot = null;
     client.connect();
     this.go('lobby');
+  }
+
+  /**
+   * Rejoint la ligue d'un ami par le code de son serveur (MULTI-12), tapé, choisi dans la liste ou reçu par une
+   * invitation CrazyGames (PLAT-05). Une partie solo en cours est sauvegardée avant. Renvoie `false` si le code est faux.
+   */
+  joinServer(raw: string): boolean {
+    const parsed = parseCode(raw);
+    if (!parsed) return false;
+    const code = formatCode(parsed);
+    if (this.multi && this.serverCode === code) return true;
+    this.saveNow();
+    this.openMultiplayer(() => new PeerTransport(parsed), code);
+    return true;
+  }
+
+  /**
+   * Multijoueur instantané (PLAT-06) : lancé depuis l'accueil multijoueur de CrazyGames, le joueur héberge
+   * tout de suite une ligue privée (son serveur déjà en ligne, sinon le premier emplacement libre) et entre
+   * dans sa salle d'attente, où ses amis peuvent le rejoindre. Renvoie `false` si les 3 ligues sont prises.
+   */
+  async startInstantLeague(): Promise<boolean> {
+    if (peerHost.status !== 'online') {
+      await peerHost.refreshSlots();
+      const free = peerHost.slots.find((entry) => entry.status === 'empty');
+      if (!free) return false;
+      const reply = await peerHost.open(free.slot);
+      if (!reply.ok) return false;
+    }
+    this.openMultiplayer(() => peerHost.loopback());
+    return true;
   }
 
   /** Code de reprise accepté : ce navigateur a changé d'identité, on se reconnecte avec elle (C10). */
@@ -166,7 +210,9 @@ class AppStore {
 
   /** Partie officielle envoyée par le serveur, du point de vue de ce coach. */
   private receiveGame(game: GameState): void {
+    const tierBefore = this.game ? humanTier(this.game) : null;
     this.game = game;
+    this.#celebratePromotion(tierBefore);
     this.version += 1;
     if (this.screen === 'lobby' || this.screen === 'title') this.go('dashboard');
   }
@@ -174,7 +220,7 @@ class AppStore {
   // --- Sauvegardes (TECH-03, TECH-04) -------------------------------------------------
 
   listSlots(): SlotSummary[] {
-    return saves.list();
+    return saves().list();
   }
 
   startNewGame(slot: SaveSlot, clubName: string, difficulty: Difficulty = 'normal'): void {
@@ -186,7 +232,7 @@ class AppStore {
   }
 
   load(slot: SaveSlot): void {
-    const game = saves.load(slot);
+    const game = saves().load(slot);
     // Anciennes sauvegardes : les capacités de son effectif sont désormais toujours connues (CLUB-10).
     if (game) revealOwnSquads(game);
     this.game = game;
@@ -196,7 +242,7 @@ class AppStore {
   }
 
   removeSlot(slot: SaveSlot): void {
-    saves.remove(slot);
+    saves().remove(slot);
   }
 
   quitToTitle(): void {
@@ -215,7 +261,7 @@ class AppStore {
     // En multi, c'est le serveur de l'hôte qui sauvegarde.
     if (!this.game || !this.slot || this.multi) return;
     try {
-      saves.save(this.slot, this.game, saveMeta(this.game));
+      saves().save(this.slot, this.game, saveMeta(this.game));
     } catch (error) {
       this.notify(error instanceof Error ? error.message : 'Sauvegarde impossible.');
     }
@@ -232,7 +278,9 @@ class AppStore {
   nextWeek(): void {
     const multi = this.multi;
     if (!multi) {
+      const tierBefore = this.game ? humanTier(this.game) : null;
       this.run(advanceWeek);
+      this.#celebratePromotion(tierBefore);
       this.saveNow();
       return;
     }
@@ -241,6 +289,11 @@ class AppStore {
       if (!reply.ok) this.notify(reply.message ?? 'Pas encore.');
       else if (ready) this.notify((reply.value as { advanced?: boolean } | undefined)?.advanced ? reply.message ?? 'Semaine suivante !' : 'Prêt ! On attend les autres coachs.');
     });
+  }
+
+  /** Montée en division supérieure : confettis sur CrazyGames, moment rare (PLAT-04). */
+  #celebratePromotion(tierBefore: number | null): void {
+    if (this.game && tierBefore !== null && humanTier(this.game) < tierBefore) crazyGames.celebrate();
   }
 
   kickOff(): void {
@@ -274,4 +327,13 @@ class AppStore {
   }
 }
 
+/** Niveau de la division du club du coach (1 = élite). */
+function humanTier(game: GameState): number {
+  const divisionId = game.clubs[game.humanClubId]?.divisionId;
+  return game.divisions.find((division) => division.id === divisionId)?.tier ?? Number.POSITIVE_INFINITY;
+}
+
 export const store = new AppStore();
+
+crazyGames.onStorageError((message) => store.notify(`Sauvegarde dans ton compte CrazyGames impossible : ${message}`));
+

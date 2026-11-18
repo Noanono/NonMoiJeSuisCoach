@@ -4,16 +4,21 @@ import type { Rng } from '../core/rng';
 import type { Ability, Player, Rarity } from '../types';
 import { isAbilityCompatible } from '../world/playerGenerator';
 import { LEGACY_ABILITY_RARITY } from './legacyAbilities';
-import { createSaveStore, type SaveStorage, type SaveStore } from '../save/saveSlots';
+import { createSaveStore, SAVE_SLOTS, type SaveStorage, type SaveStore } from '../save/saveSlots';
 import { chooseRival } from './season';
 import { humanClub } from './selectors';
 import { GAME_VERSION, type GameState } from './state';
 import { withRng } from './week';
 
+const GAME_SAVE_PREFIX = 'nmjsc';
+
+/** Clés de stockage des emplacements de partie : le stockage du compte CrazyGames les précharge (PLAT-03). */
+export const GAME_SAVE_KEYS: readonly string[] = SAVE_SLOTS.map((slot) => `${GAME_SAVE_PREFIX}${slot}`);
+
 /** Sauvegardes locales de la partie (TECH-03, TECH-04). */
 export function createGameSaves(storage: SaveStorage): SaveStore<GameState> {
   return createSaveStore<GameState>(storage, {
-    keyPrefix: 'nmjsc',
+    keyPrefix: GAME_SAVE_PREFIX,
     version: GAME_VERSION,
     validate: isGameState,
     migrate: migrateGame,

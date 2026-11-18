@@ -65,3 +65,13 @@ button {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* CrazyGames (PLAT-07) : sur tablette, un appui long ne sélectionne pas toute la page. Les champs et les codes restent sélectionnables. */
+html.crazygames body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+html.crazygames :is(input, textarea, .code) {
+  -webkit-user-select: text;
+  user-select: text;
+}

@@ -5,6 +5,7 @@
   import { store } from './store.svelte';
   import { savedProfile } from './multiClient.svelte';
   import { peerHost } from './net/peerHost.svelte';
+  import { crazyGames } from './platform/crazygames.svelte';
 
   /**
    * Salle d'attente de la ligue entre amis (MULTI-02, MULTI-03) : chacun crée son club, puis l'un d'eux
@@ -12,8 +13,10 @@
    */
   const client = $derived(store.multi);
   const profile = savedProfile();
-  let name = $state(profile.name);
-  let clubName = $state(profile.clubName);
+  /** Sur CrazyGames, le coach porte le pseudo de son compte : ses amis le reconnaissent (PLAT-02). */
+  const username = crazyGames.username;
+  let name = $state(username ?? profile.name);
+  let clubName = $state(profile.clubName || (username ? `FC ${username.split('.')[0]}` : ''));
   let feedback = $state<string | null>(null);
   let busy = $state(false);
 
@@ -23,12 +26,27 @@
 
   async function join(event: SubmitEvent): Promise<void> {
     event.preventDefault();
+    await register();
+  }
+
+  async function register(): Promise<void> {
     if (!client) return;
     busy = true;
     const reply = await client.join({ name, clubName });
     busy = false;
     feedback = reply.ok ? (playing ? 'Bienvenue dans la ligue !' : 'Inscrit. On attend les copains.') : (reply.message ?? 'Inscription refusée.');
   }
+
+  /**
+   * Arrivé par une invitation ou le multijoueur instantané avec un compte CrazyGames : on l'inscrit tout seul
+   * dans la salle d'attente, il n'a rien à remplir (PLAT-05). Une ligue déjà lancée attend son clic : il y reprend un club.
+   */
+  let autoRegistered = false;
+  $effect(() => {
+    if (!username || autoRegistered || !client?.synced || client.joined || playing || client.status !== 'online') return;
+    autoRegistered = true;
+    void register();
+  });
 
   async function start(): Promise<void> {
     if (!client) return;
@@ -40,6 +58,20 @@
 
   /** Code à partager : celui de l'hôte s'il joue dans sa propre ligue, sinon celui du serveur rejoint. */
   const shareCode = $derived(store.serverCode ?? (peerHost.status === 'online' ? peerHost.codeText : null));
+
+  /** Lien d'invitation CrazyGames vers cette ligue ; absent hors CrazyGames (le code suffit). */
+  const inviteLink = $derived(shareCode ? crazyGames.inviteLink(shareCode) : null);
+  let copied = $state(false);
+  async function copyInvite(): Promise<void> {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      copied = true;
+      setTimeout(() => (copied = false), 2000);
+    } catch {
+      feedback = 'Copie impossible : partage le code du serveur.';
+    }
+  }
 
   /** Reprise de son club depuis ce navigateur, avec le code de l'hôte (C10). */
   let claimCode = $state('');
@@ -62,6 +94,9 @@
     {/if}
     {#if shareCode}
       <p class="texte-s">Code du serveur : <span class="code">{shareCode}</span></p>
+      {#if inviteLink}
+        <Button size="s" onclick={copyInvite}>{copied ? 'Lien copié !' : 'Copier le lien d’invitation'}</Button>
+      {/if}
     {/if}
   </header>
 
@@ -79,7 +114,8 @@
       {/if}
       <form onsubmit={join}>
         <label class="tampon" for="coach-nom">Nom de coach</label>
-        <input id="coach-nom" bind:value={name} maxlength="24" placeholder="Coach Raymond" required />
+        <input id="coach-nom" bind:value={name} maxlength="24" placeholder="Coach Raymond" required readonly={username !== null} />
+        {#if username}<p class="texte-s discret">Ton pseudo CrazyGames : tes amis te reconnaissent.</p>{/if}
         <label class="tampon" for="coach-club">Nom du club</label>
         <input id="coach-club" bind:value={clubName} maxlength="40" placeholder="Les Gros Mollets" required />
         <div class="row">

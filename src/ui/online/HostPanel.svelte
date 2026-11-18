@@ -7,7 +7,8 @@
   import Card from '../kit/Card.svelte';
   import { store } from '../store.svelte';
   import { peerHost } from '../net/peerHost.svelte';
-  import { savedProfile } from '../net/identity';
+  import { defaultCoachName } from '../net/identity';
+  import { crazyGames } from '../platform/crazygames.svelte';
   import { SERVER_NAME_MAX } from '../net/publicDirectory';
   import type { SlotInfo } from '../../server/hub';
 
@@ -16,7 +17,7 @@
   let confirmStop = $state(false);
   let feedback = $state<string | null>(null);
   let copied = $state<'code' | 'lien' | null>(null);
-  let serverName = $state(host.serverName || `Ligue de ${savedProfile().name || 'l’hôte'}`);
+  let serverName = $state(host.serverName || `Ligue de ${defaultCoachName() || 'l’hôte'}`);
   let busy = $state(false);
 
   $effect(() => {
@@ -24,7 +25,10 @@
   });
 
   const online = $derived(host.status === 'online' && host.code !== null);
-  const link = $derived(host.codeText ? `${location.origin}${location.pathname}#rejoindre=${encodeURIComponent(host.codeText)}` : '');
+  /** Sur CrazyGames, le lien mène à la page du jeu sur le site (le jeu y tourne dans un cadre) (PLAT-05). */
+  const link = $derived(
+    host.codeText ? (crazyGames.inviteLink(host.codeText) ?? `${location.origin}${location.pathname}#rejoindre=${encodeURIComponent(host.codeText)}`) : '',
+  );
 
   async function run(action: () => Promise<unknown>): Promise<void> {
     busy = true;

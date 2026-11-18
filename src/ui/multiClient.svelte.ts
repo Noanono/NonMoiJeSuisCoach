@@ -71,6 +71,8 @@ export class MultiClient {
   phase = $state<'lobby' | 'playing'>('lobby');
   /** Inscrit dans la ligue (salle d'attente ou partie). */
   joined = $state(false);
+  /** L'hôte a répondu au moins une fois : `phase` et `joined` sont fiables. */
+  synced = $state(false);
   coaches = $state<CoachPresence[]>([]);
   /** Match en direct contre un autre coach (MULTI-07), et l'instant où on l'a reçu (comptes à rebours). */
   duel = $state.raw<DuelView | null>(null);
@@ -159,6 +161,7 @@ export class MultiClient {
       return;
     }
     this.coaches = message.coaches;
+    this.synced = true;
     if (message.type === 'lobby') {
       this.phase = message.phase;
       this.joined = message.you !== null;
