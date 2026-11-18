@@ -30,7 +30,7 @@ describe('équipes étrangères (UNIV-10)', () => {
     expect(Object.keys(NATIONS)).toContain(friendly.nationId);
   });
 
-  test('l’équipe étrangère : noms et trombines du pays, rien que ses deux capacités, et 5 à 8 points de plus que le onze du coach', () => {
+  test('l’équipe étrangère : noms et trombines du pays, rien que ses deux capacités, et à peu près le niveau du onze du coach', () => {
     const state = newGame({ seed: 111 });
     const coachLevel = humanSquad(state).map(overall).sort((a, b) => b - a).slice(0, 11).reduce((sum, value) => sum + value, 0) / 11;
     for (const nation of Object.values(NATIONS)) {
@@ -44,8 +44,8 @@ describe('équipes étrangères (UNIV-10)', () => {
       // Seulement les capacités de leur pays, remplaçants compris.
       expect(abilities.every((id) => nation.abilityIds.includes(id))).toBe(true);
       const average = sheet.starters.reduce((sum, player) => sum + overall(player), 0) / sheet.starters.length;
-      expect(average).toBeGreaterThan(coachLevel + 2);
-      expect(average).toBeLessThan(coachLevel + 12);
+      expect(average).toBeGreaterThan(coachLevel - 4);
+      expect(average).toBeLessThan(coachLevel + 10);
     }
   });
 
