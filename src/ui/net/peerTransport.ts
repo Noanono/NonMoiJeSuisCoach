@@ -9,9 +9,10 @@
 import { GAME_VERSION } from '../../domain/game';
 import { canGunzip, unpackMessage } from './gzip';
 import { localCoachId, localCoachSecret } from './identity';
+import { codeHint, netLog } from './netLog';
 import { joinLeagueRoom, prewarm, prewarmed, REQUEST_TIMEOUT_MS, retryDelay, type LeagueRoom } from './p2p';
 import { roomIdOf, type ServerCode } from './serverCode';
-import { parseServerMessage, type ApiResult, type Transport, type TransportHandlers } from './transport';
+import { parseServerMessage, type ApiResult, type ConnectionStatus, type Transport, type TransportHandlers } from './transport';
 
 /** Première connexion : sans hôte au bout de ce délai, on le dit et on rejoint la salle à nouveau. */
 const FIRST_WAIT_MS = 20_000;
@@ -29,6 +30,8 @@ export class PeerTransport implements Transport {
   readonly #coachId = localCoachId();
   readonly #secret = localCoachSecret();
   #handlers: TransportHandlers | null = null;
+  /** Dernier état annoncé : le journal ne note que les changements. */
+  #status: ConnectionStatus = 'idle';
   #league: LeagueRoom | null = null;
   #hostPeer: string | null = null;
   #closed = false;
@@ -48,7 +51,7 @@ export class PeerTransport implements Transport {
   };
   readonly #onOnline = () => void this.#check();
   readonly #onOffline = () => {
-    if (!this.#hostPeer) this.#handlers?.status('offline');
+    if (!this.#hostPeer) this.#setStatus('offline');
   };
 
   constructor(code: ServerCode) {
@@ -58,7 +61,8 @@ export class PeerTransport implements Transport {
   connect(handlers: TransportHandlers): void {
     this.#handlers = handlers;
     if (this.#league || this.#opening || this.#closed) return;
-    handlers.status('connecting');
+    netLog.add('connexion', `serveur ${codeHint(this.#code.secret)}`);
+    this.#setStatus('connecting');
     if (typeof window !== 'undefined') {
       document.addEventListener('visibilitychange', this.#onVisible);
       window.addEventListener('online', this.#onOnline);
@@ -68,10 +72,23 @@ export class PeerTransport implements Transport {
     void this.#open(FIRST_WAIT_MS);
   }
 
+  /** Annonce l'état de la liaison, et note dans le journal réseau (MULTI-18) ceux qui aident à comprendre un échec. */
+  #setStatus(status: ConnectionStatus): void {
+    const changed = status !== this.#status;
+    this.#status = status;
+    if (changed && status === 'online') netLog.add('connecte', 'relié à l’hôte');
+    if (changed && (status === 'blocked' || status === 'offline')) {
+      const label = status === 'blocked' ? 'réseau bloqué (hôte trouvé, connexion directe refusée)' : 'hôte injoignable';
+      netLog.add('etat', `${label}, ${Math.round((Date.now() - this.#lostAt) / 1000)} s sans hôte`);
+    }
+    this.#handlers?.status(status);
+  }
+
   /** Rejoint la salle (à nouveau), puis laisse `wait` ms à l'hôte pour se montrer. */
   async #open(wait: number): Promise<void> {
     if (this.#opening || this.#closed) return;
     this.#opening = true;
+    if (this.#league) netLog.add('reconnexion', `tentative ${this.#attempt}${this.#failed ? ', après un échec de connexion directe' : ''}`);
     this.#failed = false;
     // Trystero refuse de rejoindre une salle qu'on n'a pas quittée : on quitte d'abord l'ancienne, en gardant
     // les connexions aux relais ouvertes par la salle de préchauffage le temps de rejoindre la nouvelle.
@@ -96,14 +113,15 @@ export class PeerTransport implements Transport {
         onPeerFailure: () => {
           if (this.#league !== league || this.#hostPeer || this.#closed) return;
           this.#failed = true;
-          this.#handlers?.status('blocked');
+          this.#setStatus('blocked');
         },
       });
     } catch (error) {
       console.warn('[p2p] salle injoignable', error);
+      netLog.add('erreur', 'salle injoignable (relais ou Trystero)');
       cooldown?.();
       this.#opening = false;
-      this.#handlers?.status('offline');
+      this.#setStatus('offline');
       this.#schedule(retryDelay(this.#attempt));
       return;
     }
@@ -133,19 +151,20 @@ export class PeerTransport implements Transport {
       room.onPeerLeave(({ peerId }) => {
         if (peerId !== this.#hostPeer || this.#league !== league) return;
         // L'hôte a fermé son onglet, ou la liaison a lâché : on lui laisse un peu de temps, puis on rejoint la salle.
-        this.#lost();
+        this.#lost('l’hôte a quitté la salle');
       }),
     );
     this.#schedule(wait);
   }
 
   /** L'hôte vient de disparaître. */
-  #lost(): void {
+  #lost(reason: string): void {
     if (this.#closed) return;
+    netLog.add('hote-perdu', reason);
     this.#hostPeer = null;
     this.#attempt = 0;
     this.#lostAt = Date.now();
-    this.#handlers?.status('connecting');
+    this.#setStatus('connecting');
     this.#schedule(retryDelay(0));
   }
 
@@ -154,7 +173,7 @@ export class PeerTransport implements Transport {
     this.#retryTimer = setTimeout(() => {
       this.#retryTimer = null;
       if (this.#hostPeer || this.#closed) return;
-      this.#handlers?.status(this.#failed ? 'blocked' : Date.now() - this.#lostAt >= OFFLINE_AFTER_MS ? 'offline' : 'connecting');
+      this.#setStatus(this.#failed ? 'blocked' : Date.now() - this.#lostAt >= OFFLINE_AFTER_MS ? 'offline' : 'connecting');
       this.#attempt += 1;
       void this.#open(retryDelay(this.#attempt));
     }, delay);
@@ -177,7 +196,7 @@ export class PeerTransport implements Transport {
       new Promise<boolean>((resolve) => setTimeout(() => resolve(false), PING_TIMEOUT_MS)),
     ]);
     if (!alive && this.#league === league && this.#hostPeer === host) {
-      this.#lost();
+      this.#lost('l’hôte ne répond plus au ping (retour sur l’onglet ou du réseau)');
       this.reconnect();
     }
   }
@@ -192,7 +211,7 @@ export class PeerTransport implements Transport {
       reply = await this.#call('hello', { coachId: this.#coachId, secret: this.#secret, version: GAME_VERSION, gzip: canGunzip });
     } catch {
       // Hôte trouvé mais muet : liaison à moitié établie. On repart sur une salle neuve.
-      if (!this.#closed) this.#lost();
+      if (!this.#closed) this.#lost('l’hôte ne répond pas à la présentation');
       return;
     }
     if (this.#closed) return;
@@ -200,7 +219,7 @@ export class PeerTransport implements Transport {
       if (this.#retryTimer) clearTimeout(this.#retryTimer);
       this.#retryTimer = null;
       this.#attempt = 0;
-      this.#handlers?.status('online');
+      this.#setStatus('online');
       return;
     }
     this.#handlers?.message({ type: 'closed', message: reply.message ?? 'L’hôte a refusé la connexion.' });
@@ -244,7 +263,7 @@ export class PeerTransport implements Transport {
     if (this.#closed || this.#opening || this.#hostPeer) return;
     if (this.#retryTimer) clearTimeout(this.#retryTimer);
     this.#retryTimer = null;
-    this.#handlers?.status('connecting');
+    this.#setStatus('connecting');
     void this.#open(retryDelay(this.#attempt));
   }
 
@@ -265,6 +284,6 @@ export class PeerTransport implements Transport {
     void this.#league?.room.leave();
     this.#league = null;
     this.#hostPeer = null;
-    this.#handlers?.status('idle');
+    this.#setStatus('idle');
   }
 }
