@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, td, type MessageKey } from '../../i18n/t';
   import './parts/screens.css';
   import Button from '../kit/Button.svelte';
   import Card from '../kit/Card.svelte';
@@ -51,10 +52,10 @@
           position: player.position,
           age: player.age,
           overall: listing.overall,
-          club: listing.clubId ? (game.clubs[listing.clubId]?.shortName ?? '?') : 'Libre',
-          clubName: listing.clubId ? (game.clubs[listing.clubId]?.name ?? 'Club inconnu') : 'Sans club',
+          club: listing.clubId ? (game.clubs[listing.clubId]?.shortName ?? '?') : t('market.free'),
+          clubName: listing.clubId ? (game.clubs[listing.clubId]?.name ?? t('sheet.unknownClub')) : t('sheet.noClub'),
           // Rareté toujours visible ; nom de la capacité et potentiel selon la cellule de scouts (CLUB-10).
-          ability: listing.ability && abilityKnown(game, player) ? `${getAbility(listing.ability.abilityId).name} · ${RARITY_LABEL[listing.ability.rarity]} · niv. ${player.ability.level}` : `??? · ${RARITY_LABEL[listing.ability!.rarity]}`,
+          ability: listing.ability && abilityKnown(game, player) ? `${td(getAbility(listing.ability.abilityId).name)} · ${td(RARITY_LABEL[listing.ability.rarity])} · ${t('offers.level', { level: player.ability.level })}` : `??? · ${td(RARITY_LABEL[listing.ability!.rarity])}`,
           abilityLevel: player.ability.level,
           rarity: listing.ability?.rarity ?? null,
           potential: potentialView(game, player),
@@ -74,22 +75,22 @@
 
   interface Column {
     key: SortKey;
-    label: string;
+    label: MessageKey;
     numeric: boolean;
     sortValue: (row: Listing) => number | string;
     firstDirection: SortDirection;
   }
 
   const COLUMNS: Column[] = [
-    { key: 'name', label: 'Nom', numeric: false, sortValue: (row) => row.name, firstDirection: 'asc' },
-    { key: 'position', label: 'Poste', numeric: false, sortValue: (row) => POSITION_ORDER[row.position], firstDirection: 'asc' },
-    { key: 'age', label: 'Âge', numeric: true, sortValue: (row) => row.age, firstDirection: 'asc' },
-    { key: 'overall', label: 'Note', numeric: true, sortValue: (row) => row.overall, firstDirection: 'desc' },
-    { key: 'potential', label: 'Potentiel', numeric: true, sortValue: (row) => potentialSortValue(row.potential), firstDirection: 'desc' },
-    { key: 'club', label: 'Club', numeric: false, sortValue: (row) => row.club, firstDirection: 'asc' },
-    { key: 'ability', label: 'Capacité', numeric: false, sortValue: (row) => (row.rarity ? RARITY_ORDER[row.rarity] * 10 + row.abilityLevel : 0), firstDirection: 'desc' },
-    { key: 'price', label: 'Prix', numeric: true, sortValue: (row) => row.price, firstDirection: 'asc' },
-    { key: 'salary', label: 'Salaire / sem.', numeric: true, sortValue: (row) => row.salary, firstDirection: 'asc' },
+    { key: 'name', label: 'squad.col.name', numeric: false, sortValue: (row) => row.name, firstDirection: 'asc' },
+    { key: 'position', label: 'squad.col.position', numeric: false, sortValue: (row) => POSITION_ORDER[row.position], firstDirection: 'asc' },
+    { key: 'age', label: 'squad.col.age', numeric: true, sortValue: (row) => row.age, firstDirection: 'asc' },
+    { key: 'overall', label: 'squad.col.overall', numeric: true, sortValue: (row) => row.overall, firstDirection: 'desc' },
+    { key: 'potential', label: 'sheet.potential', numeric: true, sortValue: (row) => potentialSortValue(row.potential), firstDirection: 'desc' },
+    { key: 'club', label: 'shell.tabs.club', numeric: false, sortValue: (row) => row.club, firstDirection: 'asc' },
+    { key: 'ability', label: 'squad.col.ability', numeric: false, sortValue: (row) => (row.rarity ? RARITY_ORDER[row.rarity] * 10 + row.abilityLevel : 0), firstDirection: 'desc' },
+    { key: 'price', label: 'market.price', numeric: true, sortValue: (row) => row.price, firstDirection: 'asc' },
+    { key: 'salary', label: 'market.salary', numeric: true, sortValue: (row) => row.salary, firstDirection: 'asc' },
   ];
 
   let openPlayerId = $state<string | null>(null);
@@ -162,83 +163,83 @@
 
 <div class="ecran">
   <div class="colonnes large-gauche">
-    <Card title="Mercato" scotch>
+    <Card title={t('shell.tabs.market')} scotch>
       {#snippet actions()}
-        <span class="tampon">Budget {formatEuros(transferWindow.budget)} · {transferWindow.squadSize} / {MAX_SQUAD_SIZE} joueurs · {transferWindow.reports} rapport{transferWindow.reports > 1 ? 's' : ''} de scout</span>
+        <span class="tampon">{t('market.summary', { budget: formatEuros(transferWindow.budget), size: transferWindow.squadSize, max: MAX_SQUAD_SIZE, reports: transferWindow.reports })}</span>
       {/snippet}
       {#if transferWindow.open}
-        <p class="texte-fort">Fenêtre ouverte jusqu'à la fin de la semaine <span class="mono">{transferWindow.closing}</span> : achète, vends, négocie.</p>
+        <p class="texte-fort">{t('market.open', { week: transferWindow.closing ?? '' })}</p>
       {:else if transferWindow.nextOpening}
-        <p class="texte-fort">Mercato fermé. Prochaine ouverture : semaine <span class="mono">{transferWindow.nextOpening}</span>.</p>
+        <p class="texte-fort">{t('market.closedNext', { week: transferWindow.nextOpening })}</p>
       {:else}
-        <p class="texte-fort">Mercato fermé jusqu'à la saison prochaine (semaine <span class="mono">1</span>).</p>
+        <p class="texte-fort">{t('market.closedSeason')}</p>
       {/if}
-      <p class="texte-s discret">Capacité affichée seulement si elle est connue. Les autres se dévoilent à l'arrivée au club.</p>
+      <p class="texte-s discret">{t('market.abilityNote')}</p>
     </Card>
 
-    <Card title="Offres reçues">
+    <Card title={t('dashboard.offers')}>
       <OffersList />
     </Card>
   </div>
 
-  <Card title="Joueurs disponibles">
+  <Card title={t('market.available')}>
     {#snippet actions()}
-      <span class="tampon">{filtered.length} joueurs</span>
+      <span class="tampon">{t('lineup.players', { count: filtered.length })}</span>
     {/snippet}
-    <form class="filtres" onsubmit={(event) => event.preventDefault()} aria-label="Filtres du mercato">
+    <form class="filtres" onsubmit={(event) => event.preventDefault()} aria-label={t('market.filters')}>
       <label class="champ">
-        <span class="tampon">Poste</span>
+        <span class="tampon">{t('squad.col.position')}</span>
         <select bind:value={positionFilter} onchange={resetPaging}>
-          <option value="all">Tous</option>
+          <option value="all">{t('market.all')}</option>
           {#each POSITIONS as position (position)}<option value={position}>{POSITION_LABEL[position]}</option>{/each}
         </select>
       </label>
       <label class="champ">
-        <span class="tampon">Âge</span>
+        <span class="tampon">{t('squad.col.age')}</span>
         <select bind:value={ageFilter} onchange={resetPaging}>
-          <option value="all">Tous</option>
-          {#each AGE_BANDS as band (band.id)}<option value={band.id}>{band.label}</option>{/each}
+          <option value="all">{t('market.all')}</option>
+          {#each AGE_BANDS as band (band.id)}<option value={band.id}>{td(band.label)}</option>{/each}
         </select>
       </label>
       <label class="champ">
-        <span class="tampon">Rareté</span>
+        <span class="tampon">{t('sheet.rarity')}</span>
         <select bind:value={rarityFilter} onchange={resetPaging}>
-          <option value="all">Toutes</option>
-          {#each RARITIES as rarity (rarity)}<option value={rarity}>{RARITY_LABEL[rarity]}</option>{/each}
+          <option value="all">{t('market.allFeminine')}</option>
+          {#each RARITIES as rarity (rarity)}<option value={rarity}>{td(RARITY_LABEL[rarity])}</option>{/each}
         </select>
       </label>
       <label class="champ">
-        <span class="tampon">Trier par</span>
+        <span class="tampon">{t('squad.sortBy')}</span>
         <select bind:value={sortKey} onchange={resetPaging}>
-          {#each COLUMNS as column (column.key)}<option value={column.key}>{column.label}</option>{/each}
+          {#each COLUMNS as column (column.key)}<option value={column.key}>{t(column.label)}</option>{/each}
         </select>
       </label>
       <label class="champ">
-        <span class="tampon">Note minimale</span>
+        <span class="tampon">{t('market.minOverall')}</span>
         <input type="number" min="1" max="99" inputmode="numeric" bind:value={minOverall} oninput={resetPaging} />
       </label>
       <label class="champ">
-        <span class="tampon">Prix maximal (€)</span>
+        <span class="tampon">{t('market.maxPrice')}</span>
         <input type="number" min="0" step="100" inputmode="numeric" bind:value={maxPrice} oninput={resetPaging} />
       </label>
     </form>
 
     {#if filtered.length === 0}
-      <p class="vide">Personne ne veut venir. Pour l'instant.</p>
+      <p class="vide">{t('market.nobody')}</p>
     {:else}
       <div class="defilant">
         <table class="tableau">
-          <caption class="sr-only">Joueurs du mercato</caption>
+          <caption class="sr-only">{t('market.caption')}</caption>
           <thead>
             <tr>
               {#each COLUMNS as column (column.key)}
                 <th scope="col" class:num={column.numeric} aria-sort={ariaSort(column.key)}>
                   <button class="tri" onclick={() => sortBy(column)}>
-                    {column.label}{#if sortKey === column.key}<span aria-hidden="true">{direction === 'asc' ? ' ▲' : ' ▼'}</span>{/if}
+                    {t(column.label)}{#if sortKey === column.key}<span aria-hidden="true">{direction === 'asc' ? ' ▲' : ' ▼'}</span>{/if}
                   </button>
                 </th>
               {/each}
-              <th scope="col"><span class="sr-only">Action</span></th>
+              <th scope="col"><span class="sr-only">{t('market.action')}</span></th>
             </tr>
           </thead>
           <tbody>
@@ -260,32 +261,32 @@
                       size="s"
                       variant="ghost"
                       disabled={transferWindow.reports === 0}
-                      aria-label={`Envoyer un scout sur ${listing.name}`}
+                      aria-label={t('market.scoutLabel', { name: listing.name })}
                       onclick={() => scout(listing.id)}
                     >
-                      Scouter
+                      {t('market.scout')}
                     </Button>
                   {/if}
                   {#if listing.coachOwned}
                     {#if offerFor === listing.id}
                       <form class="offre-coach" onsubmit={(event) => sendOffer(event, listing.id)}>
-                        <input type="number" min="1" step="1" bind:value={offerAmount} aria-label="Montant de l'offre" />
-                        <Button size="s" type="submit">Envoyer</Button>
-                        <Button size="s" variant="ghost" onclick={() => (offerFor = null)}>Annuler</Button>
+                        <input type="number" min="1" step="1" bind:value={offerAmount} aria-label={t('market.offerAmount')} />
+                        <Button size="s" type="submit">{t('market.send')}</Button>
+                        <Button size="s" variant="ghost" onclick={() => (offerFor = null)}>{t('common.cancel')}</Button>
                       </form>
                     {:else}
                       <Button size="s" variant="ghost" disabled={!transferWindow.open || squadFull} onclick={() => openOffer(listing)}>
-                        {listing.offerSent !== null ? `Offre : ${formatEuros(listing.offerSent)}` : 'Faire une offre'}
+                        {listing.offerSent !== null ? t('market.offerSent', { amount: formatEuros(listing.offerSent) }) : t('market.makeOffer')}
                       </Button>
                     {/if}
                   {:else}
                     <Button
                       size="s"
                       disabled={!transferWindow.open || !affordable || squadFull}
-                      aria-label={`Acheter ${listing.name} pour ${formatEuros(listing.price)}`}
+                      aria-label={t('market.buyLabel', { name: listing.name, price: formatEuros(listing.price) })}
                       onclick={() => purchase(listing.id)}
                     >
-                      {affordable ? 'Acheter' : 'Trop cher'}
+                      {affordable ? t('market.buy') : t('market.tooExpensive')}
                     </Button>
                   {/if}
                 </td>
@@ -297,7 +298,7 @@
       {#if visible.length < filtered.length}
         <div class="plus">
           <Button variant="ghost" size="s" onclick={() => (shown += PAGE_SIZE)}>
-            Voir {Math.min(PAGE_SIZE, filtered.length - visible.length)} de plus
+            {t('market.more', { count: Math.min(PAGE_SIZE, filtered.length - visible.length) })}
           </Button>
         </div>
       {/if}

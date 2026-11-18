@@ -17,6 +17,7 @@
   import { overall } from '../../domain/player/rating';
   import { AI_STYLE_HINT, AI_STYLE_LABEL, aiStyleOf } from '../../domain/club/aiStyle';
   import { recentForm, weekLabel, type FormLetter } from './views';
+  import { t, td } from '../../i18n/t';
 
   /** Bureau du coach : semaine, prochain match, actualité, dialogue, offres, finances et président. */
   const FORM_LETTER = { win: 'V', draw: 'N', loss: 'D' } as const;
@@ -32,16 +33,14 @@
         const opponentId = isHome ? fixture.awayId : fixture.homeId;
         const outcome = outcomeFor(fixture, game.humanClubId);
         match = {
-          opponent: game.clubs[opponentId]?.name ?? 'Adversaire inconnu',
+          opponent: game.clubs[opponentId]?.name ?? null,
           isHome,
           competition:
             fixture.competition === 'league'
-              ? `Championnat · ${humanDivision(game).name}`
+              ? { kind: 'league' as const, division: humanDivision(game).name }
               : fixture.competition === 'playoff'
-                ? fixture.awayId === game.humanClubId
-                  ? 'Barrage d’accession'
-                  : 'Barrage de maintien'
-                : 'Coupe',
+                ? { kind: fixture.awayId === game.humanClubId ? ('promotionPlayoff' as const) : ('relegationPlayoff' as const), division: '' }
+                : { kind: 'cup' as const, division: '' },
           score: fixture.result ? `${fixture.result.homeGoals}-${fixture.result.awayGoals}` : null,
           outcome: outcome ? (FORM_LETTER[outcome] as FormLetter) : null,
           ownForm: recentForm(allFixtures, game.humanClubId),
@@ -106,18 +105,18 @@
 
   function assistantPick(): void {
     const errors = store.command('autoPickLineup');
-    store.notify(errors.length === 0 ? 'L’adjoint a fait la compo.' : errors[0]!.message);
+    store.notify(errors.length === 0 ? t('dashboard.assistantPicked') : errors[0]!.message);
   }
 
   function signFor(clubId: string, name: string): void {
-    if (store.command('acceptJob', clubId)) store.notify(`Bienvenue à ${name}, coach.`);
+    if (store.command('acceptJob', clubId)) store.notify(t('dashboard.welcomeJob', { club: name }));
   }
 
   function kickOff(): void {
     try {
       store.kickOff();
     } catch (error) {
-      store.notify(error instanceof Error ? error.message : 'Le match ne peut pas commencer.');
+      store.notify(error instanceof Error ? error.message : t('dashboard.cannotStart'));
     }
   }
 </script>
@@ -126,32 +125,32 @@
   <div class="ecran">
     <Card>
       <div class="licencie">
-        <h2 class="banderole-xl">Licencié</h2>
-        <p class="texte-fort">Saison {desk.season}, semaine {desk.week}. Le président a appelé. Il n'a rien dit. Puis il a raccroché.</p>
+        <h2 class="banderole-xl">{t('dashboard.fired.title')}</h2>
+        <p class="texte-fort">{t('dashboard.fired.text', { season: desk.season, week: desk.week })}</p>
         {#if desk.history.length > 0}
           <ul class="liste-nue texte-s">
             {#each desk.history as record (record.season)}
               <li>
-                <span class="mono">Saison {record.season}</span> · {record.divisionName}, <span class="mono">{record.position}e</span>
+                <span class="mono">{t('common.season', { season: record.season })}</span> · {td(record.divisionName)}, <span class="mono">{t('common.rank', { position: record.position })}</span>
               </li>
             {/each}
           </ul>
         {/if}
         {#if desk.jobOffers.length > 0}
-          <h3 class="banderole-m">Le téléphone sonne encore</h3>
-          <p class="texte-s">Trois clubs te veulent. Tu reprends leur effectif, leur budget et leur place au classement.</p>
+          <h3 class="banderole-m">{t('dashboard.fired.phone')}</h3>
+          <p class="texte-s">{t('dashboard.fired.offers')}</p>
           <ul class="liste-nue offres-emploi">
             {#each desk.jobOffers as offer (offer.clubId)}
               <li>
                 <p class="texte-fort">{offer.name}</p>
-                <p class="texte-s discret">{offer.division} · niveau <span class="mono">{offer.level}</span> · budget <span class="mono">{formatEuros(offer.budget)}</span></p>
-                <Button variant="primary" onclick={() => signFor(offer.clubId, offer.name)}>Signer</Button>
+                <p class="texte-s discret">{td(offer.division)} · {t('dashboard.fired.level')} <span class="mono">{offer.level}</span> · {t('dashboard.fired.budget')} <span class="mono">{formatEuros(offer.budget)}</span></p>
+                <Button variant="primary" onclick={() => signFor(offer.clubId, offer.name)}>{t('dashboard.fired.sign')}</Button>
               </li>
             {/each}
           </ul>
         {/if}
         <div>
-          <Button variant={desk.jobOffers.length > 0 ? 'ghost' : 'primary'} onclick={() => store.quitToTitle()}>Retour au titre</Button>
+          <Button variant={desk.jobOffers.length > 0 ? 'ghost' : 'primary'} onclick={() => store.quitToTitle()}>{t('dashboard.fired.backToTitle')}</Button>
         </div>
       </div>
     </Card>
@@ -159,59 +158,59 @@
 {:else}
   <div class="ecran">
     <div class="colonnes large-gauche">
-      <Card title={`Semaine ${desk.week}`} scotch>
+      <Card title={t('dashboard.week', { week: desk.week })} scotch>
         {#snippet actions()}
-          <span class="tampon">{desk.weekLabel}</span>
+          <span class="tampon">{td(desk.weekLabel)}</span>
         {/snippet}
         <div class="semaine">
           {#if desk.match}
             <div class="affiche">
-              <p class="tampon discret">{desk.match.competition} · {desk.match.isHome ? 'à domicile' : 'à l’extérieur'}</p>
-              {#if desk.match.derby}<Sticker tilted>Derby ! Ça compte double</Sticker>{/if}
+              <p class="tampon discret">{t(`dashboard.competition.${desk.match.competition.kind}`, { division: td(desk.match.competition.division) })} · {desk.match.isHome ? t('dashboard.home') : t('dashboard.away')}</p>
+              {#if desk.match.derby}<Sticker tilted>{t('dashboard.derby')}</Sticker>{/if}
               <p class="banderole-m">
-                {desk.match.isHome ? 'Contre' : 'Chez'} {desk.match.opponent}
+                {desk.match.isHome ? t('dashboard.versus', { club: desk.match.opponent ?? t('dashboard.unknownOpponent') }) : t('dashboard.at', { club: desk.match.opponent ?? t('dashboard.unknownOpponent') })}
               </p>
               {#if desk.match.style}
-                <p class="texte-s"><span class="tampon">Leur coach</span> <span class="texte-fort">{desk.match.style.label}</span> : {desk.match.style.hint}.</p>
+                <p class="texte-s"><span class="tampon">{t('dashboard.theirCoach')}</span> <span class="texte-fort">{td(desk.match.style.label)}</span>{t('common.colon')}{td(desk.match.style.hint)}.</p>
               {/if}
               {#if desk.match.score}
                 <p class="resultat">
-                  <span class="tampon">Score</span>
+                  <span class="tampon">{t('dashboard.score')}</span>
                   <span class="mono texte-fort">{desk.match.score}</span>
                   {#if desk.match.outcome}<FormBadge result={desk.match.outcome} />{/if}
                 </p>
               {/if}
               <dl class="formes">
                 <div>
-                  <dt class="tampon">Ta forme</dt>
+                  <dt class="tampon">{t('dashboard.ownForm')}</dt>
                   <dd>
-                    {#each desk.match.ownForm as result, index (index)}<FormBadge {result} />{:else}<span class="texte-s discret">Aucun match</span>{/each}
+                    {#each desk.match.ownForm as result, index (index)}<FormBadge {result} />{:else}<span class="texte-s discret">{t('dashboard.noMatches')}</span>{/each}
                   </dd>
                 </div>
                 <div>
-                  <dt class="tampon">Leur forme</dt>
+                  <dt class="tampon">{t('dashboard.theirForm')}</dt>
                   <dd>
-                    {#each desk.match.opponentForm as result, index (index)}<FormBadge {result} />{:else}<span class="texte-s discret">Aucun match</span>{/each}
+                    {#each desk.match.opponentForm as result, index (index)}<FormBadge {result} />{:else}<span class="texte-s discret">{t('dashboard.noMatches')}</span>{/each}
                   </dd>
                 </div>
               </dl>
             </div>
           {:else}
-            <p class="texte-s">Pas de match pour toi cette semaine. Profites-en pour régler le vestiaire.</p>
+            <p class="texte-s">{t('dashboard.noMatchThisWeek')}</p>
           {/if}
 
           {#if desk.friendly && !matchToPlay}
             <div class="affiche amical">
-              <p class="tampon discret">Match amical · à domicile · aucun point en jeu</p>
-              <p class="banderole-m">Contre {desk.friendly.club}</p>
-              <p class="texte-s"><span class="tampon">{desk.friendly.country}</span> {desk.friendly.motto}</p>
-              <p class="texte-s">Ils sont un peu plus forts que ton onze. Gagne, et ils t'offrent un de leurs jeunes, avec une capacité de leur pays.</p>
+              <p class="tampon discret">{t('dashboard.friendly.kicker')}</p>
+              <p class="banderole-m">{t('dashboard.versus', { club: desk.friendly.club })}</p>
+              <p class="texte-s"><span class="tampon">{td(desk.friendly.country)}</span> {td(desk.friendly.motto)}</p>
+              <p class="texte-s">{t('dashboard.friendly.text')}</p>
               {#if desk.lineupErrors.length > 0}
-                <ul class="texte-s malus">{#each desk.lineupErrors as error, index (index)}<li>{error}</li>{/each}</ul>
+                <ul class="texte-s malus">{#each desk.lineupErrors as error, index (index)}<li>{td(error)}</li>{/each}</ul>
               {/if}
               <div class="ligne-actions">
-                <Button variant="primary" disabled={desk.lineupErrors.length > 0} onclick={() => store.kickOffFriendly()}>Jouer l'amical</Button>
-                <Button variant="ghost" onclick={() => { store.command('declineFriendly'); store.notify('Amical annulé : ils repartent avec leurs valises.'); }}>Décliner</Button>
+                <Button variant="primary" disabled={desk.lineupErrors.length > 0} onclick={() => store.kickOffFriendly()}>{t('dashboard.friendly.play')}</Button>
+                <Button variant="ghost" onclick={() => { store.command('declineFriendly'); store.notify(t('dashboard.friendly.declined')); }}>{t('dashboard.friendly.decline')}</Button>
               </div>
             </div>
           {/if}
@@ -219,84 +218,84 @@
           {#if matchToPlay}
             {#if desk.lineupErrors.length > 0}
               <div class="bloque" role="alert">
-                <p class="tampon">Compo à revoir avant le coup d'envoi</p>
+                <p class="tampon">{t('dashboard.lineupToFix')}</p>
                 <ul class="texte-s">
-                  {#each desk.lineupErrors as error, index (index)}<li>{error}</li>{/each}
+                  {#each desk.lineupErrors as error, index (index)}<li>{td(error)}</li>{/each}
                 </ul>
               </div>
             {/if}
             <div class="ligne-actions">
-              <Button variant="primary" disabled={desk.lineupErrors.length > 0} onclick={kickOff}>Lancer le match</Button>
-              <Button onclick={assistantPick}>Compo de l'adjoint</Button>
-              <Button variant="ghost" onclick={() => store.go('tactics')}>Tactique</Button>
+              <Button variant="primary" disabled={desk.lineupErrors.length > 0} onclick={kickOff}>{t('dashboard.kickOff')}</Button>
+              <Button onclick={assistantPick}>{t('dashboard.assistantLineup')}</Button>
+              <Button variant="ghost" onclick={() => store.go('tactics')}>{t('shell.tabs.tactics')}</Button>
             </div>
           {:else}
             {#if duelToPlay}
               <div class="ligne-actions">
                 {#if duelWaiting}
-                  <span class="texte-s texte-fort">Tu es sur le terrain. On attend {desk.match?.opponent ?? 'ton adversaire'}…</span>
+                  <span class="texte-s texte-fort">{t('dashboard.duel.waiting', { club: desk.match?.opponent ?? t('dashboard.duel.yourOpponent') })}</span>
                 {:else}
-                  <Button variant="primary" onclick={() => store.joinDuel()}>Jouer en direct contre {desk.match?.opponent}</Button>
-                  {#if opponentWaiting}<span class="texte-s texte-fort">Ton adversaire t’attend sur le terrain !</span>{/if}
+                  <Button variant="primary" onclick={() => store.joinDuel()}>{t('dashboard.duel.play', { club: desk.match?.opponent ?? '' })}</Button>
+                  {#if opponentWaiting}<span class="texte-s texte-fort">{t('dashboard.duel.opponentWaiting')}</span>{/if}
                 {/if}
               </div>
-              <p class="texte-s">Match contre un autre coach : en direct à ×1, 3 pauses de 10 s chacun, 10 s pour chaque décision. Si vous passez la semaine sans le jouer, il sera simulé.</p>
+              <p class="texte-s">{t('dashboard.duel.rules')}</p>
             {/if}
             <div class="ligne-actions">
               {#if multi}
                 <Button variant={ready ? 'ghost' : 'primary'} disabled={!desk.advance.ok && !ready} onclick={() => store.nextWeek()}>
-                  {ready ? 'Finalement, pas prêt' : 'Je suis prêt'}
+                  {ready ? t('dashboard.notReady') : t('dashboard.ready')}
                 </Button>
-                <span class="texte-s">{readyCount} / {multi.coaches.length} coach{multi.coaches.length > 1 ? 's' : ''} prêt{readyCount > 1 ? 's' : ''}</span>
+                <span class="texte-s">{t('dashboard.readyCount', { ready: readyCount, total: multi.coaches.length })}</span>
               {:else}
-                <Button variant="primary" disabled={!desk.advance.ok} onclick={() => store.nextWeek()}>Semaine suivante</Button>
+                <Button variant="primary" disabled={!desk.advance.ok} onclick={() => store.nextWeek()}>{t('dashboard.nextWeek')}</Button>
               {/if}
-              {#if !desk.advance.ok}<span class="texte-s malus">{desk.advance.reason}</span>{/if}
+              {#if !desk.advance.ok}<span class="texte-s malus">{td(desk.advance.reason)}</span>{/if}
             </div>
           {/if}
 
           {#if desk.dialogueKey && !showDialogue && !dialogueOutcome}
             <div class="ligne-actions">
-              <Button size="s" onclick={() => (closedDialogueKey = null)}>Répondre à {desk.dialogueSpeaker ?? 'ton visiteur'}</Button>
+              <Button size="s" onclick={() => (closedDialogueKey = null)}>{t('dashboard.answer', { speaker: desk.dialogueSpeaker ? td(desk.dialogueSpeaker) : t('dashboard.yourVisitor') })}</Button>
             </div>
           {/if}
         </div>
       </Card>
 
-      <Card title="Le président">
+      <Card title={t('dashboard.president')}>
         <PresidentPanel />
       </Card>
     </div>
 
     <div class="colonnes">
-      <Card title="Fil de la semaine">
+      <Card title={t('dashboard.news')}>
         {#if desk.news.length === 0}
-          <p class="vide">Rien de neuf cette semaine.</p>
+          <p class="vide">{t('dashboard.noNews')}</p>
         {:else}
           <ul class="liste-nue fil texte-s">
-            {#each desk.news as line, index (index)}<li>{line}</li>{/each}
+            {#each desk.news as line, index (index)}<li>{td(line)}</li>{/each}
           </ul>
         {/if}
       </Card>
 
       <div class="pile">
-        <Card title="Offres reçues">
+        <Card title={t('dashboard.offers')}>
           <OffersList />
         </Card>
 
-        <Card title="Bilan de la semaine">
+        <Card title={t('dashboard.balance.title')}>
           {#if desk.finance.length === 0}
-            <p class="vide">Pas encore de bilan : il tombe à la fin de la semaine.</p>
+            <p class="vide">{t('dashboard.balance.empty')}</p>
           {:else}
             <table class="tableau">
-              <caption class="sr-only">Recettes et dépenses de la semaine passée</caption>
+              <caption class="sr-only">{t('dashboard.balance.caption')}</caption>
               <thead>
-                <tr><th scope="col">Poste</th><th scope="col" class="num">Montant</th></tr>
+                <tr><th scope="col">{t('dashboard.balance.item')}</th><th scope="col" class="num">{t('dashboard.balance.amount')}</th></tr>
               </thead>
               <tbody>
                 {#each desk.finance as line (line.label)}
                   <tr>
-                    <td>{line.label}</td>
+                    <td>{td(line.label)}</td>
                     <td class="num" class:bonus={line.amount > 0} class:malus={line.amount < 0}>
                       {line.amount > 0 ? '+' : '−'}{formatEuros(Math.abs(line.amount))}
                     </td>
@@ -305,7 +304,7 @@
               </tbody>
               <tfoot>
                 <tr>
-                  <th scope="row">Total</th>
+                  <th scope="row">{t('dashboard.balance.total')}</th>
                   <td class="num texte-fort" class:bonus={desk.financeTotal > 0} class:malus={desk.financeTotal < 0}>
                     {desk.financeTotal < 0 ? '−' : '+'}{formatEuros(Math.abs(desk.financeTotal))}
                   </td>
@@ -322,10 +321,10 @@
     <DialogueModal onclose={() => (closedDialogueKey = desk.dialogueKey)} onanswered={(outcome) => (dialogueOutcome = outcome)} />
   {/if}
   {#if dialogueOutcome}
-    <Modal title={dialogueOutcome.speaker} kicker="Dialogue de la semaine · la suite" onclose={() => (dialogueOutcome = null)}>
-      <p class="texte-fort">{dialogueOutcome.text}</p>
+    <Modal title={td(dialogueOutcome.speaker)} kicker={t('dashboard.dialogueFollowUp')} onclose={() => (dialogueOutcome = null)}>
+      <p class="texte-fort">{td(dialogueOutcome.text)}</p>
       {#snippet actions()}
-        <Button onclick={() => (dialogueOutcome = null)}>Retour au bureau</Button>
+        <Button onclick={() => (dialogueOutcome = null)}>{t('dashboard.backToOffice')}</Button>
       {/snippet}
     </Modal>
   {/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, td } from '../../../i18n/t';
   import Gauge from '../../kit/Gauge.svelte';
   import Sticker from '../../kit/Sticker.svelte';
   import { level5Bonus, MAX_LEVEL, RARITY_LABEL, statsAtLevel, XP_THRESHOLDS } from '../../../domain/abilities/progression';
@@ -22,10 +23,10 @@
   }
 
   const columns = $derived.by((): LevelColumn[] => {
-    const current = { level: progress.level, caption: `Niv. ${progress.level} (actuel)`, stats: statsAtLevel(ability, progress.level) };
+    const current = { level: progress.level, caption: t('ability.levelCurrent', { level: progress.level }), stats: statsAtLevel(ability, progress.level) };
     if (progress.level >= MAX_LEVEL) return [current];
     const next = progress.level + 1;
-    return [current, { level: next, caption: `Niv. ${next}`, stats: statsAtLevel(ability, next) }];
+    return [current, { level: next, caption: t('ability.level', { level: next }), stats: statsAtLevel(ability, next) }];
   });
 
   /** XP dans le niveau en cours, pour la jauge (CAP-10). */
@@ -37,29 +38,29 @@
   });
 </script>
 
-<section class="capacite" aria-label="Capacité spéciale">
+<section class="capacite" aria-label={t('ability.special')}>
   <header>
-    <h3 class="banderole-m">{ability.name}</h3>
-    <Sticker tone={RARITY_TONE[ability.rarity]}>{RARITY_LABEL[ability.rarity]}</Sticker>
+    <h3 class="banderole-m">{td(ability.name)}</h3>
+    <Sticker tone={RARITY_TONE[ability.rarity]}>{td(RARITY_LABEL[ability.rarity])}</Sticker>
   </header>
 
-  <p class="texte-fort description">{ability.description}</p>
+  <p class="texte-fort description">{td(ability.description)}</p>
 
   <dl class="paire texte-s">
-    <dt>Poste</dt>
+    <dt>{t('ability.position')}</dt>
     <dd>{ABILITY_POSITION_LABEL[ability.position]}</dd>
-    <dt>Ciblage</dt>
+    <dt>{t('ability.targeting')}</dt>
     <dd>{describeTargeting(columns[0]!.stats.targeting)}</dd>
-    <dt>Quand</dt>
+    <dt>{t('ability.when')}</dt>
     <dd>{describeTrigger(ability.trigger)}</dd>
   </dl>
 
   <div class="defilant">
     <table class="tableau niveaux">
-      <caption class="tampon">Stats chiffrées</caption>
+      <caption class="tampon">{t('ability.stats')}</caption>
       <thead>
         <tr>
-          <th scope="col"><span class="sr-only">Stat</span></th>
+          <th scope="col"><span class="sr-only">{t('ability.stat')}</span></th>
           {#each columns as column (column.level)}
             <th scope="col">{column.caption}</th>
           {/each}
@@ -67,7 +68,7 @@
       </thead>
       <tbody>
         <tr>
-          <th scope="row">Effet</th>
+          <th scope="row">{t('ability.effect')}</th>
           {#each columns as column (column.level)}
             <td>
               <ul class="effets">
@@ -77,26 +78,26 @@
           {/each}
         </tr>
         <tr>
-          <th scope="row">Utilisation</th>
-          {#each columns as column (column.level)}<td class="mono">{ability.trigger === 'anytime' ? 'Une fois par match' : 'À chaque occasion'}</td>{/each}
+          <th scope="row">{t('ability.usage')}</th>
+          {#each columns as column (column.level)}<td class="mono">{ability.trigger === 'anytime' ? t('ability.oncePerMatch') : t('ability.eachOccasion')}</td>{/each}
         </tr>
         <tr>
-          <th scope="row">Coût</th>
-          {#each columns as column (column.level)}<td class="mono">{column.stats.cost} pts de gueulante</td>{/each}
+          <th scope="row">{t('ability.cost')}</th>
+          {#each columns as column (column.level)}<td class="mono">{t('ability.costValue', { cost: column.stats.cost })}</td>{/each}
         </tr>
       </tbody>
     </table>
   </div>
 
-  <p class="texte-s"><span class="tampon">Niveau 5</span> {describeLevel5(level5Bonus(ability))}</p>
+  <p class="texte-s"><span class="tampon">{t('ability.level5')}</span> {describeLevel5(level5Bonus(ability))}</p>
 
   <div class="xp">
-    <span class="tampon">Niveau {progress.level} / {MAX_LEVEL}</span>
+    <span class="tampon">{t('ability.levelOf', { level: progress.level, max: MAX_LEVEL })}</span>
     {#if xp}
-      <Gauge value={xp.gained} max={xp.span} label="Expérience vers le niveau suivant" tone="scotch" />
+      <Gauge value={xp.gained} max={xp.span} label={t('ability.xpLabel')} tone="scotch" />
       <span class="mono texte-s">{xp.current} / {xp.target} XP</span>
     {:else}
-      <span class="texte-s">Niveau maximum atteint.</span>
+      <span class="texte-s">{t('ability.maxLevel')}</span>
     {/if}
   </div>
 </section>

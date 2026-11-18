@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../../i18n/t';
   import Card from '../kit/Card.svelte';
   import type { MatchController } from './controller.svelte';
   import { lastGoalText, LIVE_LIMIT, liveLines } from './live';
@@ -33,18 +34,18 @@
   const goalAnnouncement = $derived(goalCount > 0 ? lastGoalText(controller.match.events) : '');
 </script>
 
-<Card title="Live">
+<Card title={t('feed.title')}>
   {#snippet actions()}
     {#if total > LIVE_LIMIT}
       <button class="tampon voir" onclick={() => (showAll = !showAll)}>
-        {showAll ? 'Réduire' : `Tout voir (${total})`}
+        {showAll ? t('feed.less') : t('feed.all', { total })}
       </button>
     {/if}
   {/snippet}
 
   <p class="annonce" aria-live="polite">{goalAnnouncement}</p>
 
-  <ol class="fil" aria-label="Live texte, le plus récent en haut">
+  <ol class="fil" aria-label={t('feed.label')}>
     {#each lines as line (line.key)}
       <li class="ligne {line.tone}" title={line.detail}>
         <span class="minute tampon">{line.minute}</span>

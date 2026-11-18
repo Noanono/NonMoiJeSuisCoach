@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, td } from '../../i18n/t';
   import { tick } from 'svelte';
   import PlayerAvatar from '../kit/PlayerAvatar.svelte';
   import { RARITY_LABEL } from '../../domain/abilities/progression';
@@ -105,20 +106,20 @@
         {/each}
       </svg>
       {#each staging.floats as entry (entry.id)}
-        <span class="flottant tampon {entry.tone}" style:left="{entry.at.x}px" style:top="{entry.at.y}px" style:animation-delay="{entry.delay}ms">{entry.text}</span>
+        <span class="flottant tampon {entry.tone}" style:left="{entry.at.x}px" style:top="{entry.at.y}px" style:animation-delay="{entry.delay}ms">{td(entry.text)}</span>
       {/each}
     {/if}
 
     {#key fx.record.id}
-      <button type="button" class="annonce {fx.record.rarity}" class:leur={!fx.own} style:--duree="{FX_DURATION_MS}ms" onclick={() => controller.skipFx()} aria-label="Passer l'annonce">
+      <button type="button" class="annonce {fx.record.rarity}" class:leur={!fx.own} style:--duree="{FX_DURATION_MS}ms" onclick={() => controller.skipFx()} aria-label={t('fx.skip')}>
         <span class="haut">
           <PlayerAvatar player={fx.avatar} size={96} />
           <span class="texte">
-            <span class="tampon qui">{fx.own ? 'Toi' : 'En face'} · {RARITY_LABEL[fx.record.rarity]} · {fx.playerName}</span>
-            <span class="capacite">{fx.record.abilityName}</span>
+            <span class="tampon qui">{fx.own ? t('live.tag.mine') : t('live.tag.theirs')} · {td(RARITY_LABEL[fx.record.rarity])} · {fx.playerName}</span>
+            <span class="capacite">{td(fx.record.abilityName)}</span>
           </span>
         </span>
-        <span class="description">{fx.description}</span>
+        <span class="description">{td(fx.description)}</span>
         <span class="effets texte-fort">
           {#each fx.effects as line, index (index)}<span>{line}</span>{/each}
         </span>

@@ -38,6 +38,7 @@ import { goalAlert, type GoalAlert } from './verdict';
 import { store } from '../store.svelte';
 import type { Speed } from './live';
 import type { DuelView } from '../../server/duel';
+import { t } from '../../i18n/t';
 
 /** Temps d'affichage d'une capacité : le match attend qu'on ait lu. */
 export const FX_DURATION_MS = 5000;
@@ -118,7 +119,7 @@ export class MatchController {
     store.touchMatch();
     if (before !== 'halftime' && this.match.status === 'halftime') {
       this.paused = true;
-      store.notify("Mi-temps. C'est le moment de changer les consignes.");
+      store.notify(t('match.halftimeToast'));
     }
   }
 
@@ -194,7 +195,7 @@ export class MatchController {
     const preview = startActivation(this.match, this.coachSide, playerId);
     store.touchMatch();
     if (!preview.available) {
-      store.notify(preview.reason ?? 'Pas maintenant.');
+      store.notify(preview.reason ?? t('match.notNow'));
       return;
     }
     if (this.match.pending?.required === 0) this.confirm();
@@ -271,7 +272,7 @@ export class MatchController {
       }
       const change = substitutionFromDrag(this.match, this.coachSide, draggedId, targetId);
       if (change) this.substitute(change.leavingId, change.enteringId);
-      else if (substitutionsLeft(this.coachSide === 'home' ? this.match.home : this.match.away) === 0) store.notify('Plus aucun changement disponible.');
+      else if (substitutionsLeft(this.coachSide === 'home' ? this.match.home : this.match.away) === 0) store.notify(t('match.noSubsLeft'));
       return;
     }
     if (line && canMoveToLine(this.match, this.coachSide, draggedId, line)) {
@@ -347,7 +348,7 @@ export class MatchController {
   substitute(leavingId: string, enteringId: string): void {
     this.inspectedId = null;
     if (this.remote) return this.remote('substitute', [leavingId, enteringId]);
-    if (substitutePlayer(this.match, this.coachSide, leavingId, enteringId) === false) store.notify('Ce changement n’est pas possible.');
+    if (substitutePlayer(this.match, this.coachSide, leavingId, enteringId) === false) store.notify(t('match.subImpossible'));
     store.touchMatch();
   }
 
@@ -362,7 +363,7 @@ export class MatchController {
     try {
       store.endMatch();
     } catch (error) {
-      store.notify(error instanceof Error ? error.message : "Le sifflet est coincé. Réessaie.");
+      store.notify(error instanceof Error ? error.message : t('match.whistleStuck'));
     }
   }
 }

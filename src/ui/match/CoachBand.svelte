@@ -17,6 +17,7 @@
   } from '../../domain/match';
   import type { MatchController } from './controller.svelte';
   import { windowTitle } from './verdict';
+  import { intlLocale, t, td } from '../../i18n/t';
 
   /**
    * Bandeau scotch rayé quand le match attend le coach : choix des cibles (CAP-16, CAP-17),
@@ -29,16 +30,16 @@
 
   let { controller }: Props = $props();
 
-  const OPTIONS: { id: FreeKickOption; label: string; hint: string }[] = [
-    { id: 'shot', label: 'Frappe directe', hint: 'le meilleur tireur vise la lucarne' },
-    { id: 'cross', label: 'Centre', hint: 'les grands montent ; risque de contre si c’est repoussé' },
-    { id: 'combination', label: 'Combinaison', hint: 'passe courte, action sûre' },
-  ];
-  const WALLS: { id: WallSize; label: string; hint: string }[] = [
-    { id: 'small', label: 'Petit mur', hint: 'meilleur sur les centres, faible contre la frappe' },
-    { id: 'normal', label: 'Mur normal', hint: 'équilibré' },
-    { id: 'large', label: 'Grand mur', hint: 'ferme la frappe, laisse de l’espace sur les centres' },
-  ];
+  const OPTIONS: { id: FreeKickOption; label: string; hint: string }[] = $derived([
+    { id: 'shot', label: t('band.option.shot'), hint: t('band.option.shotHint') },
+    { id: 'cross', label: t('band.option.cross'), hint: t('band.option.crossHint') },
+    { id: 'combination', label: t('band.option.combination'), hint: t('band.option.combinationHint') },
+  ]);
+  const WALLS: { id: WallSize; label: string; hint: string }[] = $derived([
+    { id: 'small', label: t('band.wall.small'), hint: t('band.wall.smallHint') },
+    { id: 'normal', label: t('band.wall.normal'), hint: t('band.wall.normalHint') },
+    { id: 'large', label: t('band.wall.large'), hint: t('band.wall.largeHint') },
+  ]);
 
   // L'état d'attente est muté en place par le moteur : on relit à chaque version.
   const prompt = $derived.by(() => {
@@ -50,7 +51,7 @@
       const source = match[pending.side].players.find((player) => player.id === pending.playerId);
       return {
         kind: 'targeting' as const,
-        abilityName: source?.ability?.name ?? 'Capacité',
+        abilityName: source?.ability?.name ? td(source.ability.name) : t('sheet.ability'),
         chosen: pending.targetIds.length,
         required: pending.required,
       };
@@ -68,7 +69,7 @@
           window.freeKick && play && distance
             ? {
                 role: window.freeKick,
-                distance: FREE_KICK_DISTANCE_LABEL[distance],
+                distance: td(FREE_KICK_DISTANCE_LABEL[distance]),
                 // Chances exactes au moment du choix : tireur, gardien, mur et capacités en cours.
                 odds: freeKickChances(match),
                 wallOdds: Object.fromEntries(WALLS.map((wall) => [wall.id, freeKickChances(match, wall.id)?.[play.option ?? defaultFreeKickOption(distance)]?.chance ?? 0])) as Record<WallSize, number>,
@@ -84,16 +85,16 @@
     return null;
   });
 
-  const STYLES: { id: PenaltyStyle; label: string; hint: string }[] = [
-    { id: 'placed', label: 'Frappe placée', hint: 'petit filet : sûre, sauf si le gardien devine le côté' },
-    { id: 'power', label: 'En force', hint: 'déborde le gardien qui plonge, s’écrase sur celui qui attend' },
-    { id: 'panenka', label: 'Panenka', hint: 'le bluff : imparable s’il plonge, ridicule s’il reste au centre ; fait basculer la gueulante' },
-  ];
-  const DIVES: { id: KeeperDive; label: string; hint: string }[] = [
-    { id: 'left', label: 'Plonger à gauche', hint: 'pari sur le côté' },
-    { id: 'right', label: 'Plonger à droite', hint: 'pari sur le côté' },
-    { id: 'center', label: 'Rester au centre', hint: 'piège la Panenka et la frappe en force, battu par une frappe placée' },
-  ];
+  const STYLES: { id: PenaltyStyle; label: string; hint: string }[] = $derived([
+    { id: 'placed', label: t('band.style.placed'), hint: t('band.style.placedHint') },
+    { id: 'power', label: t('band.style.power'), hint: t('band.style.powerHint') },
+    { id: 'panenka', label: t('band.style.panenka'), hint: t('band.style.panenkaHint') },
+  ]);
+  const DIVES: { id: KeeperDive; label: string; hint: string }[] = $derived([
+    { id: 'left', label: t('band.dive.left'), hint: t('band.dive.sideHint') },
+    { id: 'right', label: t('band.dive.right'), hint: t('band.dive.sideHint') },
+    { id: 'center', label: t('band.dive.center'), hint: t('band.dive.centerHint') },
+  ]);
 
   /** Gardien blessé : les remplaçants possibles, gardiens d'abord. */
   function keeperPrompt(injuredId: string) {
@@ -102,7 +103,7 @@
     const injured = team.players.find((player) => player.id === injuredId);
     return {
       injuredId,
-      name: injured?.name ?? 'Ton gardien',
+      name: injured?.name ?? t('band.yourKeeper'),
       options: keeperReplacements(team).map((player) => ({ id: player.id, name: player.name, keeper: player.profile.position === 'GK', rating: Math.round(player.rating) })),
     };
   }
@@ -118,16 +119,16 @@
     const details: string[] = [];
     if (chances) {
       const duel = chances.skillFactor;
-      details.push(`Tireur : ${chances.shooterName ?? '?'} · gardien : ${chances.keeperName ?? 'personne'} · duel ×${duel.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
-      if (chances.boost !== 0) details.push(`Capacité du tireur : ${chances.boost > 0 ? '+' : '−'}${points(chances.boost)}`);
-      if (chances.malus > 0) details.push(`Capacité du gardien : −${Math.round(chances.malus * 100)} % de chances`);
-      if (chances.retake) details.push('Le Ramasseur de balles : un penalty marqué sera à retirer');
+      details.push(t('band.penalty.duel', { shooter: chances.shooterName ?? '?', keeper: chances.keeperName ?? t('band.penalty.nobody'), factor: duel.toLocaleString(intlLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }));
+      if (chances.boost !== 0) details.push(t('band.penalty.shooterAbility', { value: `${chances.boost > 0 ? '+' : '−'}${points(chances.boost)}` }));
+      if (chances.malus > 0) details.push(t('band.penalty.keeperAbility', { value: Math.round(chances.malus * 100) }));
+      if (chances.retake) details.push(t('band.penalty.retake'));
     }
     return {
       role,
       keeper: habit && keeper
-        ? `Le staff a noté : ${keeper.name} ${KEEPER_HABIT_LABEL[habit]} (au centre ${percent(chances?.keeperStay ?? 0)} du temps).`
-        : 'Habitudes du gardien inconnues : chiffres pour un gardien moyen (au centre 20 % du temps).',
+        ? t('band.penalty.habit', { keeper: keeper.name, habit: td(KEEPER_HABIT_LABEL[habit]), stay: percent(chances?.keeperStay ?? 0) })
+        : t('band.penalty.habitUnknown'),
       details,
       style: play?.style ?? null,
       dive: play?.dive ?? null,
@@ -135,11 +136,11 @@
     };
   }
 
-  const percent = (value: number) => `${Math.round(value * 100)} %`;
+  const percent = (value: number) => t('band.percent', { value: Math.round(value * 100) });
   /** Pourcentage au dixième : « 12,4 % ». */
-  const exact = (value: number) => `${(value * 100).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+  const exact = (value: number) => t('band.percent', { value: (value * 100).toLocaleString(intlLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) });
   /** Points de probabilité ajoutés par les capacités : « 5,0 pts ». */
-  const points = (value: number) => `${Math.abs(value * 100).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} pts`;
+  const points = (value: number) => t('band.points', { value: Math.abs(value * 100).toLocaleString(intlLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) });
 
   /** Échap annule le ciblage en cours, sans rien consommer (CAP-20). */
   function cancelOnEscape(event: KeyboardEvent): void {
@@ -150,35 +151,35 @@
 <svelte:window onkeydown={cancelOnEscape} />
 
 {#if prompt}
-  <div class="bandeau" role="region" aria-label="Le match t'attend">
+  <div class="bandeau" role="region" aria-label={t('band.waiting')}>
     {#if prompt.kind === 'targeting'}
       {@const complete = prompt.chosen >= prompt.required}
       <p class="consigne" aria-live="polite">
         <span class="texte-fort">{prompt.abilityName} :</span>
-        <span>{complete ? 'cible choisie. On y va ?' : 'touche une cible surlignée.'}</span>
+        <span>{complete ? t('band.targetChosen') : t('band.touchTarget')}</span>
         <span class="tampon compteur">{prompt.chosen}/{prompt.required}</span>
       </p>
       <div class="actions">
-        <Button variant="primary" size="s" disabled={!complete} onclick={() => controller.confirm()}>Valider</Button>
-        <Button variant="secondary" size="s" onclick={() => controller.cancel()}>Laisser tomber</Button>
+        <Button variant="primary" size="s" disabled={!complete} onclick={() => controller.confirm()}>{t('band.confirm')}</Button>
+        <Button variant="secondary" size="s" onclick={() => controller.cancel()}>{t('band.dropIt')}</Button>
       </div>
     {:else if prompt.keeper}
       {@const keeper = prompt.keeper}
       <div class="coup-franc">
         <p class="consigne" aria-live="assertive">
           <span class="banderole-titre">{prompt.title}</span>
-          <span class="texte-s">{keeper.name} ne peut plus jouer. Choisis qui le remplace, sinon le jeu fait entrer le meilleur gardien du banc.</span>
+          <span class="texte-s">{t('band.keeperOut', { keeper: keeper.name })}</span>
         </p>
-        <div class="choix" role="group" aria-label="Remplaçant du gardien">
+        <div class="choix" role="group" aria-label={t('band.keeperReplacement')}>
           {#each keeper.options as option (option.id)}
             <button class="carte" type="button" onclick={() => controller.substitute(keeper.injuredId, option.id)}>
               <span class="texte-fort">{option.name}</span>
-              <span class="texte-s mono">{option.keeper ? 'gardien' : 'joueur de champ'} · note {option.rating}</span>
+              <span class="texte-s mono">{option.keeper ? t('band.keeper') : t('band.outfield')} · {t('pitch.rating', { rating: option.rating })}</span>
             </button>
           {/each}
         </div>
         <div class="actions">
-          <Button variant="primary" size="s" onclick={() => controller.dismissWindow()}>Laisser le jeu choisir</Button>
+          <Button variant="primary" size="s" onclick={() => controller.dismissWindow()}>{t('band.letGameChoose')}</Button>
         </div>
       </div>
     {:else if prompt.freeKick}
@@ -186,12 +187,12 @@
       <div class="coup-franc">
         <p class="consigne" aria-live="polite">
           <span class="banderole-titre">{prompt.title}</span>
-          <span class="tampon distance">Coup franc {freeKick.distance}</span>
-          <span class="texte-s">{freeKick.role === 'attack' ? `En face : ${freeKick.wallLabel.toLowerCase()}.` : `Ils vont jouer : ${freeKick.theirOption.toLowerCase()}.`}</span>
-          {#if prompt.hasAbilities}<span class="texte-s">Une capacité peut s'en mêler : touche un joueur surligné.</span>{/if}
+          <span class="tampon distance">{t('band.freeKickDistance', { distance: freeKick.distance })}</span>
+          <span class="texte-s">{freeKick.role === 'attack' ? t('band.theirWall', { wall: freeKick.wallLabel.toLowerCase() }) : t('band.theirOption', { option: freeKick.theirOption.toLowerCase() })}</span>
+          {#if prompt.hasAbilities}<span class="texte-s">{t('band.abilityCanHelp')}</span>{/if}
         </p>
         {#if freeKick.role === 'attack'}
-          <div class="choix" role="radiogroup" aria-label="Option du coup franc">
+          <div class="choix" role="radiogroup" aria-label={t('band.freeKickOption')}>
             {#each OPTIONS as option (option.id)}
               {@const odds = freeKick.odds?.[option.id]}
               <button
@@ -201,19 +202,19 @@
                 onclick={() => controller.chooseFreeKick(option.id)}
               >
                 <span class="texte-fort">{option.label}</span>
-                <span class="mono">but {exact(odds?.chance ?? 0)}</span>
-                {#if odds?.takerName}<span class="texte-s">Tireur : {odds.takerName}</span>{/if}
-                {#if odds && odds.boost !== 0}<span class="texte-s mono">dont capacités {odds.boost > 0 ? '+' : '−'}{points(odds.boost)}</span>{/if}
+                <span class="mono">{t('band.goalChance', { chance: exact(odds?.chance ?? 0) })}</span>
+                {#if odds?.takerName}<span class="texte-s">{t('band.taker', { player: odds.takerName })}</span>{/if}
+                {#if odds && odds.boost !== 0}<span class="texte-s mono">{t('band.fromAbilities', { value: `${odds.boost > 0 ? '+' : '−'}${points(odds.boost)}` })}</span>{/if}
                 <span class="texte-s">{option.hint}</span>
               </button>
             {/each}
           </div>
         {:else}
-          <div class="choix" role="radiogroup" aria-label="Taille du mur">
+          <div class="choix" role="radiogroup" aria-label={t('band.wallSize')}>
             {#each WALLS as wall (wall.id)}
               <button class="carte" role="radio" aria-checked={freeKick.wall === wall.id} onclick={() => controller.chooseWall(wall.id)}>
                 <span class="texte-fort">{wall.label}</span>
-                <span class="mono">but adverse {exact(freeKick.wallOdds[wall.id])}</span>
+                <span class="mono">{t('band.opponentGoal', { chance: exact(freeKick.wallOdds[wall.id]) })}</span>
                 <span class="texte-s">{wall.hint}</span>
               </button>
             {/each}
@@ -221,7 +222,7 @@
         {/if}
         <div class="actions">
           <Button variant="primary" size="s" onclick={() => controller.dismissWindow()}>
-            {freeKick.role === 'attack' ? 'Jouer le coup franc' : 'En place'}
+            {freeKick.role === 'attack' ? t('band.playFreeKick') : t('band.inPlace')}
           </Button>
         </div>
       </div>
@@ -229,13 +230,13 @@
       {@const penalty = prompt.penalty}
       <div class="coup-franc">
         <p class="consigne" aria-live="polite">
-          <span class="banderole-titre">{penalty.role === 'attack' ? 'Penalty pour toi : quelle frappe ?' : 'Penalty contre toi : où plonge ton gardien ?'}</span>
+          <span class="banderole-titre">{penalty.role === 'attack' ? t('band.penalty.attackTitle') : t('band.penalty.defenseTitle')}</span>
           {#if penalty.role === 'attack'}<span class="texte-s">{penalty.keeper}</span>{/if}
           {#each penalty.details as detail (detail)}<span class="texte-s mono">{detail}</span>{/each}
-          {#if prompt.hasAbilities}<span class="texte-s">Une capacité peut s'en mêler : touche un joueur surligné.</span>{/if}
+          {#if prompt.hasAbilities}<span class="texte-s">{t('band.abilityCanHelp')}</span>{/if}
         </p>
         {#if penalty.role === 'attack'}
-          <div class="choix" role="radiogroup" aria-label="Frappe du penalty">
+          <div class="choix" role="radiogroup" aria-label={t('band.penalty.styleLabel')}>
             {#each STYLES as style (style.id)}
               <button class="carte" role="radio" aria-checked={penalty.style === style.id} onclick={() => controller.choosePenaltyStyle(style.id)}>
                 <span class="texte-fort">{style.label}</span>
@@ -243,7 +244,7 @@
                   {@const read = penalty.chances.byRead[style.id]}
                   <span class="mono texte-fort">{exact(penalty.chances.byStyle[style.id])}</span>
                   <span class="texte-s mono">
-                    {#if style.id === 'panenka'}il plonge {exact(read.wrong)} · il reste {exact(read.center)}{:else}mauvais côté {exact(read.wrong)} · bon côté {exact(read.right)} · centre {exact(read.center)}{/if}
+                    {#if style.id === 'panenka'}{t('band.penalty.panenkaOdds', { dives: exact(read.wrong), stays: exact(read.center) })}{:else}{t('band.penalty.odds', { wrong: exact(read.wrong), right: exact(read.right), center: exact(read.center) })}{/if}
                   </span>
                 {/if}
                 <span class="texte-s">{style.hint}</span>
@@ -251,11 +252,11 @@
             {/each}
           </div>
         {:else}
-          <div class="choix" role="radiogroup" aria-label="Plongeon du gardien">
+          <div class="choix" role="radiogroup" aria-label={t('band.penalty.diveLabel')}>
             {#each DIVES as dive (dive.id)}
               <button class="carte" role="radio" aria-checked={penalty.dive === dive.id} onclick={() => controller.chooseKeeperDive(dive.id)}>
                 <span class="texte-fort">{dive.label}</span>
-                {#if penalty.chances}<span class="mono texte-fort">but adverse {exact(penalty.chances.byDive[dive.id])}</span>{/if}
+                {#if penalty.chances}<span class="mono texte-fort">{t('band.opponentGoal', { chance: exact(penalty.chances.byDive[dive.id]) })}</span>{/if}
                 <span class="texte-s">{dive.hint}</span>
               </button>
             {/each}
@@ -263,17 +264,17 @@
         {/if}
         <div class="actions">
           <Button variant="primary" size="s" onclick={() => controller.dismissWindow()}>
-            {penalty.role === 'attack' ? (penalty.style ? 'Tirer' : 'Laisser le tireur choisir') : penalty.dive ? 'En place' : 'Laisser le gardien choisir'}
+            {penalty.role === 'attack' ? (penalty.style ? t('band.penalty.shoot') : t('band.penalty.letShooter')) : penalty.dive ? t('band.inPlace') : t('band.penalty.letKeeper')}
           </Button>
         </div>
       </div>
     {:else}
       <p class="consigne" aria-live="polite">
         <span class="banderole-titre">{prompt.title}</span>
-        <span class="texte-s">Touche un joueur surligné, ou laisse filer.</span>
+        <span class="texte-s">{t('band.touchOrSkip')}</span>
       </p>
       <div class="actions">
-        <Button variant="secondary" size="s" onclick={() => controller.dismissWindow()}>Laisser passer</Button>
+        <Button variant="secondary" size="s" onclick={() => controller.dismissWindow()}>{t('band.letPass')}</Button>
       </div>
     {/if}
   </div>

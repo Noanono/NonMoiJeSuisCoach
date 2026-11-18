@@ -12,16 +12,18 @@
   import ClubScreen from './screens/ClubScreen.svelte';
   import Competitions from './screens/Competitions.svelte';
   import Stats from './screens/Stats.svelte';
+  import LangSwitch from './kit/LangSwitch.svelte';
+  import { t, td, type MessageKey } from '../i18n/t';
 
-  const TABS: { screen: Screen; label: string }[] = [
-    { screen: 'dashboard', label: 'Bureau' },
-    { screen: 'squad', label: 'Effectif' },
-    { screen: 'tactics', label: 'Tactique' },
-    { screen: 'training', label: 'Entraînement' },
-    { screen: 'market', label: 'Mercato' },
-    { screen: 'club', label: 'Club' },
-    { screen: 'competitions', label: 'Compétitions' },
-    { screen: 'stats', label: 'Statistiques' },
+  const TABS: { screen: Screen; label: MessageKey }[] = [
+    { screen: 'dashboard', label: 'shell.tabs.dashboard' },
+    { screen: 'squad', label: 'shell.tabs.squad' },
+    { screen: 'tactics', label: 'shell.tabs.tactics' },
+    { screen: 'training', label: 'shell.tabs.training' },
+    { screen: 'market', label: 'shell.tabs.market' },
+    { screen: 'club', label: 'shell.tabs.club' },
+    { screen: 'competitions', label: 'shell.tabs.competitions' },
+    { screen: 'stats', label: 'shell.tabs.stats' },
   ];
 
   /** Licencié : plus d'accès aux écrans du club, seul le Bureau (et son écran de fin) reste. */
@@ -46,44 +48,47 @@
   <header class="bandeau">
     <div class="ident">
       <h1 class="banderole-m">{header.club}</h1>
-      <span class="tampon">Saison {header.season} · semaine {header.week}</span>
+      <span class="tampon">{t('common.seasonWeek', { season: header.season, week: header.week })}</span>
     </div>
     <dl class="jauges">
       {#if header.rating !== null}
         <div>
-          <dt class="tampon">Général équipe</dt>
+          <dt class="tampon">{t('shell.teamRating')}</dt>
           <dd><RatingBadge value={header.rating} size="l" /></dd>
         </div>
       {/if}
       <div>
-        <dt class="tampon">Budget</dt>
+        <dt class="tampon">{t('shell.budget')}</dt>
         <dd class="chiffre">{formatEuros(header.budget)}</dd>
       </div>
       <div>
-        <dt class="tampon">Président</dt>
-        <dd><Gauge value={header.confidence} max={100} label="Confiance du président" tone={header.confidence < 30 ? 'carton' : 'victoire'} /></dd>
+        <dt class="tampon">{t('shell.president')}</dt>
+        <dd><Gauge value={header.confidence} max={100} label={t('shell.presidentConfidence')} tone={header.confidence < 30 ? 'carton' : 'victoire'} /></dd>
       </div>
     </dl>
-    <button class="quitter tampon" onclick={() => store.quitToTitle()}>Quitter</button>
+    <div class="actions">
+      <LangSwitch />
+      <button class="quitter tampon" onclick={() => store.quitToTitle()}>{t('shell.quit')}</button>
+    </div>
   </header>
 
   {#if !fired}
-  <nav aria-label="Écrans du club">
+  <nav aria-label={t('shell.navLabel')}>
     {#each TABS as tab (tab.screen)}
       <button class="onglet tampon" class:actif={store.screen === tab.screen} aria-current={store.screen === tab.screen ? 'page' : undefined} onclick={() => store.go(tab.screen)}>
-        {tab.label}
+        {t(tab.label)}
       </button>
     {/each}
   </nav>
   {/if}
 
   {#if store.multi}
-  <section class="ligue" aria-label="Coachs de la ligue">
-    <span class="tampon">Ligue</span>
+  <section class="ligue" aria-label={t('shell.leagueCoaches')}>
+    <span class="tampon">{t('shell.league')}</span>
     {#each store.multi.coaches as coach (coach.id)}
-      <span class="coach texte-s" class:pret={coach.ready} class:absent={!coach.online} title={coach.waitingFor ?? ''}>
+      <span class="coach texte-s" class:pret={coach.ready} class:absent={!coach.online} title={coach.waitingFor ? td(coach.waitingFor) : ''}>
         <span class="texte-fort">{coach.name}</span>
-        {coach.ready ? '· prêt' : !coach.online ? '· hors ligne' : coach.waitingFor ? '· ' + coach.waitingFor : '· en réflexion'}
+        {coach.ready ? '· ' + t('shell.coach.ready') : !coach.online ? '· ' + t('shell.coach.offline') : coach.waitingFor ? '· ' + td(coach.waitingFor) : '· ' + t('shell.coach.thinking')}
       </span>
     {/each}
   </section>
@@ -159,6 +164,11 @@
     font-family: var(--font-mono);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+  }
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
   }
   .quitter {
     background: none;

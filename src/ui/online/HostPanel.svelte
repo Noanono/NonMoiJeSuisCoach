@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, td } from '../../i18n/t';
   /**
    * Héberger une ligue (MULTI-11 à MULTI-13) : ce navigateur devient le serveur. L'hôte choisit une de ses
    * 3 ligues, partage le code, l'ouvre au public s'il veut, et joue dedans comme les autres.
@@ -16,7 +17,7 @@
   let confirmStop = $state(false);
   let feedback = $state<string | null>(null);
   let copied = $state<'code' | 'lien' | null>(null);
-  let serverName = $state(host.serverName || `Ligue de ${savedProfile().name || 'l’hôte'}`);
+  let serverName = $state(host.serverName || t('host.defaultName', { name: savedProfile().name || t('host.theHost') }));
   let busy = $state(false);
 
   $effect(() => {
@@ -59,7 +60,7 @@
       copied = what;
       setTimeout(() => (copied = null), 2000);
     } catch {
-      feedback = 'Copie impossible : sélectionne le code à la main.';
+      feedback = t('host.copyFailed');
     }
   }
 
@@ -82,96 +83,96 @@
   }
 
   function leagueLine(league: NonNullable<SlotInfo['league']>): string {
-    const when = league.phase === 'lobby' ? 'salle d’attente' : `saison ${league.season}, semaine ${league.week}`;
-    return `${when} · ${league.coaches.map((coach) => coach.name).join(', ') || 'aucun coach'}`;
+    const when = league.phase === 'lobby' ? t('host.lobby') : t('host.seasonWeek', { season: league.season ?? '?', week: league.week ?? '?' });
+    return `${when} · ${league.coaches.map((coach) => coach.name).join(', ') || t('host.noCoach')}`;
   }
 </script>
 
 {#if online && host.league}
   <div class="colonnes">
-    <Card title="Ton serveur" scotch>
-      <p class="texte-s meta">Ligue {host.league.slot} · {leagueLine(host.league)}</p>
-      <p class="tampon">Code à partager</p>
+    <Card title={t('host.yourServer')} scotch>
+      <p class="texte-s meta">{t('host.league', { slot: host.league.slot })} · {leagueLine(host.league)}</p>
+      <p class="tampon">{t('host.codeToShare')}</p>
       <p class="code" data-testid="code-serveur">{host.codeText}</p>
       <div class="row">
-        <Button size="s" variant="primary" onclick={() => copy('code')}>{copied === 'code' ? 'Copié !' : 'Copier le code'}</Button>
-        <Button size="s" onclick={() => copy('lien')}>{copied === 'lien' ? 'Copié !' : 'Copier le lien'}</Button>
+        <Button size="s" variant="primary" onclick={() => copy('code')}>{copied === 'code' ? t('host.copied') : t('host.copyCode')}</Button>
+        <Button size="s" onclick={() => copy('lien')}>{copied === 'lien' ? t('host.copied') : t('host.copyLink')}</Button>
       </div>
-      <p class="texte-s meta">Tes amis le collent dans « Rejoindre une partie ». Connexion directe entre navigateurs, chiffrée.</p>
+      <p class="texte-s meta">{t('host.shareHelp')}</p>
 
       <label class="public">
         <input type="checkbox" checked={host.isPublic} onchange={togglePublic} />
-        <span class="texte-fort">Ouvrir au public</span>
+        <span class="texte-fort">{t('host.openPublic')}</span>
       </label>
-      <label class="tampon" for="nom-serveur">Nom affiché dans la liste</label>
+      <label class="tampon" for="nom-serveur">{t('host.listedName')}</label>
       <input id="nom-serveur" bind:value={serverName} maxlength={SERVER_NAME_MAX} onchange={renamePublic} />
       <p class="texte-s meta">
-        {host.isPublic ? 'Ton serveur apparaît dans la liste des serveurs publics : n’importe qui peut entrer.' : 'Privé : seuls ceux qui ont le code peuvent entrer.'}
+        {host.isPublic ? t('host.isPublic') : t('host.isPrivate')}
       </p>
 
       <div class="row">
-        <Button variant="primary" onclick={play}>Jouer dans ma ligue</Button>
+        <Button variant="primary" onclick={play}>{t('host.play')}</Button>
       </div>
-      <p class="texte-s alerte">Garde cet onglet ouvert : c'est lui le serveur. Le fermer renvoie tout le monde à l'accueil (la ligue reste sauvegardée ici).</p>
+      <p class="texte-s alerte">{t('host.keepTab')}</p>
     </Card>
 
-    <Card title="Coachs">
-      <p class="texte-s meta">{host.peers} navigateur{host.peers > 1 ? 's' : ''} d'amis connecté{host.peers > 1 ? 's' : ''}.</p>
+    <Card title={t('host.coaches')}>
+      <p class="texte-s meta">{t('host.peers', { count: host.peers })}</p>
       {#if host.league.coaches.length === 0}
-        <p class="texte-s meta">Personne d'inscrit pour l'instant.</p>
+        <p class="texte-s meta">{t('host.nobody')}</p>
       {:else}
         <ul class="liste">
           {#each host.league.coaches as coach (coach.id)}
             <li class="row">
-              <span class="pastille" class:en-ligne={coach.online} aria-label={coach.online ? 'en ligne' : 'hors ligne'}></span>
+              <span class="pastille" class:en-ligne={coach.online} aria-label={coach.online ? t('host.online') : t('shell.coach.offline')}></span>
               <span class="texte-s"><span class="texte-fort">{coach.name}</span> · {coach.clubName}</span>
-              <Button size="s" variant="ghost" onclick={() => giveCode(coach.id)}>Code de reprise</Button>
+              <Button size="s" variant="ghost" onclick={() => giveCode(coach.id)}>{t('host.claimCode')}</Button>
             </li>
           {/each}
         </ul>
-        <p class="texte-s meta">Un ami a changé de navigateur ? Donne-lui un code de reprise : il le tape dans la salle d'attente.</p>
+        <p class="texte-s meta">{t('host.claimHelp')}</p>
       {/if}
       <div class="row">
-        <Button size="s" variant="ghost" disabled={busy} onclick={() => run(() => host.renewCode())}>Nouveau code</Button>
+        <Button size="s" variant="ghost" disabled={busy} onclick={() => run(() => host.renewCode())}>{t('host.newCode')}</Button>
         {#if confirmStop}
-          <Button size="s" onclick={() => run(async () => { confirmStop = false; await host.stop(); })}>Confirmer l'arrêt</Button>
-          <Button size="s" variant="ghost" onclick={() => (confirmStop = false)}>Annuler</Button>
+          <Button size="s" onclick={() => run(async () => { confirmStop = false; await host.stop(); })}>{t('host.confirmStop')}</Button>
+          <Button size="s" variant="ghost" onclick={() => (confirmStop = false)}>{t('common.cancel')}</Button>
         {:else}
-          <Button size="s" variant="ghost" onclick={() => (confirmStop = true)}>Arrêter le serveur</Button>
+          <Button size="s" variant="ghost" onclick={() => (confirmStop = true)}>{t('host.stop')}</Button>
         {/if}
       </div>
-      <p class="texte-s meta">« Nouveau code » : l'ancien ne mène plus nulle part, et les amis connectés doivent recevoir le nouveau.</p>
+      <p class="texte-s meta">{t('host.newCodeHelp')}</p>
     </Card>
   </div>
 {:else}
-  <Card title="Héberger une partie">
-    <p class="texte-s meta">Ton navigateur devient le serveur : choisis une ligue, tu obtiendras un code à donner à tes amis. Tes ligues restent sur ce PC.</p>
+  <Card title={t('title.host.title')}>
+    <p class="texte-s meta">{t('host.intro')}</p>
     {#if host.status === 'starting'}
-      <p class="texte-s texte-fort" role="status">Ouverture du serveur…</p>
+      <p class="texte-s texte-fort" role="status">{t('host.starting')}</p>
     {/if}
     <ul class="liste">
       {#each host.slots as entry (entry.slot)}
         <li>
-          <p class="texte-fort">Ligue {entry.slot}</p>
+          <p class="texte-fort">{t('host.league', { slot: entry.slot })}</p>
           {#if entry.status === 'ok' && entry.league}
             <p class="texte-s meta">{leagueLine(entry.league)}</p>
           {:else if entry.status === 'error'}
-            <p class="texte-s erreur">Sauvegarde illisible.</p>
+            <p class="texte-s erreur">{t('host.unreadable')}</p>
           {:else}
-            <p class="texte-s meta">Emplacement vide.</p>
+            <p class="texte-s meta">{t('host.emptySlot')}</p>
           {/if}
           <div class="row">
             {#if entry.status === 'empty'}
-              <Button size="s" variant="primary" disabled={busy} onclick={() => open(entry.slot)}>Nouvelle ligue</Button>
+              <Button size="s" variant="primary" disabled={busy} onclick={() => open(entry.slot)}>{t('host.newLeague')}</Button>
             {:else if entry.status === 'ok'}
-              <Button size="s" variant="primary" disabled={busy} onclick={() => open(entry.slot)}>Héberger</Button>
+              <Button size="s" variant="primary" disabled={busy} onclick={() => open(entry.slot)}>{t('title.host.button')}</Button>
             {/if}
             {#if entry.status !== 'empty'}
               {#if confirmDelete === entry.slot}
-                <Button size="s" onclick={() => remove(entry.slot)}>Confirmer</Button>
-                <Button size="s" variant="ghost" onclick={() => (confirmDelete = null)}>Annuler</Button>
+                <Button size="s" onclick={() => remove(entry.slot)}>{t('common.confirm')}</Button>
+                <Button size="s" variant="ghost" onclick={() => (confirmDelete = null)}>{t('common.cancel')}</Button>
               {:else}
-                <Button size="s" variant="ghost" onclick={() => (confirmDelete = entry.slot)}>Supprimer</Button>
+                <Button size="s" variant="ghost" onclick={() => (confirmDelete = entry.slot)}>{t('common.delete')}</Button>
               {/if}
             {/if}
           </div>
@@ -180,8 +181,8 @@
     </ul>
   </Card>
 {/if}
-{#if host.error}<p class="texte-s erreur" role="alert">{host.error}</p>{/if}
-{#if feedback}<p class="texte-s texte-fort" role="status">{feedback}</p>{/if}
+{#if host.error}<p class="texte-s erreur" role="alert">{td(host.error)}</p>{/if}
+{#if feedback}<p class="texte-s texte-fort" role="status">{td(feedback)}</p>{/if}
 
 <style>
   .colonnes {

@@ -2,6 +2,7 @@
  * Live texte et horloge (MATCH-02, MATCH-04, MATCH-07) : fonctions pures de présentation.
  */
 import type { MatchEvent, MatchState, Side } from '../../domain/match';
+import { t, td, type MessageKey } from '../../i18n/t';
 
 export type Speed = 1 | 2 | 4;
 export const SPEEDS: readonly Speed[] = [1, 2, 4];
@@ -18,15 +19,15 @@ export function minuteLabel(minute: number, addedMinute: number): string {
   return addedMinute > 0 ? `${minute}+${addedMinute}'` : `${minute}'`;
 }
 
-const PERIOD_LABEL: Record<MatchState['status'], string> = {
-  firstHalf: '1re mi-temps',
-  halftime: 'Mi-temps',
-  secondHalf: '2e mi-temps',
-  finished: 'Terminé',
+const PERIOD_LABEL: Record<MatchState['status'], MessageKey> = {
+  firstHalf: 'live.period.firstHalf',
+  halftime: 'live.period.halftime',
+  secondHalf: 'live.period.secondHalf',
+  finished: 'live.period.finished',
 };
 
 export function periodLabel(state: MatchState): string {
-  return PERIOD_LABEL[state.status];
+  return t(PERIOD_LABEL[state.status]);
 }
 
 /** Lignes du live affichées par défaut : au-delà, « tout voir » (green code). */
@@ -47,11 +48,11 @@ export interface LiveLine {
   detail: string;
 }
 
-const TAG: Record<LiveTone, string | null> = {
-  goal: 'But',
-  mine: 'Toi',
-  theirs: 'En face',
-  card: 'Carton',
+const TAG: Record<LiveTone, MessageKey | null> = {
+  goal: 'live.tag.goal',
+  mine: 'live.tag.mine',
+  theirs: 'live.tag.theirs',
+  card: 'live.tag.card',
   plain: null,
 };
 
@@ -79,43 +80,43 @@ function scoreText(score: [number, number], coachSide: Side): string {
 /** L'action en quelques mots, `null` pour ce qui ne compte pas dans le fil (fautes, ambiance). */
 export function liveHeadline(event: MatchEvent, coachSide: Side, nameOf: (playerId: string) => string): string | null {
   const name = event.playerId ? nameOf(event.playerId) : '';
-  const team = event.side === coachSide ? 'toi' : 'eux';
+  const team = event.side === coachSide ? t('live.you') : t('live.them');
   switch (event.kind) {
     case 'kickoff':
-      return "Coup d'envoi";
+      return t('live.kickoff');
     case 'halftime':
-      return 'Mi-temps';
+      return t('live.period.halftime');
     case 'fullTime':
-      return 'Fin du match';
+      return t('live.fullTime');
     case 'stoppage':
-      return `+${event.label} min de temps additionnel`;
+      return t('live.stoppage', { minutes: event.label ?? '' });
     case 'goal':
-      return `${name} marque${event.label ? ' (compte double)' : ''}${event.assistName ? ` (passe de ${event.assistName})` : ''} · ${scoreText(event.score!, coachSide)}`;
+      return `${t('live.scores', { player: name })}${event.label ? t('live.double') : ''}${event.assistName ? t('live.assist', { player: event.assistName }) : ''} · ${scoreText(event.score!, coachSide)}`;
     case 'goalCancelled':
-      return `But annulé · ${scoreText(event.score!, coachSide)}`;
+      return `${t('live.goalCancelled')} · ${scoreText(event.score!, coachSide)}`;
     case 'save':
-      return `Arrêt sur la frappe de ${name}`;
+      return t('live.save', { player: name });
     case 'miss':
-      return `${name} rate le cadre`;
+      return t('live.miss', { player: name });
     case 'actionCancelled':
-      return 'Action annulée';
+      return t('live.actionCancelled');
     case 'yellowCard':
-      return `Jaune pour ${name}`;
+      return t('live.yellow', { player: name });
     case 'redCard':
-      return `Rouge pour ${name}`;
+      return t('live.red', { player: name });
     case 'penalty':
-      return `Penalty pour ${team}`;
+      return t('live.penalty', { team });
     case 'freeKick':
-      return `Coup franc ${event.label ?? 'dangereux'} pour ${team}`;
+      return t('live.freeKick', { distance: event.label ? td(event.label) : t('live.dangerous'), team });
     case 'injury':
-      return `${name} blessé`;
+      return t('live.injured', { player: name });
     case 'activation':
-      return `${name} : ${event.label}`;
+      return `${name}${t('common.colon')}${td(event.label ?? '')}`;
     case 'effect':
-      return name ? `${name} au sol` : event.text;
+      return name ? t('live.down', { player: name }) : td(event.text);
     case 'substitution':
     case 'shootout':
-      return event.text;
+      return td(event.text);
     case 'ambiance':
     case 'foul':
     case 'corner':
@@ -132,7 +133,8 @@ export function liveLines(events: readonly MatchEvent[], coachSide: Side, limit:
     const text = liveHeadline(event, coachSide, nameOf);
     if (text === null) continue;
     const tone = liveTone(event, coachSide);
-    lines.push({ key: index, minute: minuteLabel(event.minute, event.addedMinute), tone, tag: TAG[tone], text, detail: event.text });
+    const tag = TAG[tone];
+    lines.push({ key: index, minute: minuteLabel(event.minute, event.addedMinute), tone, tag: tag ? t(tag) : null, text, detail: td(event.text) });
   }
   return lines;
 }
@@ -141,7 +143,7 @@ export function liveLines(events: readonly MatchEvent[], coachSide: Side, limit:
 export function lastGoalText(events: readonly MatchEvent[]): string {
   for (let index = events.length - 1; index >= 0; index--) {
     const event = events[index]!;
-    if (event.kind === 'goal') return `${minuteLabel(event.minute, event.addedMinute)} ${event.text}`;
+    if (event.kind === 'goal') return `${minuteLabel(event.minute, event.addedMinute)} ${td(event.text)}`;
   }
   return '';
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../../i18n/t';
   /** Énergie restante : verte tant que ça va, jaune quand ça tire, rouge quand il faut le sortir. */
   interface Props {
     /** De 0 (vidé) à 100 (frais). */
@@ -12,7 +13,7 @@
   const level = $derived(energy < LOW ? 'bas' : energy < MEDIUM ? 'moyen' : 'haut');
 </script>
 
-<span class="barre" title="Énergie restante : {energy} %" aria-hidden="true"><span class={level} style:width="{energy}%"></span></span>
+<span class="barre" title={t('kit.energy', { energy })} aria-hidden="true"><span class={level} style:width="{energy}%"></span></span>
 
 <style>
   .barre {

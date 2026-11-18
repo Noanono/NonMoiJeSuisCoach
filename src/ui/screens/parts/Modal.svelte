@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../../../i18n/t';
   import type { Snippet } from 'svelte';
 
   /**
@@ -35,7 +36,7 @@
       {#if kicker}<p class="tampon kicker">{kicker}</p>{/if}
       <h2 id={titleId} class="banderole-m">{title}</h2>
     </div>
-    <button class="fermer tampon" onclick={onclose} aria-label="Fermer la fenêtre">Fermer</button>
+    <button class="fermer tampon" onclick={onclose} aria-label={t('modal.closeLabel')}>{t('common.close')}</button>
   </header>
   <div class="contenu">
     {@render children()}

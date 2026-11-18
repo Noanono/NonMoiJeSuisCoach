@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, td } from '../../i18n/t';
   import './parts/screens.css';
   import Card from '../kit/Card.svelte';
   import FormBadge from '../kit/FormBadge.svelte';
@@ -37,9 +38,9 @@
         const rank = index + 1;
         let zone: string | null = null;
         const barrage = playoffZone(division, hasUpper, hasLower, rank);
-        if (rank <= division.promoted) zone = 'Montée';
-        else if (rank > size - division.relegated) zone = 'Descente';
-        else if (barrage) zone = barrage === 'up' ? 'Barrage (montée)' : 'Barrage (maintien)';
+        if (rank <= division.promoted) zone = t('competitions.zone.promotion');
+        else if (rank > size - division.relegated) zone = t('competitions.zone.relegation');
+        else if (barrage) zone = barrage === 'up' ? t('competitions.zone.playoffUp') : t('competitions.zone.playoffDown');
         return {
           ...row,
           rank,
@@ -55,7 +56,7 @@
   function scoreOf(fixture: Fixture): string | null {
     const { result } = fixture;
     if (!result) return null;
-    const shootout = result.penaltyWinnerId ? ' (t.a.b.)' : '';
+    const shootout = result.penaltyWinnerId ? t('competitions.shootout') : '';
     return `${result.homeGoals}-${result.awayGoals}${shootout}`;
   }
 
@@ -71,7 +72,7 @@
             id: fixture.id,
             week: fixture.week,
             current: fixture.week === game.week,
-            competition: fixture.competition === 'league' ? `J${fixture.round}` : fixture.competition === 'playoff' ? 'Barrage' : cupRoundName(game.cup, fixture.round),
+            competition: fixture.competition === 'league' ? t('competitions.matchday', { round: fixture.round }) : fixture.competition === 'playoff' ? t('competitions.playoff') : td(cupRoundName(game.cup, fixture.round)),
             isHome,
             opponent: game.clubs[isHome ? fixture.awayId : fixture.homeId]?.name ?? '?',
             score: scoreOf(fixture),
@@ -94,7 +95,7 @@
       week: window.first,
       first: window.first,
       last: window.last,
-      status: currentWeek > window.last ? 'Terminé' : currentWeek >= window.first ? 'Ouvert en ce moment' : 'À venir',
+      status: currentWeek > window.last ? t('competitions.window.over') : currentWeek >= window.first ? t('competitions.window.open') : t('competitions.window.upcoming'),
       open: currentWeek >= window.first && currentWeek <= window.last,
     })),
   ].sort((a, b) => a.week - b.week));
@@ -113,7 +114,7 @@
           const round = index + 1;
           return {
             round,
-            name: cupRoundName(state, round),
+            name: td(cupRoundName(state, round)),
             fixtures: cupRoundFixtures(state, round).map((fixture) => {
               const winner = fixture.result ? fixtureWinnerId(fixture) : null;
               return {
@@ -138,33 +139,33 @@
 
 <div class="ecran">
   <div class="colonnes large-gauche">
-    <Card title="Classement">
+    <Card title={t('competitions.table')}>
       {#snippet actions()}
         <label class="champ">
-          <span class="sr-only">Division affichée</span>
+          <span class="sr-only">{t('competitions.shownDivision')}</span>
           <select class="select" value={divisionId} onchange={(event) => (chosenDivisionId = event.currentTarget.value)}>
             {#each divisions.list as division (division.id)}
-              <option value={division.id}>{division.name}{division.id === divisions.humanId ? ' (la tienne)' : ''}</option>
+              <option value={division.id}>{td(division.name)}{division.id === divisions.humanId ? t('stats.yours') : ''}</option>
             {/each}
           </select>
         </label>
       {/snippet}
       <div class="defilant">
         <table class="tableau">
-          <caption class="sr-only">Classement de la division : points, puis différence de buts</caption>
+          <caption class="sr-only">{t('competitions.tableCaption')}</caption>
           <thead>
             <tr>
               <th scope="col" class="num">#</th>
-              <th scope="col">Club</th>
-              <th scope="col" class="num"><abbr title="Joués">J</abbr></th>
-              <th scope="col" class="num"><abbr title="Gagnés">G</abbr></th>
-              <th scope="col" class="num"><abbr title="Nuls">N</abbr></th>
-              <th scope="col" class="num"><abbr title="Perdus">P</abbr></th>
-              <th scope="col" class="num"><abbr title="Buts pour">BP</abbr></th>
-              <th scope="col" class="num"><abbr title="Buts contre">BC</abbr></th>
-              <th scope="col" class="num"><abbr title="Différence de buts">Diff</abbr></th>
-              <th scope="col" class="num">Pts</th>
-              <th scope="col">Zone</th>
+              <th scope="col">{t('shell.tabs.club')}</th>
+              <th scope="col" class="num"><abbr title={t('competitions.col.played')}>{t('competitions.col.playedShort')}</abbr></th>
+              <th scope="col" class="num"><abbr title={t('competitions.col.won')}>{t('competitions.col.wonShort')}</abbr></th>
+              <th scope="col" class="num"><abbr title={t('competitions.col.drawn')}>{t('competitions.col.drawnShort')}</abbr></th>
+              <th scope="col" class="num"><abbr title={t('competitions.col.lost')}>{t('competitions.col.lostShort')}</abbr></th>
+              <th scope="col" class="num"><abbr title={t('competitions.col.for')}>{t('competitions.col.forShort')}</abbr></th>
+              <th scope="col" class="num"><abbr title={t('competitions.col.against')}>{t('competitions.col.againstShort')}</abbr></th>
+              <th scope="col" class="num"><abbr title={t('competitions.col.difference')}>{t('competitions.col.differenceShort')}</abbr></th>
+              <th scope="col" class="num">{t('competitions.col.points')}</th>
+              <th scope="col">{t('competitions.col.zone')}</th>
             </tr>
           </thead>
           <tbody>
@@ -188,21 +189,21 @@
       </div>
     </Card>
 
-    <Card title="Ton calendrier">
+    <Card title={t('competitions.calendar')}>
       <p class="texte-s rappel">
-        <span class="tampon pastille-mercato">Mercato</span>
-        {#each WINDOWS as window, index (window.first)}{index > 0 ? ' et ' : ''}semaines <span class="mono texte-fort">{window.first} à {window.last}</span>{/each}
+        <span class="tampon pastille-mercato">{t('shell.tabs.market')}</span>
+        {#each WINDOWS as window, index (window.first)}{index > 0 ? t('competitions.and') : ''}{t('competitions.weeks')} <span class="mono texte-fort">{t('competitions.range', { first: window.first, last: window.last })}</span>{/each}
       </p>
       <div class="defilant">
         <table class="tableau">
-          <caption class="sr-only">Matchs de ton club cette saison, championnat et coupe</caption>
+          <caption class="sr-only">{t('competitions.calendarCaption')}</caption>
           <thead>
             <tr>
-              <th scope="col" class="num">Sem.</th>
-              <th scope="col">Compét.</th>
-              <th scope="col">Adversaire</th>
-              <th scope="col" class="num">Score</th>
-              <th scope="col"><span class="sr-only">Résultat</span></th>
+              <th scope="col" class="num">{t('competitions.col.week')}</th>
+              <th scope="col">{t('competitions.col.competition')}</th>
+              <th scope="col">{t('competitions.col.opponent')}</th>
+              <th scope="col" class="num">{t('dashboard.score')}</th>
+              <th scope="col"><span class="sr-only">{t('competitions.col.result')}</span></th>
             </tr>
           </thead>
           <tbody>
@@ -210,7 +211,7 @@
               {#if entry.kind === 'mercato'}
                 <tr class="mercato" class:ouvert={entry.open}>
                   <td class="num">{entry.first}-{entry.last}</td>
-                  <td colspan="4"><span class="tampon">Mercato</span> <span class="texte-s">{entry.status}</span></td>
+                  <td colspan="4"><span class="tampon">{t('shell.tabs.market')}</span> <span class="texte-s">{entry.status}</span></td>
                 </tr>
               {:else}
                 {@const match = entry.match}
@@ -219,10 +220,10 @@
                   <td class="texte-s">{match.competition}</td>
                   <td>
                     {match.opponent}
-                    <span class="discret texte-s">{match.isHome ? 'dom.' : 'ext.'}</span>
+                    <span class="discret texte-s">{match.isHome ? t('competitions.homeShort') : t('competitions.awayShort')}</span>
                     {#if match.derby}<span class="tampon pastille-derby">Derby</span>{/if}
                   </td>
-                  <td class="num">{match.score ?? (match.current ? 'Cette sem.' : '')}</td>
+                  <td class="num">{match.score ?? (match.current ? t('competitions.thisWeek') : '')}</td>
                   <td>{#if match.result}<FormBadge result={match.result} />{/if}</td>
                 </tr>
               {/if}
@@ -233,14 +234,14 @@
     </Card>
   </div>
 
-  <Card title="La coupe">
+  <Card title={t('competitions.cup')}>
     {#snippet actions()}
-      {#if cup.winner}<span class="tampon">Vainqueur : {cup.winner}</span>{/if}
+      {#if cup.winner}<span class="tampon">{t('competitions.winner', { club: cup.winner })}</span>{/if}
     {/snippet}
     {#if cup.rounds.length === 0}
-      <p class="vide">Le tirage n'a pas encore eu lieu.</p>
+      <p class="vide">{t('competitions.noDraw')}</p>
     {:else}
-      <div class="tours" role="group" aria-label="Tours de coupe">
+      <div class="tours" role="group" aria-label={t('competitions.rounds')}>
         {#each cup.rounds as round (round.round)}
           <button class="onglet tampon" aria-pressed={round.round === shownRound?.round} onclick={() => (chosenRound = round.round)}>
             {round.name}
@@ -250,7 +251,7 @@
       {#if shownRound}
         {#if shownRound.round === 1 && cup.byes > 0}
           <p class="texte-s discret">
-            {cup.byes} clubs exemptés entrent au tour suivant{cup.humanBye ? ', dont le tien' : ''}.
+            {t('competitions.byes', { count: cup.byes })}{cup.humanBye ? t('competitions.byesYours') : ''}.
           </p>
         {/if}
         <ul class="liste-nue rencontres">

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../../i18n/t';
   import type { MatchController } from './controller.svelte';
   import { minuteIntervalMs } from './live';
   import { MAP_HEIGHT, MAP_PHASES, MAP_WIDTH, minimapFrame } from './minimap';
@@ -31,7 +32,7 @@
   });
 </script>
 
-<section class="carte" style:--pas="{stepMs}ms" aria-label="Carte du match : ton équipe attaque vers la droite">
+<section class="carte" style:--pas="{stepMs}ms" aria-label={t('minimap.label')}>
   <svg viewBox="-3 -1 {MAP_WIDTH + 6} {MAP_HEIGHT + 2}" aria-hidden="true" focusable="false">
     <rect class="herbe" x="0" y="0" width={MAP_WIDTH} height={MAP_HEIGHT} />
     <g class="traces">
@@ -51,9 +52,9 @@
     <g class="pion" style:transform="translate({frame.ball.x}px, {frame.ball.y}px)">
       <circle class="ballon" r="1.4" />
     </g>
-    {#if frame.goal}<text class="but" x={MAP_WIDTH / 2} y={MAP_HEIGHT / 2 + 6}>BUT !</text>{/if}
+    {#if frame.goal}<text class="but" x={MAP_WIDTH / 2} y={MAP_HEIGHT / 2 + 6}>{t('minimap.goal')}</text>{/if}
   </svg>
-  <p class="legende tampon"><span class="pastille toi"></span>Toi <span class="pastille eux"></span>En face <span class="pastille ballon"></span>Ballon</p>
+  <p class="legende tampon"><span class="pastille toi"></span>{t('live.tag.mine')} <span class="pastille eux"></span>{t('live.tag.theirs')} <span class="pastille ballon"></span>{t('minimap.ball')}</p>
 </section>
 
 <style>

@@ -1,11 +1,12 @@
 <script lang="ts">
+  import { t, td, type MessageKey } from '../../i18n/t';
   import './parts/screens.css';
   import Card from '../kit/Card.svelte';
   import { store } from '../store.svelte';
   import { humanDivision, seasonLeaders, type LeaderRow } from '../../domain/game';
 
   /** Statistiques de la saison (UNIV-08) : buteurs, passeurs, cartons, équipe type et palmarès. */
-  const POSITION_LABEL = { GK: 'G', DEF: 'DEF', MID: 'MIL', ATT: 'ATT' } as const;
+  const POSITION_LABEL: Record<'GK' | 'DEF' | 'MID' | 'ATT', MessageKey> = { GK: 'stats.pos.GK', DEF: 'stats.pos.DEF', MID: 'stats.pos.MID', ATT: 'stats.pos.ATT' };
 
   const divisions = $derived(
     store.select((game) => ({
@@ -22,31 +23,31 @@
   const leaders = $derived(store.select((game) => seasonLeaders(game, divisionId)));
   const history = $derived(store.select((game) => [...game.history].reverse()));
 
-  const boards: { title: string; unit: string; rows: () => LeaderRow[]; empty: string }[] = [
-    { title: 'Buteurs', unit: 'buts', rows: () => leaders.scorers, empty: 'Personne n’a encore marqué. Les gardiens sont en forme.' },
-    { title: 'Passeurs', unit: 'passes', rows: () => leaders.assisters, empty: 'Aucune passe décisive. Tout le monde joue perso.' },
-    { title: 'Cartons', unit: 'pts', rows: () => leaders.cards, empty: 'Aucun carton. L’arbitre a oublié son sifflet ?' },
+  const boards: { id: string; title: MessageKey; unit: MessageKey; rows: () => LeaderRow[]; empty: MessageKey }[] = [
+    { id: 'scorers', title: 'stats.scorers.title', unit: 'stats.scorers.unit', rows: () => leaders.scorers, empty: 'stats.scorers.empty' },
+    { id: 'assisters', title: 'stats.assisters.title', unit: 'stats.assisters.unit', rows: () => leaders.assisters, empty: 'stats.assisters.empty' },
+    { id: 'cards', title: 'stats.cards.title', unit: 'stats.cards.unit', rows: () => leaders.cards, empty: 'stats.cards.empty' },
   ];
 </script>
 
 <div class="ecran">
   <div class="entete">
     <label class="champ">
-      <span class="tampon">Division</span>
+      <span class="tampon">{t('club.col.division')}</span>
       <select class="select" value={divisionId} onchange={(event) => (chosenDivisionId = event.currentTarget.value)}>
         {#each divisions.list as division (division.id)}
-          <option value={division.id}>{division.name}{division.id === divisions.humanId ? ' (la tienne)' : ''}</option>
+          <option value={division.id}>{td(division.name)}{division.id === divisions.humanId ? t('stats.yours') : ''}</option>
         {/each}
       </select>
     </label>
   </div>
 
   <div class="grille">
-    {#each boards as board (board.title)}
+    {#each boards as board (board.id)}
       {@const rows = board.rows()}
-      <Card title={board.title}>
+      <Card title={t(board.title)}>
         {#if rows.length === 0}
-          <p class="vide">{board.empty}</p>
+          <p class="vide">{t(board.empty)}</p>
         {:else}
           <ol class="liste-nue classement">
             {#each rows as row, index (row.playerId)}
@@ -54,9 +55,9 @@
                 <span class="mono rang">{index + 1}</span>
                 <span class="nom">
                   <span class:texte-fort={row.isHuman}>{row.name}</span>
-                  <span class="texte-s discret">{row.clubName} · {row.detail}</span>
+                  <span class="texte-s discret">{td(row.clubName)} · {td(row.detail)}</span>
                 </span>
-                <span class="mono texte-fort valeur">{row.value} <span class="texte-s discret">{board.unit}</span></span>
+                <span class="mono texte-fort valeur">{row.value} <span class="texte-s discret">{t(board.unit)}</span></span>
               </li>
             {/each}
           </ol>
@@ -64,17 +65,17 @@
       </Card>
     {/each}
 
-    <Card title="Équipe type">
+    <Card title={t('stats.team')}>
       {#if leaders.team.length === 0}
-        <p class="vide">Pas encore assez de matchs pour désigner les meilleurs.</p>
+        <p class="vide">{t('stats.teamEmpty')}</p>
       {:else}
         <ol class="liste-nue classement">
           {#each leaders.team as row (row.playerId)}
             <li class:surligne={row.isHuman}>
-              <span class="tampon rang">{POSITION_LABEL[row.position]}</span>
+              <span class="tampon rang">{t(POSITION_LABEL[row.position])}</span>
               <span class="nom">
                 <span class:texte-fort={row.isHuman}>{row.name}</span>
-                <span class="texte-s discret">{row.clubName} · {row.detail}</span>
+                <span class="texte-s discret">{td(row.clubName)} · {td(row.detail)}</span>
               </span>
               <span class="mono texte-fort valeur">{row.value}</span>
             </li>
@@ -84,17 +85,17 @@
     </Card>
   </div>
 
-  <Card title="Palmarès du coach">
+  <Card title={t('stats.honours')}>
     {#if history.length === 0}
-      <p class="vide">Première saison : le palmarès est encore vierge. Comme l’armoire à trophées.</p>
+      <p class="vide">{t('stats.honoursEmpty')}</p>
     {:else}
       <ul class="liste-nue palmares">
         {#each history as record (record.season)}
           <li>
-            <p class="texte-fort">Saison {record.season} · {record.clubName ?? ''} {record.clubName ? '·' : ''} {record.position}e de {record.divisionName}</p>
-            <p class="texte-s">{record.verdict}</p>
+            <p class="texte-fort">{t('common.season', { season: record.season })} · {record.clubName ?? ''} {record.clubName ? '·' : ''} {t('stats.rankIn', { position: t('common.rank', { position: record.position }), division: td(record.divisionName) })}</p>
+            <p class="texte-s">{td(record.verdict)}</p>
             {#each record.awards ?? [] as award (award)}
-              <p class="texte-s discret">{award}</p>
+              <p class="texte-s discret">{td(award)}</p>
             {/each}
           </li>
         {/each}

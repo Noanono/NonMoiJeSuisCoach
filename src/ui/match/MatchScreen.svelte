@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../../i18n/t';
   import type { Side } from '../../domain/match';
   import Button from '../kit/Button.svelte';
   import Card from '../kit/Card.svelte';
@@ -21,9 +22,9 @@
   {/key}
 {:else}
   <main class="vide">
-    <Card title="Pas de match">
-      <p>Le terrain est vide. Même les pigeons sont partis.</p>
-      <Button variant="primary" onclick={() => store.leaveMatch()}>Retour au bureau</Button>
+    <Card title={t('match.none')}>
+      <p>{t('match.emptyPitch')}</p>
+      <Button variant="primary" onclick={() => store.leaveMatch()}>{t('dashboard.backToOffice')}</Button>
     </Card>
   </main>
 {/if}

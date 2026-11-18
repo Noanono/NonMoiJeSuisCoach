@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, td } from '../../i18n/t';
   import { DUEL_DECISION_MS } from '../../server/duel';
   import type { MatchController } from './controller.svelte';
 
@@ -35,13 +36,13 @@
     const pending = match.pending;
     if (pending && pending.side === side) {
       const source = match[side].players.find((player) => player.id === pending.playerId);
-      return `choisit la cible de « ${source?.ability?.name ?? 'sa capacité'} »`;
+      return t('duel.choosingTarget', { ability: source?.ability?.name ? td(source.ability.name) : t('duel.hisAbility') });
     }
     const window = match.awaiting;
-    if (window?.keeper) return 'remplace son gardien blessé';
-    if (window?.penalty) return window.penalty === 'attack' ? 'choisit sa frappe de penalty' : 'choisit où plonge son gardien';
-    if (window?.freeKick) return window.freeKick === 'attack' ? 'choisit son coup franc' : 'place son mur';
-    return 'hésite à lancer une capacité';
+    if (window?.keeper) return t('duel.keeper');
+    if (window?.penalty) return window.penalty === 'attack' ? t('duel.penaltyShot') : t('duel.penaltyDive');
+    if (window?.freeKick) return window.freeKick === 'attack' ? t('duel.freeKick') : t('duel.wall');
+    return t('duel.hesitating');
   }
 
   const seconds = (ms: number) => Math.ceil(ms / 1000);
@@ -49,15 +50,15 @@
 
 {#if decision}
   {#if decision.mine}
-    <div class="chrono" role="timer" aria-label="Temps pour décider">
-      <span class="tampon">À toi de décider · {seconds(decision.remaining)} s</span>
+    <div class="chrono" role="timer" aria-label={t('duel.timer')}>
+      <span class="tampon">{t('duel.yourCall', { seconds: seconds(decision.remaining) })}</span>
       <div class="barre" class:urgent={decision.share < 0.3}><div class="reste" style:width="{decision.share * 100}%"></div></div>
     </div>
   {:else}
     <div class="adverse" role="status" aria-live="polite">
       <p class="banderole-titre">⏳ {decision.name} {decision.what}…</p>
       <div class="barre" class:urgent={decision.share < 0.3}><div class="reste" style:width="{decision.share * 100}%"></div></div>
-      <p class="texte-s">Le match reprend dès qu'il a choisi, au plus tard dans {seconds(decision.remaining)} s.</p>
+      <p class="texte-s">{t('duel.resumes', { seconds: seconds(decision.remaining) })}</p>
     </div>
   {/if}
 {/if}

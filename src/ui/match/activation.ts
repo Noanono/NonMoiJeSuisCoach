@@ -9,10 +9,9 @@ import type { Position, Rarity } from '../../domain/types';
 import type { AvatarPlayer } from '../kit/avatar';
 import { describeEffect, POSITION_SHORT } from '../screens/describe';
 import { effectChips } from './pitch';
+import { t, td } from '../../i18n/t';
 
-const HIDDEN_DESCRIPTION = "Capacité cachée : tu sauras ce qu'elle fait en gueulant.";
-
-const LINE_WORD: Record<Position, string> = { GK: 'gardien', DEF: 'défenseur', MID: 'milieu', ATT: 'attaquant' };
+const LINE_WORD = (line: Position): string => t(`activation.line.${line}`);
 
 export interface AbilitySheet {
   playerName: string;
@@ -100,7 +99,7 @@ export function substitutionPanel(state: MatchState, coachSide: Side, playerId: 
       displaced: entering.profile.position !== line,
       energy: energyOf(entering),
     }));
-    return { ...base, title: 'Remplacer par', options };
+    return { ...base, title: t('activation.replaceWith'), options };
   }
   if (canEnter(player)) {
     const options = team.players.filter(canLeave).map((leaving) => ({
@@ -113,7 +112,7 @@ export function substitutionPanel(state: MatchState, coachSide: Side, playerId: 
       displaced: player.profile.position !== leaving.line,
       energy: energyOf(leaving),
     }));
-    return { ...base, title: 'Entrer à la place de', options };
+    return { ...base, title: t('activation.comeOnFor'), options };
   }
   return null;
 }
@@ -127,28 +126,28 @@ export function targetingText(preview: ActivationPreview): string {
   const count = Math.max(1, preview.targetCount);
   switch (preview.targeting) {
     case 'self':
-      return 'Lui-même';
+      return t('activation.target.self');
     case 'team':
-      return 'Toute ton équipe';
+      return t('activation.target.team');
     case 'opponentTeam':
-      return "Toute l'équipe adverse";
+      return t('activation.target.opponentTeam');
     case 'zone':
-      return 'Sa zone du terrain : tu choisis le moment, pas la cible';
+      return t('activation.target.zone');
     case 'teammate':
-      return `${plural(count, 'coéquipier')}${preview.targetDowned ? ' au sol ou blessé' : ''}, à choisir sur le terrain`;
+      return t('activation.target.pick', { who: `${plural(count, t('activation.target.teammate'))}${preview.targetDowned ? t('activation.target.downed') : ''}` });
     case 'opponent':
-      return `${plural(count, preview.targetLine ? LINE_WORD[preview.targetLine] : 'adversaire')}, à choisir sur le terrain`;
+      return t('activation.target.pick', { who: plural(count, preview.targetLine ? LINE_WORD(preview.targetLine) : t('activation.target.opponent')) });
     case 'randomOpponent':
-      return `${plural(count, 'adversaire')} au hasard`;
+      return t('activation.target.random', { who: plural(count, t('activation.target.opponent')) });
     case null:
-      return 'Aucune';
+      return t('activation.target.none');
   }
 }
 
 function positionText(player: MatchPlayer): string {
   const natural = POSITION_SHORT[player.profile.position];
-  if (player.line === null) return `${natural} · sur le banc`;
-  return player.line === player.profile.position ? natural : `${natural}, joue ${POSITION_SHORT[player.line]} (hors poste)`;
+  if (player.line === null) return t('activation.onBench', { position: natural });
+  return player.line === player.profile.position ? natural : t('activation.playsAt', { position: natural, line: POSITION_SHORT[player.line] });
 }
 
 export function abilitySheet(state: MatchState, coachSide: Side, playerId: string): AbilitySheet {
@@ -156,20 +155,20 @@ export function abilitySheet(state: MatchState, coachSide: Side, playerId: strin
   const team = coachSide === 'home' ? state.home : state.away;
   const player = team.players.find((candidate) => candidate.id === playerId);
   const ability = player?.ability ?? null;
-  const cooldown = preview.cooldownRemaining > 0 ? `Recharge : encore ${preview.cooldownRemaining} min.` : null;
+  const cooldown = preview.cooldownRemaining > 0 ? t('activation.cooldown', { minutes: preview.cooldownRemaining }) : null;
   const known = ability !== null && preview.revealed;
   return {
     playerName: player?.name ?? '?',
     avatar: player ? avatarOf(player) : null,
-    abilityName: preview.abilityName,
-    rarity: preview.rarity ? { key: preview.rarity, label: RARITY_LABEL[preview.rarity] } : null,
-    description: !ability ? '' : known ? ability.description : HIDDEN_DESCRIPTION,
+    abilityName: td(preview.abilityName),
+    rarity: preview.rarity ? { key: preview.rarity, label: td(RARITY_LABEL[preview.rarity]) } : null,
+    description: !ability ? '' : known ? td(ability.description) : t('activation.hidden'),
     abilityEffects: known ? ability.effects.map(describeEffect) : [],
     targeting: targetingText(preview),
     cost: preview.cost,
     gauge: preview.gauge,
     available: preview.available,
-    status: preview.reason ?? cooldown,
+    status: preview.reason ? td(preview.reason) : cooldown,
     active: effectChips(state, playerId).map((chip) => chip.detail),
     position: player ? positionText(player) : '',
     energy: player ? energyOf(player) : 0,

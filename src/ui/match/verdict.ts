@@ -4,6 +4,7 @@
 import type { Consequence, EventWindow, GoalRecord, MatchState, MatchSummary, PendingPlay, Side } from '../../domain/match';
 import type { AvatarPlayer } from '../kit/avatar';
 import { minuteLabel } from './live';
+import { t, td, type MessageKey } from '../../i18n/t';
 
 export type Outcome = 'V' | 'N' | 'D';
 
@@ -20,13 +21,7 @@ export function outcomeFor(summary: MatchSummary, coachSide: Side): Outcome {
   return 'N';
 }
 
-const OUTCOME_WORD: Record<Outcome, string> = { V: 'Victoire', N: 'Nul', D: 'Défaite' };
-
-const OUTCOME_JOKE: Record<Outcome, string> = {
-  V: 'La buvette ferme tard ce soir.',
-  N: 'Le président a soupiré. Fort.',
-  D: "Le président a appelé. Il n'a rien dit. C'est pire.",
-};
+const OUTCOME_KEY: Record<Outcome, 'win' | 'draw' | 'loss'> = { V: 'win', N: 'draw', D: 'loss' };
 
 /** Phrase d'ambiance de fin de match : « Défaite 0-3. Le président a appelé. » */
 export function outcomeLine(summary: MatchSummary, coachSide: Side): string {
@@ -35,41 +30,41 @@ export function outcomeLine(summary: MatchSummary, coachSide: Side): string {
   let score = `${own}-${other}`;
   if (summary.shootout) {
     const [ownShots, otherShots] = fromCoach(summary.shootout.home, summary.shootout.away, coachSide);
-    score += ` (${ownShots}-${otherShots} aux tirs au but)`;
+    score += t('verdict.shootout', { own: ownShots, other: otherShots });
   }
-  return `${OUTCOME_WORD[outcome]} ${score}. ${OUTCOME_JOKE[outcome]}`;
+  return `${t(`form.${OUTCOME_KEY[outcome]}`)} ${score}. ${t(`verdict.joke.${OUTCOME_KEY[outcome]}`)}`;
 }
 
-const SET_PIECE_NAME: Record<PendingPlay['kind'], string> = {
-  freeKick: 'Coup franc',
-  corner: 'Corner',
-  penalty: 'Penalty',
+const SET_PIECE_NAME: Record<PendingPlay['kind'], MessageKey> = {
+  freeKick: 'verdict.setPiece.freeKick',
+  corner: 'verdict.setPiece.corner',
+  penalty: 'verdict.setPiece.penalty',
 };
 
 /** Titre du bandeau de fenêtre d'événement (CAP-19). */
 export function windowTitle(window: EventWindow, pendingPlay: PendingPlay | null): string {
-  if (window.keeper) return 'Ton gardien est blessé : qui va dans les buts ?';
-  const setPiece = SET_PIECE_NAME[pendingPlay?.kind ?? 'freeKick'];
+  if (window.keeper) return t('verdict.window.keeper');
+  const setPiece = t(SET_PIECE_NAME[pendingPlay?.kind ?? 'freeKick']);
   switch (window.trigger) {
     case 'ownSetPiece':
     case 'ownDeadBall':
-      return `${setPiece} pour toi : quelqu'un a une idée ?`;
+      return t('verdict.window.ownSetPiece', { setPiece });
     case 'opponentSetPiece':
-      return `${setPiece} pour eux : quelqu'un a une idée ?`;
+      return t('verdict.window.opponentSetPiece', { setPiece });
     case 'ownFreeKick':
-      return window.freeKick ? 'Coup franc pour toi : tir, centre ou combinaison ?' : "Coup franc pour toi : quelqu'un a une idée ?";
+      return window.freeKick ? t('verdict.window.ownFreeKickChoice') : t('verdict.window.ownFreeKick');
     case 'opponentFreeKick':
-      return window.freeKick ? 'Coup franc contre toi : quel mur ?' : "Coup franc pour eux : quelqu'un a une idée ?";
+      return window.freeKick ? t('verdict.window.opponentFreeKickChoice') : t('verdict.window.opponentFreeKick');
     case 'ownPenalty':
-      return "Penalty pour toi : quelqu'un veut s'en mêler ?";
+      return t('verdict.window.ownPenalty');
     case 'opponentPenalty':
-      return 'Penalty contre toi : on déconcentre le tireur ?';
+      return t('verdict.window.opponentPenalty');
     case 'afterOwnGoal':
-      return "But ! Quelqu'un veut en rajouter une couche ?";
+      return t('verdict.window.afterOwnGoal');
     case 'halftime':
-      return "Mi-temps : le vestiaire t'écoute.";
+      return t('verdict.window.halftime');
     case 'anytime':
-      return 'À toi de voir.';
+      return t('verdict.window.anytime');
   }
 }
 
@@ -77,11 +72,11 @@ export function windowTitle(window: EventWindow, pendingPlay: PendingPlay | null
 export function consequenceText(consequence: Consequence, playerName: (id: string) => string): string {
   switch (consequence.type) {
     case 'injury':
-      return `${playerName(consequence.playerId)} absent ${consequence.weeks} sem. : ${consequence.reason}`;
+      return t('verdict.injury', { player: playerName(consequence.playerId), weeks: consequence.weeks, reason: td(consequence.reason) });
     case 'suspension':
-      return `${playerName(consequence.playerId)} suspendu ${consequence.matches} match(s) : ${consequence.reason}`;
+      return t('verdict.suspension', { player: playerName(consequence.playerId), matches: consequence.matches, reason: td(consequence.reason) });
     case 'abilityRevealed':
-      return `Capacité révélée chez ${playerName(consequence.playerId)}`;
+      return t('verdict.revealed', { player: playerName(consequence.playerId) });
   }
 }
 
@@ -113,7 +108,7 @@ export function goalAlert(state: MatchState, goal: GoalRecord, coachSide: Side):
   const { age, clubId, position, nationality } = scorer.profile;
   return {
     own,
-    title: goal.value > 1 ? (own ? 'But en or !' : 'But en or encaissé') : own ? 'But !' : 'But encaissé',
+    title: goal.value > 1 ? (own ? t('verdict.goal.goldenOwn') : t('verdict.goal.goldenConceded')) : own ? t('verdict.goal.own') : t('verdict.goal.conceded'),
     scorer: scorer.name,
     avatar: { id: scorer.id, age, clubId, position, nationality },
     team: scoringTeam.name,

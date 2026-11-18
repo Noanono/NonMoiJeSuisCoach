@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../../i18n/t';
   import { GAUGE_MAX } from '../../domain/match';
   import Button from '../kit/Button.svelte';
   import EnergyBar from '../kit/EnergyBar.svelte';
@@ -46,29 +47,29 @@
   </div>
   {#if sheet.description}<p class="description">{sheet.description}</p>{/if}
   {#if sheet.abilityEffects.length > 0}
-    <ul class="ce-que-ca-fait texte-fort" aria-label="Effet de la capacité">
+    <ul class="ce-que-ca-fait texte-fort" aria-label={t('activation.panel.effect')}>
       {#each sheet.abilityEffects as line, index (index)}<li>{line}</li>{/each}
     </ul>
   {/if}
 
   <dl class="chiffres">
-    <div><dt class="tampon">Cible</dt><dd class="texte-s">{sheet.targeting}</dd></div>
-    <div><dt class="tampon">Coût</dt><dd class="stat-s">{sheet.cost} pts</dd></div>
+    <div><dt class="tampon">{t('activation.panel.target')}</dt><dd class="texte-s">{sheet.targeting}</dd></div>
+    <div><dt class="tampon">{t('ability.cost')}</dt><dd class="stat-s">{t('activation.panel.points', { cost: sheet.cost })}</dd></div>
     <div>
-      <dt class="tampon">Énergie</dt>
-      <dd class="jauge"><EnergyBar energy={sheet.energy} /><span class="stat-s">{sheet.energy} %</span></dd>
+      <dt class="tampon">{t('activation.panel.energy')}</dt>
+      <dd class="jauge"><EnergyBar energy={sheet.energy} /><span class="stat-s">{t('band.percent', { value: sheet.energy })}</span></dd>
     </div>
     <div>
-      <dt class="tampon">Jauge</dt>
+      <dt class="tampon">{t('activation.panel.gauge')}</dt>
       <dd class="jauge">
-        <Gauge value={sheet.gauge} max={GAUGE_MAX} label="Jauge de Gueulante" />
+        <Gauge value={sheet.gauge} max={GAUGE_MAX} label={t('activation.panel.gaugeLabel')} />
         <span class="stat-s">{sheet.gauge}/{GAUGE_MAX}</span>
       </dd>
     </div>
   </dl>
 
   {#if sheet.active.length > 0}
-    <ul class="effets texte-s" aria-label="Effets actifs">
+    <ul class="effets texte-s" aria-label={t('activation.panel.active')}>
       {#each sheet.active as effect, index (index)}<li>{effect}</li>{/each}
     </ul>
   {/if}
@@ -76,18 +77,18 @@
   {#if sheet.status}<p class="statut texte-s texte-fort">{sheet.status}</p>{/if}
 
   <div class="actions">
-    <Button variant="primary" disabled={!sheet.available} onclick={() => controller.shout()}>Gueuler !</Button>
-    <Button variant="ghost" onclick={() => controller.closeInspection()}>Laisser tomber</Button>
+    <Button variant="primary" disabled={!sheet.available} onclick={() => controller.shout()}>{t('activation.panel.shout')}</Button>
+    <Button variant="ghost" onclick={() => controller.closeInspection()}>{t('band.dropIt')}</Button>
   </div>
 
   {#if sheet.substitution}
     {@const panel = sheet.substitution}
-    <section class="changements" aria-label="Remplacement">
-      <h3 class="tampon">{panel.title} · {panel.left}/{panel.max} restants</h3>
+    <section class="changements" aria-label={t('activation.panel.substitution')}>
+      <h3 class="tampon">{panel.title} · {t('activation.panel.left', { left: panel.left, max: panel.max })}</h3>
       {#if panel.left === 0}
-        <p class="texte-s">Plus aucun changement disponible.</p>
+        <p class="texte-s">{t('match.noSubsLeft')}</p>
       {:else if panel.options.length === 0}
-        <p class="texte-s">Personne de disponible.</p>
+        <p class="texte-s">{t('activation.panel.nobody')}</p>
       {:else}
         <ul>
           {#each panel.options as option (option.leavingId + option.enteringId)}

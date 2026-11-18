@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, td } from '../../../i18n/t';
   import Button from '../../kit/Button.svelte';
   import PlayerAvatar from '../../kit/PlayerAvatar.svelte';
   import RarityTag from '../../kit/RarityTag.svelte';
@@ -22,7 +23,7 @@
         const player = game.players[offer.playerId];
         const base = {
           id: offer.id,
-          club: game.clubs[offer.fromClubId]?.name ?? 'Club mystère',
+          club: game.clubs[offer.fromClubId]?.name ?? t('offers.mysteryClub'),
           amount: offer.amount,
           expiresWeek: offer.expiresWeek,
         };
@@ -43,8 +44,8 @@
             age: player.age,
             overall: overall(player),
             potential: player.potential,
-            role: lineup?.starters.includes(player.id) ? 'Titulaire' : lineup?.bench.includes(player.id) ? 'Remplaçant' : 'Tribune',
-            ability: `${ability.name} · ${RARITY_LABEL[ability.rarity]} · niv. ${player.ability.level}`,
+            role: lineup?.starters.includes(player.id) ? t('offers.starter') : lineup?.bench.includes(player.id) ? t('offers.sub') : t('offers.stand'),
+            ability: `${td(ability.name)} · ${td(RARITY_LABEL[ability.rarity])} · ${t('offers.level', { level: player.ability.level })}`,
             rarity: ability.rarity,
             stats: player.seasonStats,
             salary: player.salary,
@@ -66,52 +67,52 @@
 <CoachOffers />
 
 {#if offers.length === 0 && coachOfferCount === 0}
-  <p class="vide">Aucune offre. Personne ne veut de tes gars. Pour l'instant.</p>
+  <p class="vide">{t('offers.none')}</p>
 {:else if offers.length > 0}
   {#if !windowOpen}
-    <p class="texte-s malus">Mercato fermé : impossible d'accepter avant la réouverture. Refuser reste possible.</p>
+    <p class="texte-s malus">{t('offers.windowClosed')}</p>
   {/if}
   <ul class="liste-nue offres">
     {#each offers as offer (offer.id)}
       <li class="offre">
         <div class="proposition">
-          <p class="tampon discret">Leur proposition</p>
+          <p class="tampon discret">{t('offers.theirOffer')}</p>
           <p class="texte-fort">{offer.club}</p>
           <p class="montant mono texte-fort">{formatEuros(offer.amount)}</p>
           {#if offer.player}
             <p class="texte-s">
-              Valeur <span class="mono">{formatEuros(offer.value)}</span>
-              <span class:bonus={offer.gap >= 0} class:malus={offer.gap < 0}>({offer.gap >= 0 ? '+' : ''}{offer.gap} %)</span>
+              {t('sheet.value')} <span class="mono">{formatEuros(offer.value)}</span>
+              <span class:bonus={offer.gap >= 0} class:malus={offer.gap < 0}>({offer.gap >= 0 ? '+' : ''}{t('band.percent', { value: offer.gap })})</span>
             </p>
           {/if}
-          <p class="texte-s discret">Expire semaine <span class="mono">{offer.expiresWeek}</span></p>
+          <p class="texte-s discret">{t('offers.expires')} <span class="mono">{offer.expiresWeek}</span></p>
           <div class="ligne-actions">
-            <Button size="s" disabled={!windowOpen || !offer.player} onclick={() => answer(offer.id, true)}>Accepter</Button>
-            <Button size="s" variant="ghost" onclick={() => answer(offer.id, false)}>Refuser</Button>
+            <Button size="s" disabled={!windowOpen || !offer.player} onclick={() => answer(offer.id, true)}>{t('offers.accept')}</Button>
+            <Button size="s" variant="ghost" onclick={() => answer(offer.id, false)}>{t('offers.refuse')}</Button>
           </div>
         </div>
 
         {#if offer.player}
           {@const player = offer.player}
           <div class="joueur">
-            <p class="tampon discret">Ton joueur</p>
+            <p class="tampon discret">{t('offers.yourPlayer')}</p>
             <div class="identite">
               <PlayerAvatar player={player.avatar} size={40} />
               <div>
                 <button class="lien texte-fort" onclick={() => (openPlayerId = player.id)}>{player.name}</button>
-                <p class="texte-s discret">{player.position} · {player.age} ans · {player.role}</p>
+                <p class="texte-s discret">{player.position} · {t('offers.age', { age: player.age })} · {player.role}</p>
               </div>
             </div>
             <dl class="infos texte-s">
-              <div><dt class="tampon">Note</dt><dd><RatingBadge value={player.overall} size="s" /></dd></div>
-              <div><dt class="tampon">Potentiel</dt><dd class="mono">{player.potential}</dd></div>
-              <div><dt class="tampon">Salaire</dt><dd class="mono">{formatEuros(player.salary)}/sem.</dd></div>
-              <div><dt class="tampon">Saison</dt><dd class="mono">{player.stats.matches} m. · {player.stats.goals} b. · {player.stats.assists} pd</dd></div>
+              <div><dt class="tampon">{t('sheet.overall')}</dt><dd><RatingBadge value={player.overall} size="s" /></dd></div>
+              <div><dt class="tampon">{t('sheet.potential')}</dt><dd class="mono">{player.potential}</dd></div>
+              <div><dt class="tampon">{t('sheet.salary')}</dt><dd class="mono">{t('sheet.perWeek', { amount: formatEuros(player.salary) })}</dd></div>
+              <div><dt class="tampon">{t('sheet.season')}</dt><dd class="mono">{t('offers.seasonStats', { matches: player.stats.matches, goals: player.stats.goals, assists: player.stats.assists })}</dd></div>
             </dl>
             <RarityTag rarity={player.rarity} text={player.ability} />
           </div>
         {:else}
-          <p class="texte-s discret">Ce joueur n'est plus chez toi.</p>
+          <p class="texte-s discret">{t('offers.gone')}</p>
         {/if}
       </li>
     {/each}

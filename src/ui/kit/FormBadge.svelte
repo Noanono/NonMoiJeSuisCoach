@@ -1,14 +1,16 @@
 <script lang="ts">
-  /** Pastille V/N/D : toujours une lettre, jamais la couleur seule (design system). */
+  import { t } from '../../i18n/t';
+
+  /** Pastille V/N/D : toujours une lettre, jamais la couleur seule (design system). En anglais : W/D/L. */
   interface Props {
     result: 'V' | 'N' | 'D';
   }
 
   let { result }: Props = $props();
-  const LABEL = { V: 'Victoire', N: 'Nul', D: 'Défaite' } as const;
+  const KEY = { V: 'win', N: 'draw', D: 'loss' } as const;
 </script>
 
-<span class="badge tampon {result}" title={LABEL[result]} aria-label={LABEL[result]}>{result}</span>
+<span class="badge tampon {result}" title={t(`form.${KEY[result]}`)} aria-label={t(`form.${KEY[result]}`)}>{t(`form.${KEY[result]}Letter`)}</span>
 
 <style>
   .badge {

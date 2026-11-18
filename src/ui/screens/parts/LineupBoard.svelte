@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../../../i18n/t';
   import type { Snippet } from 'svelte';
   import Card from '../../kit/Card.svelte';
   import { EMPTY_SLOT, MAX_BENCH_SIZE } from '../../../domain/league/lineup';
@@ -134,7 +135,7 @@
 <svelte:window onpointermove={moveDrag} onpointerup={endDrag} onpointercancel={endDrag} onkeydown={cancelOnEscape} />
 
 <div class="plateau" class:en-glisse={drag?.moving}>
-  <div class="pelouse" role="group" aria-label="Terrain : glisse une carte sur un poste">
+  <div class="pelouse" role="group" aria-label={t('lineup.pitchLabel')}>
     <span class="rond" aria-hidden="true"></span>
     <span class="surface" aria-hidden="true"></span>
     {#each rows as row (row.line)}
@@ -159,15 +160,15 @@
               <button
                 type="button"
                 class="vide-poste"
-                aria-label="Poste libre : {POSITION_LABEL[slot.position]}"
+                aria-label={t('lineup.freeSlot', { position: POSITION_LABEL[slot.position] })}
                 onclick={() => place({ kind: 'slot', index: slot.index })}
               >
                 <span class="tampon">{POSITION_SHORT[slot.position]}</span>
-                <span class="texte-s">Libre</span>
+                <span class="texte-s">{t('lineup.free')}</span>
               </button>
             {/if}
             {#if target && previewPlayer}
-              <span class="apercu tampon">Note ici {previewPlayer.ratingAt[slot.position]}{#if previewPlayer.position !== slot.position} · hors poste{/if}</span>
+              <span class="apercu tampon">{t('lineup.ratingHere', { rating: previewPlayer.ratingAt[slot.position] })}{#if previewPlayer.position !== slot.position} · {t('lineup.outOfPosition')}{/if}</span>
             {/if}
           </div>
         {/each}
@@ -176,11 +177,11 @@
   </div>
 
   <div class="cote">
-    <Card title="Le banc">
+    <Card title={t('lineup.bench')}>
       {#snippet actions()}
         <span class="tampon">{bench.length} / {MAX_BENCH_SIZE}</span>
       {/snippet}
-      <div class="zone" class:survole={hovered === 'bench'} data-drop="bench" role="group" aria-label="Banc : glisse une carte ici">
+      <div class="zone" class:survole={hovered === 'bench'} data-drop="bench" role="group" aria-label={t('lineup.benchLabel')}>
         {#each bench as id (id)}
           {@const player = byId.get(id)}
           {#if player}
@@ -197,18 +198,18 @@
             </div>
           {/if}
         {/each}
-        {#if bench.length === 0}<p class="vide">Personne sur le banc. Glisse des cartes ici.</p>{/if}
+        {#if bench.length === 0}<p class="vide">{t('lineup.benchEmpty')}</p>{/if}
       </div>
       {#if selectedId && !benchIds.has(selectedId)}
-        <button type="button" class="poser tampon" onclick={() => place({ kind: 'bench' })}>Poser sur le banc</button>
+        <button type="button" class="poser tampon" onclick={() => place({ kind: 'bench' })}>{t('lineup.toBench')}</button>
       {/if}
     </Card>
 
-    <Card title="La tribune">
+    <Card title={t('lineup.stand')}>
       {#snippet actions()}
-        <span class="tampon">{standing.length} joueurs</span>
+        <span class="tampon">{t('lineup.players', { count: standing.length })}</span>
       {/snippet}
-      <div class="zone" class:survole={hovered === 'stand'} data-drop="stand" role="group" aria-label="Tribune : glisse une carte ici">
+      <div class="zone" class:survole={hovered === 'stand'} data-drop="stand" role="group" aria-label={t('lineup.standLabel')}>
         {#each standing as player (player.id)}
           <div class:survole={hovered === `stand:${player.id}`} data-drop="stand:{player.id}">
             <PlayerCard
@@ -222,10 +223,10 @@
             />
           </div>
         {/each}
-        {#if standing.length === 0}<p class="vide">Tout le monde est dans le groupe. Même le kiné.</p>{/if}
+        {#if standing.length === 0}<p class="vide">{t('lineup.standEmpty')}</p>{/if}
       </div>
       {#if selectedId && (fieldIds.has(selectedId) || benchIds.has(selectedId))}
-        <button type="button" class="poser tampon" onclick={() => place({ kind: 'stand' })}>Envoyer en tribune</button>
+        <button type="button" class="poser tampon" onclick={() => place({ kind: 'stand' })}>{t('lineup.toStand')}</button>
       {/if}
     </Card>
   </div>

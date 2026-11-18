@@ -11,6 +11,8 @@
   import JoinPanel from './online/JoinPanel.svelte';
   import LanLeague from './lan/LanLeague.svelte';
   import { peerHost } from './net/peerHost.svelte';
+  import LangSwitch from './kit/LangSwitch.svelte';
+  import { intlLocale, t, td } from '../i18n/t';
 
   const DIFFICULTY_IDS = Object.keys(DIFFICULTIES) as Difficulty[];
   const JOIN_LINK = /^#rejoindre=(.+)$/;
@@ -63,87 +65,88 @@
     slots = store.listSlots();
   }
 
-  const dateFormat = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+  const dateFormat = $derived(new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'short', timeStyle: 'short' }));
 </script>
 
 <div class="title">
+  <div class="langue"><LangSwitch /></div>
   <header>
     <h1 class="banderole-xl">NON, MOI JE<br />SUIS COACH</h1>
-    <p class="accroche texte-fort">Le jeu de gestion pour tous ceux qui savaient mieux que le sélectionneur.</p>
-    <Sticker tilted>District · saison 1</Sticker>
+    <p class="accroche texte-fort">{t('title.tagline')}</p>
+    <Sticker tilted>{t('title.sticker')}</Sticker>
   </header>
 
   {#if mode === 'choice'}
   <div class="modes">
-    <Card title="Solo">
-      <p class="texte-s meta">Ton club, ta carrière, trois vestiaires de sauvegarde sur ce PC.</p>
-      <div class="row"><Button variant="primary" onclick={() => (mode = 'solo')}>Jouer en solo</Button></div>
+    <Card title={t('title.solo.title')}>
+      <p class="texte-s meta">{t('title.solo.text')}</p>
+      <div class="row"><Button variant="primary" onclick={() => (mode = 'solo')}>{t('title.solo.button')}</Button></div>
     </Card>
-    <Card title="Héberger une partie">
+    <Card title={t('title.host.title')}>
       <p class="texte-s meta">
-        {peerHost.status === 'online' ? 'Ton serveur tourne : reviens-y pour le code et les coachs.' : 'Ton navigateur devient le serveur. Tu obtiens un code à partager, et tu peux ouvrir ta ligue au public.'}
+        {peerHost.status === 'online' ? t('title.host.running') : t('title.host.text')}
       </p>
-      <div class="row"><Button variant="primary" onclick={() => (mode = 'host')}>{peerHost.status === 'online' ? 'Mon serveur' : 'Héberger'}</Button></div>
+      <div class="row"><Button variant="primary" onclick={() => (mode = 'host')}>{peerHost.status === 'online' ? t('title.host.myServer') : t('title.host.button')}</Button></div>
     </Card>
-    <Card title="Rejoindre une partie">
-      <p class="texte-s meta">Un ami t'a donné un code ? Ou pioche dans la liste des serveurs publics.</p>
-      <div class="row"><Button variant="primary" onclick={() => (mode = 'join')}>Rejoindre</Button></div>
+    <Card title={t('title.join.title')}>
+      <p class="texte-s meta">{t('title.join.text')}</p>
+      <div class="row"><Button variant="primary" onclick={() => (mode = 'join')}>{t('title.join.button')}</Button></div>
     </Card>
     {#if lan}
       <LanLeague server={lan} onrefresh={refreshLan} />
     {/if}
   </div>
   {:else if mode === 'host'}
-  <div class="row"><Button variant="ghost" onclick={() => (mode = 'choice')}>Retour au choix du mode</Button></div>
+  <div class="row"><Button variant="ghost" onclick={() => (mode = 'choice')}>{t('title.back')}</Button></div>
   <HostPanel />
   {:else if mode === 'join'}
-  <div class="row"><Button variant="ghost" onclick={() => (mode = 'choice')}>Retour au choix du mode</Button></div>
+  <div class="row"><Button variant="ghost" onclick={() => (mode = 'choice')}>{t('title.back')}</Button></div>
   <div class="rejoindre">
     <JoinPanel initialCode={linkCode} />
   </div>
   {:else}
-  <div class="row"><Button variant="ghost" onclick={() => (mode = 'choice')}>Retour au choix du mode</Button></div>
+  <div class="row"><Button variant="ghost" onclick={() => (mode = 'choice')}>{t('title.back')}</Button></div>
   <div class="slots">
     {#each slots as entry (entry.slot)}
-      <Card title={`Vestiaire ${entry.slot}`}>
+      <Card title={t('title.slot.title', { slot: entry.slot })}>
         {#if entry.status === 'ok'}
           <p class="texte-fort">{entry.meta.clubName}</p>
-          <p class="tampon meta">Saison {entry.meta.season} · semaine {entry.meta.week}</p>
-          <p class="texte-s meta">Sauvé le {dateFormat.format(new Date(entry.meta.savedAt))}</p>
+          <p class="tampon meta">{t('common.seasonWeek', { season: entry.meta.season, week: entry.meta.week })}</p>
+          <p class="texte-s meta">{t('title.slot.savedAt', { date: dateFormat.format(new Date(entry.meta.savedAt)) })}</p>
           <div class="row">
-            <Button variant="primary" onclick={() => store.load(entry.slot)}>Reprendre</Button>
+            <Button variant="primary" onclick={() => store.load(entry.slot)}>{t('title.slot.resume')}</Button>
             {#if confirmDelete === entry.slot}
-              <Button onclick={() => remove(entry.slot)}>Confirmer</Button>
-              <Button variant="ghost" onclick={() => (confirmDelete = null)}>Annuler</Button>
+              <Button onclick={() => remove(entry.slot)}>{t('common.confirm')}</Button>
+              <Button variant="ghost" onclick={() => (confirmDelete = null)}>{t('common.cancel')}</Button>
             {:else}
-              <Button variant="ghost" onclick={() => (confirmDelete = entry.slot)}>Supprimer</Button>
+              <Button variant="ghost" onclick={() => (confirmDelete = entry.slot)}>{t('common.delete')}</Button>
             {/if}
           </div>
         {:else if entry.status === 'error'}
-          <p class="texte-s erreur">{entry.error.message}</p>
-          <Button variant="ghost" onclick={() => remove(entry.slot)}>Vider le vestiaire</Button>
+          <p class="texte-s erreur">{td(entry.error.message)}</p>
+          <Button variant="ghost" onclick={() => remove(entry.slot)}>{t('title.slot.clear')}</Button>
         {:else if creatingSlot === entry.slot}
           <form onsubmit={create}>
-            <label class="tampon" for="club-{entry.slot}">Nom de ton club</label>
-            <input id="club-{entry.slot}" bind:value={clubName} maxlength="40" placeholder="Laisse vide, on t'en trouve un" />
+            <label class="tampon" for="club-{entry.slot}">{t('title.slot.clubName')}</label>
+            <input id="club-{entry.slot}" bind:value={clubName} maxlength="40" placeholder={t('title.slot.clubPlaceholder')} />
             <fieldset class="difficulte">
-              <legend class="tampon">Difficulté</legend>
+              <legend class="tampon">{t('title.slot.difficulty')}</legend>
               {#each DIFFICULTY_IDS as id (id)}
                 <label class="choix" class:actif={difficulty === id}>
                   <input type="radio" name="difficulte-{entry.slot}" value={id} bind:group={difficulty} />
-                  <span class="texte-fort">{DIFFICULTIES[id].label}</span>
-                  <span class="texte-s meta">{DIFFICULTIES[id].description}</span>
+                  <span class="texte-fort">{td(DIFFICULTIES[id].label)}</span>
+                  <span class="texte-s meta">{td(DIFFICULTIES[id].description)}</span>
                 </label>
               {/each}
             </fieldset>
             <div class="row">
-              <Button variant="primary" type="submit">Signer</Button>
-              <Button variant="ghost" onclick={() => (creatingSlot = null)}>Annuler</Button>
+              <Button variant="primary" type="submit">{t('title.slot.sign')}</Button>
+              <Button variant="ghost" onclick={() => (creatingSlot = null)}>{t('common.cancel')}</Button>
             </div>
           </form>
         {:else}
-          <p class="texte-s meta">Vestiaire vide. Ça sent encore le camphre.</p>
-          <Button onclick={() => (creatingSlot = entry.slot)}>Nouvelle partie</Button>
+          <p class="texte-s meta">{t('title.slot.empty')}</p>
+          <Button onclick={() => (creatingSlot = entry.slot)}>{t('title.slot.newGame')}</Button>
         {/if}
       </Card>
     {/each}
@@ -158,6 +161,9 @@
     padding: var(--marge-page);
     max-width: 1100px;
     margin: 0 auto;
+  }
+  .langue {
+    justify-self: end;
   }
   header {
     display: grid;

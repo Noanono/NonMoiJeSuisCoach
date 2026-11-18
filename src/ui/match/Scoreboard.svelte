@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../../i18n/t';
   import type { MatchController } from './controller.svelte';
   import { minuteLabel, periodLabel, SPEEDS } from './live';
 
@@ -11,18 +12,18 @@
   // Match en direct contre un autre coach (MULTI-07) : comptes à rebours envoyés par le serveur, décomptés par le contrôleur.
   const duel = $derived(controller.duel);
   function seconds(ms: number): string {
-    return `${Math.ceil(controller.remaining(ms) / 1000)} s`;
+    return t('match.seconds', { seconds: Math.ceil(controller.remaining(ms) / 1000) });
   }
   const duelStatus = $derived.by(() => {
     void controller.version;
     if (!duel) return '';
     const match = controller.match;
     const mine = controller.coachSide;
-    if (duel.pausedBy) return duel.pausedBy === mine ? 'Ta pause' : 'Pause adverse';
-    if (match.status === 'halftime') return `Mi-temps · reprise dans ${seconds(duel.halftimeRemaining)}`;
+    if (duel.pausedBy) return duel.pausedBy === mine ? t('scoreboard.yourPause') : t('scoreboard.theirPause');
+    if (match.status === 'halftime') return t('scoreboard.halftimeResume', { time: seconds(duel.halftimeRemaining) });
     const deciding = match.pending?.side ?? match.awaiting?.side;
-    if (deciding) return `${deciding === mine ? 'À toi de décider' : 'L’adversaire décide'} · ${seconds(duel.decisionRemaining)}`;
-    return 'En cours';
+    if (deciding) return `${deciding === mine ? t('scoreboard.yourDecision') : t('scoreboard.theirDecision')} · ${seconds(duel.decisionRemaining)}`;
+    return t('scoreboard.inProgress');
   });
   const halftime = $derived.by(() => {
     void controller.version;
@@ -48,29 +49,29 @@
 
   const status = $derived(
     controller.finished
-      ? 'Terminé'
+      ? t('live.period.finished')
       : controller.engineWaiting
-        ? 'Le match t’attend'
+        ? t('scoreboard.waitingForYou')
         : controller.running
-          ? 'En cours'
-          : 'Pause',
+          ? t('scoreboard.inProgress')
+          : t('scoreboard.pause'),
   );
 </script>
 
-<header class="banderole" aria-label="Tableau de score">
+<header class="banderole" aria-label={t('scoreboard.label')}>
   <div class="equipe domicile">
     <span class="nom banderole-m">{board.ownName}</span>
-    <span class="tampon toi">Ton équipe</span>
+    <span class="tampon toi">{t('scoreboard.yourTeam')}</span>
   </div>
 
   <div class="centre">
-    <p class="score" aria-label="Score {board.ownGoals} à {board.otherGoals}">
+    <p class="score" aria-label={t('scoreboard.scoreLabel', { own: board.ownGoals, other: board.otherGoals })}>
       <span>{board.ownGoals}</span><span aria-hidden="true">-</span><span>{board.otherGoals}</span>
     </p>
     <p class="horloge tampon">
       <span class="minute">{board.minute}</span>
       <span>{board.period}</span>
-      {#if board.shootout}<span>TAB {board.shootout}</span>{/if}
+      {#if board.shootout}<span>{t('scoreboard.shootout', { score: board.shootout })}</span>{/if}
     </p>
     {#if board.derby}<p class="tampon derby">Derby</p>{/if}
   </div>
@@ -81,26 +82,26 @@
 
   {#if !controller.finished && controller.remote}
     <div class="commandes">
-      <span class="tampon vitesse" aria-pressed="true">×1 imposé</span>
+      <span class="tampon vitesse" aria-pressed="true">{t('scoreboard.forcedSpeed')}</span>
       {#if duel?.pausedBy}
         <button class="tampon pause" disabled={duel.pausedBy !== controller.coachSide} onclick={() => controller.togglePause()}>
-          {duel.pausedBy === controller.coachSide ? 'Reprendre' : 'Pause adverse'} · {seconds(duel.pauseRemaining)}
+          {duel.pausedBy === controller.coachSide ? t('scoreboard.resume') : t('scoreboard.theirPause')} · {seconds(duel.pauseRemaining)}
         </button>
       {:else}
         <button class="tampon pause" disabled={!duel || duel.pausesLeft[controller.coachSide] === 0} onclick={() => controller.togglePause()}>
-          Pause 10 s ({duel?.pausesLeft[controller.coachSide] ?? 0} restante{(duel?.pausesLeft[controller.coachSide] ?? 0) > 1 ? 's' : ''})
+          {t('scoreboard.pausesLeft', { left: duel?.pausesLeft[controller.coachSide] ?? 0 })}
         </button>
       {/if}
       {#if halftime && duel}
         <button class="tampon pause" disabled={duel.halftimeReady.includes(controller.coachSide)} onclick={() => controller.halftimeReady()}>
-          {duel.halftimeReady.includes(controller.coachSide) ? 'Prêt, on attend l’autre' : 'Prêt pour la reprise'}
+          {duel.halftimeReady.includes(controller.coachSide) ? t('scoreboard.readyWaiting') : t('scoreboard.readyResume')}
         </button>
       {/if}
       <span class="tampon etat" aria-live="off">{duelStatus}</span>
     </div>
   {:else if !controller.finished}
     <div class="commandes">
-      <div class="vitesses" role="group" aria-label="Vitesse du match">
+      <div class="vitesses" role="group" aria-label={t('scoreboard.speed')}>
         {#each SPEEDS as speed (speed)}
           <button
             class="tampon vitesse"
@@ -112,7 +113,7 @@
         {/each}
       </div>
       <button class="tampon pause" disabled={controller.engineWaiting} onclick={() => controller.togglePause()}>
-        {controller.paused ? 'Reprendre' : 'Pause'}
+        {controller.paused ? t('scoreboard.resume') : t('scoreboard.pause')}
       </button>
       <span class="tampon etat" aria-live="off">{status}</span>
     </div>

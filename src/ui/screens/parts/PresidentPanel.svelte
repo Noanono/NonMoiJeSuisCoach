@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, td, type MessageKey } from '../../../i18n/t';
   import Gauge from '../../kit/Gauge.svelte';
   import { store } from '../../store.svelte';
   import type { LeagueGoal } from '../../../domain/club/president';
@@ -12,11 +13,11 @@
 
   let { speech = false }: Props = $props();
 
-  const GOAL_LABEL: Record<LeagueGoal, string> = {
-    survival: 'Maintien',
-    midTable: 'Milieu de tableau',
-    promotion: 'Montée',
-    title: 'Titre',
+  const GOAL_LABEL: Record<LeagueGoal, MessageKey> = {
+    survival: 'president.goal.survival',
+    midTable: 'president.goal.midTable',
+    promotion: 'president.goal.promotion',
+    title: 'president.goal.title',
   };
   /** Sous ce seuil, la jauge passe au rouge : le licenciement n'est pas loin. */
   const DANGER_CONFIDENCE = 30;
@@ -42,34 +43,34 @@
 
 <div class="president">
   <dl class="paire texte-s">
-    <dt>Championnat</dt>
+    <dt>{t('president.league')}</dt>
     <dd>
-      {GOAL_LABEL[president.objective.league]} : finir <span class="mono">{president.objective.targetPosition}e</span> ou mieux.
-      Actuellement <span class="mono">{president.position}e</span>
-      <span class={onTrack ? 'bonus' : 'malus'}>{onTrack ? '(dans les clous)' : '(en retard)'}</span>
+      {t('president.leagueGoal', { goal: t(GOAL_LABEL[president.objective.league]), target: t('common.rank', { position: president.objective.targetPosition }) })}
+      {t('president.currently', { position: t('common.rank', { position: president.position }) })}
+      <span class={onTrack ? 'bonus' : 'malus'}>{onTrack ? t('president.onTrack') : t('president.behind')}</span>
     </dd>
-    <dt>Coupe</dt>
+    <dt>{t('president.cup')}</dt>
     <dd>
-      Passer <span class="mono">{president.objective.cupRoundsToWin}</span> tour(s).
-      Déjà <span class="mono">{president.cupRoundsWon}</span>
-      <span class={cupDone ? 'bonus' : 'discret'}>{cupDone ? '(fait)' : ''}</span>
+      {t('president.cupGoal', { rounds: president.objective.cupRoundsToWin })}
+      {t('president.cupDone', { rounds: president.cupRoundsWon })}
+      <span class={cupDone ? 'bonus' : 'discret'}>{cupDone ? t('president.done') : ''}</span>
     </dd>
-    <dt>Confiance</dt>
+    <dt>{t('president.confidence')}</dt>
     <dd class="jauge">
-      <Gauge value={president.confidence} max={100} label="Confiance du président" tone={president.confidence < DANGER_CONFIDENCE ? 'carton' : 'victoire'} />
+      <Gauge value={president.confidence} max={100} label={t('shell.presidentConfidence')} tone={president.confidence < DANGER_CONFIDENCE ? 'carton' : 'victoire'} />
       <span class="mono">{president.confidence} / 100</span>
     </dd>
-    <dt>Sponsors</dt>
+    <dt>{t('president.sponsors')}</dt>
     <dd class="jauge">
-      <Gauge value={president.sponsorMood} max={100} label="Humeur des sponsors" tone="scotch" />
+      <Gauge value={president.sponsorMood} max={100} label={t('president.sponsorMood')} tone="scotch" />
       <span class="mono">{president.sponsorMood} / 100</span>
     </dd>
   </dl>
   {#if president.confidence < DANGER_CONFIDENCE}
-    <p class="texte-s malus">Confiance dans le rouge : à zéro, tu es licencié.</p>
+    <p class="texte-s malus">{t('president.danger')}</p>
   {/if}
   {#if speech && president.objective.speech}
-    <blockquote class="texte-s">« {president.objective.speech} »</blockquote>
+    <blockquote class="texte-s">{t('president.quote', { speech: td(president.objective.speech) })}</blockquote>
   {/if}
 </div>
 

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { store } from '../store.svelte';
+  import { td } from '../../i18n/t';
 
   const TOAST_DURATION_MS = 4000;
 
@@ -11,7 +12,7 @@
 </script>
 
 {#if store.toast}
-  <div class="toast" role="status">{store.toast}</div>
+  <div class="toast" role="status">{td(store.toast)}</div>
 {/if}
 
 <style>

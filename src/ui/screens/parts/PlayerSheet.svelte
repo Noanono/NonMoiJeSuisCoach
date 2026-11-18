@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, td } from '../../../i18n/t';
   import Button from '../../kit/Button.svelte';
   import Gauge from '../../kit/Gauge.svelte';
   import DeltaBadge from '../../kit/DeltaBadge.svelte';
@@ -38,7 +39,7 @@
       return {
         own,
         standIn: own && player.standIn === true,
-        club: own ? null : player.clubId ? (game.clubs[player.clubId]?.name ?? 'Club inconnu') : 'Sans club',
+        club: own ? null : player.clubId ? (game.clubs[player.clubId]?.name ?? t('sheet.unknownClub')) : t('sheet.noClub'),
         name: fullName(player),
         avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position, nationality: player.nationality },
         position: POSITION_LABEL[player.position],
@@ -78,33 +79,33 @@
 </script>
 
 {#if view}
-  <Modal title={view.name} kicker="Fiche joueur · {view.position} · {view.age} ans{view.club ? ` · ${view.club}` : ''}" {onclose}>
+  <Modal title={view.name} kicker={t('sheet.kicker', { position: view.position, age: view.age }) + (view.club ? ` · ${view.club}` : '')} {onclose}>
     <div class="haut">
       <PlayerAvatar player={view.avatar} size={88} />
       <dl class="chiffres">
-        <div><dt class="tampon">Note</dt><dd class="stat"><RatingBadge value={view.overall} size="l" /> <DeltaBadge value={view.evolution} /></dd></div>
-        <div><dt class="tampon">Potentiel</dt><dd class="stat">{view.potential}</dd></div>
-        <div><dt class="tampon">Valeur</dt><dd class="valeur mono">{formatEuros(view.value)}</dd></div>
+        <div><dt class="tampon">{t('sheet.overall')}</dt><dd class="stat"><RatingBadge value={view.overall} size="l" /> <DeltaBadge value={view.evolution} /></dd></div>
+        <div><dt class="tampon">{t('sheet.potential')}</dt><dd class="stat">{view.potential}</dd></div>
+        <div><dt class="tampon">{t('sheet.value')}</dt><dd class="valeur mono">{formatEuros(view.value)}</dd></div>
       </dl>
       <dl class="paire texte-s">
-        <dt>Rareté</dt>
+        <dt>{t('sheet.rarity')}</dt>
         <dd>
-          {#if view.own && !view.progress.revealed}???{:else}{RARITY_LABEL[view.ability.rarity]}{/if}
+          {#if view.own && !view.progress.revealed}???{:else}{td(RARITY_LABEL[view.ability.rarity])}{/if}
         </dd>
-        <dt>Salaire</dt>
-        <dd class="mono">{formatEuros(view.salary)} / sem.</dd>
-        <dt>Dispo</dt>
+        <dt>{t('sheet.salary')}</dt>
+        <dd class="mono">{t('sheet.perWeek', { amount: formatEuros(view.salary) })}</dd>
+        <dt>{t('sheet.availability')}</dt>
         <dd>
-          {#if view.availability}<span class="malus">{view.availability}</span>{:else}Apte{/if}
+          {#if view.availability}<span class="malus">{view.availability}</span>{:else}{t('squad.fit')}{/if}
         </dd>
-        <dt>Saison</dt>
-        <dd class="mono">{view.stats.matches} m. · {view.stats.goals} b. · {view.stats.yellowCards} J · {view.stats.redCards} R</dd>
+        <dt>{t('sheet.season')}</dt>
+        <dd class="mono">{t('sheet.seasonStats', { matches: view.stats.matches, goals: view.stats.goals, yellow: view.stats.yellowCards, red: view.stats.redCards })}</dd>
       </dl>
     </div>
 
     <div class="colonnes-fiche">
       <table class="tableau">
-        <caption class="tampon">Attributs</caption>
+        <caption class="tampon">{t('sheet.attributes')}</caption>
         <tbody>
           {#each view.attributes as attribute (attribute.name)}
             <tr>
@@ -116,11 +117,11 @@
         </tbody>
       </table>
       <table class="tableau">
-        <caption class="tampon">Forme</caption>
+        <caption class="tampon">{t('sheet.form')}</caption>
         <tbody>
           <tr>
-            <th scope="row">Fatigue</th>
-            <td class="jauge"><Gauge value={view.fatigue} max={100} label="Fatigue" tone="carton" /></td>
+            <th scope="row">{t('sheet.fatigue')}</th>
+            <td class="jauge"><Gauge value={view.fatigue} max={100} label={t('sheet.fatigue')} tone="carton" /></td>
             <td class="num">{view.fatigue}</td>
           </tr>
         </tbody>
@@ -131,41 +132,41 @@
       <AbilityPanel ability={view.ability} progress={view.progress} />
     {:else}
       <p class="texte-s">
-        <span class="tampon">Capacité</span> ???
-        {view.own ? 'Elle se dévoilera à sa première activation en match.' : `Capacité ${RARITY_LABEL[view.ability.rarity].toLowerCase()}, mais tes scouts ne l'ont pas encore vue.`}
+        <span class="tampon">{t('sheet.ability')}</span> ???
+        {view.own ? t('sheet.abilityHiddenOwn') : t('sheet.abilityHiddenScout', { rarity: td(RARITY_LABEL[view.ability.rarity]).toLowerCase() })}
       </p>
     {/if}
     {#if view.scoutable}
       <div class="ligne-actions">
         <Button size="s" variant="ghost" disabled={view.reports === 0} onclick={() => (feedback = store.command('scoutPlayer', playerId).message)}>
-          Envoyer un scout ({view.reports} rapport{view.reports > 1 ? 's' : ''})
+          {t('sheet.sendScout', { reports: view.reports })}
         </Button>
       </div>
-      {#if !view.own}<p class="texte-s texte-fort" role="status">{feedback ?? ''}</p>{/if}
+      {#if !view.own}<p class="texte-s texte-fort" role="status">{feedback ? td(feedback) : ''}</p>{/if}
     {/if}
 
     {#if view.own}
     {#if view.standIn}
-      <section class="actions" aria-label="Contrat de dépanneur">
-        <h3 class="tampon">Dépanneur</h3>
-        <p class="texte-s">Son contrat prend fin à l'ouverture du prochain mercato, si le club n'a plus besoin de lui.</p>
-        <Button size="s" variant="ghost" onclick={() => store.notify(store.command('keepStandIn', playerId).message)}>Lui faire signer un vrai contrat</Button>
+      <section class="actions" aria-label={t('sheet.standInContract')}>
+        <h3 class="tampon">{t('sheet.standIn')}</h3>
+        <p class="texte-s">{t('sheet.standInText')}</p>
+        <Button size="s" variant="ghost" onclick={() => store.notify(store.command('keepStandIn', playerId).message)}>{t('sheet.keepStandIn')}</Button>
       </section>
     {/if}
     <AbilityReroll {playerId} />
-    <section class="actions" aria-label="Transfert">
-      <h3 class="tampon">Vente express</h3>
+    <section class="actions" aria-label={t('sheet.transfer')}>
+      <h3 class="tampon">{t('sheet.quickSale')}</h3>
       {#if !view.windowOpen}
-        <p class="texte-s discret">Mercato fermé : la vente express attendra la prochaine fenêtre.</p>
+        <p class="texte-s discret">{t('sheet.windowClosed')}</p>
       {:else if confirmSale}
         <div class="ligne-actions">
-          <Button size="s" onclick={sell}>Confirmer la vente</Button>
-          <Button size="s" variant="ghost" onclick={() => (confirmSale = false)}>Annuler</Button>
+          <Button size="s" onclick={sell}>{t('sheet.confirmSale')}</Button>
+          <Button size="s" variant="ghost" onclick={() => (confirmSale = false)}>{t('common.cancel')}</Button>
         </div>
       {:else}
-        <Button size="s" variant="ghost" onclick={() => (confirmSale = true)}>Vendre tout de suite (sous sa valeur)</Button>
+        <Button size="s" variant="ghost" onclick={() => (confirmSale = true)}>{t('sheet.sellNow')}</Button>
       {/if}
-      <p class="texte-s texte-fort" role="status">{feedback ?? ''}</p>
+      <p class="texte-s texte-fort" role="status">{feedback ? td(feedback) : ''}</p>
     </section>
     {/if}
   </Modal>

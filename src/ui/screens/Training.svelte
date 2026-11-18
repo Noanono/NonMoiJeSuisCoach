@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, td } from '../../i18n/t';
   import './parts/screens.css';
   import Button from '../kit/Button.svelte';
   import Card from '../kit/Card.svelte';
@@ -40,19 +41,19 @@
             evolution: overall(player) - player.overallAtSeasonStart,
             focus,
             progress: Math.round(player.training.progress * 100),
-            pace: rate === 0 ? 'Plafond atteint' : rate >= 0.2 ? 'Rapide' : rate >= 0.1 ? 'Moyen' : 'Lent',
-            bonus: bonus ? `+${percent(bonus.value)} au prochain match` : 'XP de capacité',
+            pace: rate === 0 ? t('training.capped') : rate >= 0.2 ? t('training.fast') : rate >= 0.1 ? t('training.medium') : t('training.slow'),
+            bonus: bonus ? t('training.nextMatchBonus', { value: `+${percent(bonus.value)}` }) : t('training.abilityXp'),
             injured: player.injuryWeeks > 0,
-            abilityName: player.ability.revealed ? getAbility(player.ability.abilityId).name : '???',
+            abilityName: player.ability.revealed ? td(getAbility(player.ability.abilityId).name) : '???',
             abilityXp:
               nextThreshold === undefined
-                ? 'Niveau max'
-                : `+${focus === 'ability' ? weeklyXp : Math.round(passiveAbilityXp(player) * facilityBonus.trainingRate(facilitiesOf(humanClub(game))))} XP/sem. · niv. ${player.ability.level}`,
+                ? t('training.maxLevel')
+                : t('training.xpPerWeek', { xp: focus === 'ability' ? weeklyXp : Math.round(passiveAbilityXp(player) * facilityBonus.trainingRate(facilitiesOf(humanClub(game)))), level: player.ability.level }),
             abilityGauge:
               nextThreshold === undefined
                 ? null
-                : { value: player.ability.xp - XP_THRESHOLDS[player.ability.level - 1]!, max: nextThreshold - XP_THRESHOLDS[player.ability.level - 1]!, label: `${player.ability.xp} / ${nextThreshold} XP vers le niveau ${player.ability.level + 1}` },
-            abilityPace: focus === 'ability' ? (weeklyXp === 0 ? 'Niveau max' : weeklyXp >= 50 ? 'Rapide' : weeklyXp >= 40 ? 'Moyen' : 'Lent') : null,
+                : { value: player.ability.xp - XP_THRESHOLDS[player.ability.level - 1]!, max: nextThreshold - XP_THRESHOLDS[player.ability.level - 1]!, label: t('training.xpToLevel', { xp: player.ability.xp, target: nextThreshold, level: player.ability.level + 1 }) },
+            abilityPace: focus === 'ability' ? (weeklyXp === 0 ? t('training.maxLevel') : weeklyXp >= 50 ? t('training.fast') : weeklyXp >= 40 ? t('training.medium') : t('training.slow')) : null,
           };
         })
         .sort((a, b) => POSITION_ORDER[a.position] - POSITION_ORDER[b.position] || b.overall - a.overall),
@@ -66,38 +67,38 @@
 
   function reset(): void {
     store.command('resetTrainingFocus');
-    store.notify('L’adjoint a remis chacun sur le programme de son poste.');
+    store.notify(t('training.reset'));
   }
 
   /** « ↑ » : le programme fait monter la note générale à ce poste. */
   function optionLabel(position: (typeof rows)[number]['position'], attribute: AttributeName): string {
-    return `${ATTRIBUTE_LABEL[attribute]}${focusRaisesOverall(position, attribute) ? ' (monte la note)' : ''}`;
+    return `${ATTRIBUTE_LABEL[attribute]}${focusRaisesOverall(position, attribute) ? t('training.raisesRating') : ''}`;
   }
 </script>
 
 <div class="ecran">
-  <Card title="Entraînement" scotch>
+  <Card title={t('shell.tabs.training')} scotch>
     {#snippet actions()}
-      <Button size="s" onclick={reset}>Programme de l'adjoint</Button>
+      <Button size="s" onclick={reset}>{t('training.assistantPlan')}</Button>
     {/snippet}
     <p class="texte-s discret intro">
-      Chaque joueur travaille un axe toutes les semaines. Les jeunes progressent vite, les vétérans peu. Passé son potentiel, un joueur progresse encore, plus lentement et de 5 points au maximum. Travailler sa capacité la fait monter bien plus vite qu’en match, à tout âge. Hors de son programme, chaque joueur progresse quand même un peu : ses stats de poste au quart de son rythme, et sa capacité de quelques XP par semaine.
+      {t('training.intro')}
     </p>
     <div class="defilant">
       <table class="tableau">
-        <caption class="sr-only">Programme d'entraînement de chaque joueur</caption>
+        <caption class="sr-only">{t('training.caption')}</caption>
         <thead>
           <tr>
-            <th scope="col">Nom</th>
-            <th scope="col">Poste</th>
-            <th scope="col" class="num">Âge</th>
-            <th scope="col" class="num">Note</th>
-            <th scope="col" class="num">Pot.</th>
-            <th scope="col">Évol.</th>
-            <th scope="col">Programme</th>
-            <th scope="col">Avancement</th>
-            <th scope="col">Rythme</th>
-            <th scope="col">Bonus</th>
+            <th scope="col">{t('squad.col.name')}</th>
+            <th scope="col">{t('squad.col.position')}</th>
+            <th scope="col" class="num">{t('squad.col.age')}</th>
+            <th scope="col" class="num">{t('squad.col.overall')}</th>
+            <th scope="col" class="num">{t('training.potShort')}</th>
+            <th scope="col">{t('squad.col.evolution')}</th>
+            <th scope="col">{t('training.plan')}</th>
+            <th scope="col">{t('training.progress')}</th>
+            <th scope="col">{t('training.pace')}</th>
+            <th scope="col">{t('training.bonus')}</th>
           </tr>
         </thead>
         <tbody>
@@ -110,9 +111,9 @@
               <td class="num">{row.potential}</td>
               <td><DeltaBadge value={row.evolution} /></td>
               <td>
-                <select class="select" aria-label="Programme de {row.name}" value={row.focus} onchange={(event) => change(row.id, event)}>
+                <select class="select" aria-label={t('training.planOf', { name: row.name })} value={row.focus} onchange={(event) => change(row.id, event)}>
                   {#each ATTRIBUTES as attribute (attribute)}<option value={attribute}>{optionLabel(row.position, attribute)}</option>{/each}
-                  <option value={ABILITY_FOCUS}>Capacité : {row.abilityName}</option>
+                  <option value={ABILITY_FOCUS}>{t('training.abilityOption', { ability: row.abilityName })}</option>
                 </select>
               </td>
               <td class="avancement">
@@ -120,10 +121,10 @@
                   {#if row.abilityGauge}<Gauge value={row.abilityGauge.value} max={row.abilityGauge.max} label={row.abilityGauge.label} tone="scotch" />{/if}
                   <span class="discret texte-s" title={row.abilityGauge?.label}>{row.abilityXp}</span>
                 {:else}
-                  <Gauge value={row.progress} max={100} label="Avancement vers le prochain point" tone="scotch" />
+                  <Gauge value={row.progress} max={100} label={t('training.progressLabel')} tone="scotch" />
                 {/if}
               </td>
-              <td>{#if row.injured}<span class="malus">Blessé</span>{:else}{row.abilityPace ?? row.pace}{/if}</td>
+              <td>{#if row.injured}<span class="malus">{t('training.injured')}</span>{:else}{row.abilityPace ?? row.pace}{/if}</td>
               <td class="texte-s">{row.bonus}</td>
             </tr>
           {/each}

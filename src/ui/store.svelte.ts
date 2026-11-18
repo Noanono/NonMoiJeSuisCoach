@@ -19,6 +19,7 @@ import {
   type Difficulty,
   type GameState,
 } from '../domain/game';
+import { t } from '../i18n/t';
 import { summarize } from '../domain/match';
 import type { MatchState, MatchSummary } from '../domain/match/types';
 import type { DuelView } from '../server/duel';
@@ -72,7 +73,7 @@ class AppStore {
     const multi = this.multi;
     if (multi) {
       void multi.command(name, args).then((reply) => {
-        if (!reply.ok) this.notify(reply.message ?? 'Le serveur a refusé.');
+        if (!reply.ok) this.notify(reply.message ?? t('store.serverRefused'));
       });
     }
     return result;
@@ -120,12 +121,12 @@ class AppStore {
   async claimClub(code: string): Promise<string> {
     const multi = this.multi;
     const factory = this.#transportFactory;
-    if (!multi || !factory) return 'Pas connecté à une ligue.';
+    if (!multi || !factory) return t('store.notConnected');
     const reply = await multi.claim(code);
-    if (!reply.ok) return reply.message ?? 'Code refusé.';
+    if (!reply.ok) return reply.message ?? t('store.codeRefused');
     this.openMultiplayer(factory, this.serverCode);
-    this.notify(reply.message ?? 'Club retrouvé !');
-    return reply.message ?? 'Club retrouvé !';
+    this.notify(reply.message ?? t('store.clubFound'));
+    return reply.message ?? t('store.clubFound');
   }
 
   /** Clé du match en direct affiché, et ceux que le coach a déjà quittés après le coup de sifflet. */
@@ -154,14 +155,14 @@ class AppStore {
   /** Entre dans son match en direct ; on attend l'adversaire sur le Bureau. */
   joinDuel(): void {
     void this.multi?.joinDuel().then((reply) => {
-      if (!reply.ok) this.notify(reply.message ?? 'Impossible de rejoindre le match.');
+      if (!reply.ok) this.notify(reply.message ?? t('store.cannotJoinMatch'));
     });
   }
 
   /** Action du coach pendant un match en direct : c'est le serveur qui l'applique. */
   duelCommand(name: string, args: unknown[] = []): void {
     void this.multi?.duelCommand(name, args).then((reply) => {
-      if (!reply.ok) this.notify(reply.message ?? 'Refusé.');
+      if (!reply.ok) this.notify(reply.message ?? t('lan.refused'));
     });
   }
 
@@ -218,7 +219,7 @@ class AppStore {
     try {
       saves.save(this.slot, this.game, saveMeta(this.game));
     } catch (error) {
-      this.notify(error instanceof Error ? error.message : 'Sauvegarde impossible.');
+      this.notify(error instanceof Error ? error.message : t('store.saveFailed'));
     }
   }
 
@@ -239,8 +240,8 @@ class AppStore {
     }
     const ready = !multi.me?.ready;
     void multi.setReady(ready).then((reply) => {
-      if (!reply.ok) this.notify(reply.message ?? 'Pas encore.');
-      else if (ready) this.notify((reply.value as { advanced?: boolean } | undefined)?.advanced ? reply.message ?? 'Semaine suivante !' : 'Prêt ! On attend les autres coachs.');
+      if (!reply.ok) this.notify(reply.message ?? t('store.notYet'));
+      else if (ready) this.notify((reply.value as { advanced?: boolean } | undefined)?.advanced ? reply.message ?? t('store.nextWeek') : t('store.readyWaiting'));
     });
   }
 

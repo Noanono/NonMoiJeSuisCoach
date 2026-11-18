@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../../i18n/t';
   import type { MatchController } from './controller.svelte';
   import PlayerAvatar from '../kit/PlayerAvatar.svelte';
   import { canMoveToLine, canSwapPositions } from '../../domain/match';
@@ -120,7 +121,7 @@
 
 <svelte:window onpointermove={moveDrag} onpointerup={endDrag} onpointercancel={endDrag} onkeydown={cancelDrag} />
 
-<section class="terrain" bind:this={root} aria-label="Terrain : ton équipe face à l'adversaire">
+<section class="terrain" bind:this={root} aria-label={t('pitchView.label')}>
   <div class="lignes">
     {#each view.columns as column (column.key)}
       <div
@@ -139,8 +140,8 @@
   </div>
 
   {#if view.bench.length > 0}
-    <div class="banc" role="group" aria-label="Ton banc">
-      <span class="tampon titre-banc">Banc<br /><span class="aide-banc">glisse pour changer<br />ou réorganiser</span></span>
+    <div class="banc" role="group" aria-label={t('pitchView.bench')}>
+      <span class="tampon titre-banc">{t('pitchView.benchTitle')}<br /><span class="aide-banc">{t('pitchView.benchHint1')}<br />{t('pitchView.benchHint2')}</span></span>
       <div class="banc-jetons">
         {#each view.bench as token (token.id)}
           {@render tokenOf(token)}

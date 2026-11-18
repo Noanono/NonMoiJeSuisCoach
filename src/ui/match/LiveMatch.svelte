@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../../i18n/t';
   import type { MatchState, Side } from '../../domain/match';
   import Button from '../kit/Button.svelte';
   import { MatchController } from './controller.svelte';
@@ -63,7 +64,7 @@
 
   {#if controller.finished}
     <div class="sifflet">
-      <Button variant="primary" onclick={() => controller.whistle()}>Coup de sifflet final</Button>
+      <Button variant="primary" onclick={() => controller.whistle()}>{t('match.finalWhistle')}</Button>
     </div>
   {/if}
 

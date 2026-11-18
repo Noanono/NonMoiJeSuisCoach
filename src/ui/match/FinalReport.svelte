@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, td } from '../../i18n/t';
   import type { MatchSummary, Side } from '../../domain/match';
   import Button from '../kit/Button.svelte';
   import Card from '../kit/Card.svelte';
@@ -39,7 +40,7 @@
       <span class="nom">{coachSide === 'home' ? summary.awayName : summary.homeName}</span>
     </h1>
     {#if summary.shootout}
-      <p class="tampon">Tirs au but {summary.shootout.home}-{summary.shootout.away}</p>
+      <p class="tampon">{t('report.shootout', { home: summary.shootout.home, away: summary.shootout.away })}</p>
     {/if}
   </header>
 
@@ -49,7 +50,7 @@
   </p>
 
   <div class="grille">
-    <Card title="Buts">
+    <Card title={t('report.goals')}>
       <div class="camps">
         {#each coachSide === 'home' ? SIDES : [...SIDES].reverse() as side (side)}
           <div>
@@ -58,10 +59,10 @@
               {#each summary.goals.filter((goal) => goal.side === side) as goal, index (index)}
                 <li>
                   <span class="tampon">{minuteLabel(goal.minute, goal.addedMinute)}</span>
-                  {goal.playerName}{goal.penalty ? ' (pen.)' : ''}{goal.value > 1 ? ' (×2)' : ''}{#if goal.assistName}<span class="pale"> · passe de {goal.assistName}</span>{/if}
+                  {goal.playerName}{goal.penalty ? t('report.pen') : ''}{goal.value > 1 ? ' (×2)' : ''}{#if goal.assistName}<span class="pale"> · {t('report.assist', { player: goal.assistName })}</span>{/if}
                 </li>
               {:else}
-                <li class="vide">Aucun but.</li>
+                <li class="vide">{t('report.noGoals')}</li>
               {/each}
             </ul>
           </div>
@@ -69,42 +70,42 @@
       </div>
     </Card>
 
-    <Card title="Cartons et blessures">
+    <Card title={t('report.cardsInjuries')}>
       <ul class="liste texte-s">
         {#each summary.cards as card, index (index)}
           <li>
             <span class="tampon">{card.minute}'</span>
-            <span class="carton tampon {card.card}">{card.card === 'red' ? 'Rouge' : 'Jaune'}</span>
+            <span class="carton tampon {card.card}">{card.card === 'red' ? t('report.red') : t('report.yellow')}</span>
             {card.playerName} <span class="pale">({teamName(card.side)})</span>
           </li>
         {/each}
         {#each summary.injuries as injury, index (index)}
           <li>
             <span class="tampon">{injury.minute}'</span>
-            <span class="carton tampon blessure">Blessé</span>
-            {injury.playerName}, {injury.weeks > 0 ? `${injury.weeks} sem.` : 'rien de grave'} <span class="pale">({teamName(injury.side)})</span>
+            <span class="carton tampon blessure">{t('training.injured')}</span>
+            {injury.playerName}, {injury.weeks > 0 ? t('report.weeks', { weeks: injury.weeks }) : t('report.nothingSerious')} <span class="pale">({teamName(injury.side)})</span>
           </li>
         {/each}
         {#if summary.cards.length === 0 && summary.injuries.length === 0}
-          <li class="vide">Aucun carton, aucune blessure.</li>
+          <li class="vide">{t('report.noCards')}</li>
         {/if}
       </ul>
     </Card>
   </div>
 
-  <Card title="Capacités">
+  <Card title={t('report.abilities')}>
     {#if summary.abilities.length === 0}
-      <p class="vide texte-s">Aucune capacité utilisée.</p>
+      <p class="vide texte-s">{t('report.noAbilities')}</p>
     {:else}
       <div class="defile">
         <table class="texte-s">
           <thead>
             <tr>
-              <th class="tampon" scope="col">Min.</th>
-              <th class="tampon" scope="col">Camp</th>
-              <th class="tampon" scope="col">Joueur</th>
-              <th class="tampon" scope="col">Capacité</th>
-              <th class="tampon" scope="col">Impact</th>
+              <th class="tampon" scope="col">{t('report.col.minute')}</th>
+              <th class="tampon" scope="col">{t('report.col.side')}</th>
+              <th class="tampon" scope="col">{t('report.col.player')}</th>
+              <th class="tampon" scope="col">{t('squad.col.ability')}</th>
+              <th class="tampon" scope="col">{t('report.col.impact')}</th>
               <th class="tampon chiffre" scope="col">XP</th>
             </tr>
           </thead>
@@ -112,10 +113,10 @@
             {#each summary.abilities as report, index (index)}
               <tr>
                 <td class="tampon">{report.minute}'</td>
-                <td>{report.side === coachSide ? 'Toi' : 'En face'}</td>
+                <td>{report.side === coachSide ? t('live.tag.mine') : t('live.tag.theirs')}</td>
                 <td>{report.playerName}</td>
-                <td class="texte-fort">{report.abilityName}</td>
-                <td>{report.text} <span class="tampon">{formatPercent(report.impact)}</span></td>
+                <td class="texte-fort">{td(report.abilityName)}</td>
+                <td>{td(report.text)} <span class="tampon">{formatPercent(report.impact)}</span></td>
                 <td class="tampon chiffre">{report.xp}</td>
               </tr>
             {/each}
@@ -125,9 +126,9 @@
     {/if}
   </Card>
 
-  <Card title="Après le match" tone="craie-2">
+  <Card title={t('report.after')} tone="craie-2">
     {#if consequences.length === 0}
-      <p class="vide texte-s">Rien à signaler pour la suite.</p>
+      <p class="vide texte-s">{t('report.nothingAfter')}</p>
     {:else}
       <ul class="liste texte-s">
         {#each consequences as text, index (index)}<li>{text}</li>{/each}
@@ -136,7 +137,7 @@
   </Card>
 
   <div class="sortie">
-    <Button variant="primary" onclick={() => store.leaveMatch()}>Retour au bureau</Button>
+    <Button variant="primary" onclick={() => store.leaveMatch()}>{t('dashboard.backToOffice')}</Button>
   </div>
 </main>
 

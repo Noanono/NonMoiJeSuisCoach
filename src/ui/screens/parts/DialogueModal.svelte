@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, td } from '../../../i18n/t';
   import Button from '../../kit/Button.svelte';
   import Modal from './Modal.svelte';
   import { store } from '../../store.svelte';
@@ -23,12 +24,12 @@
       // Montants ajustés à la division du coach (CLUB-06).
       const definition = localizeDialogue(found, humanDivision(game).tier);
       return {
-        speaker: definition.speakerName,
-        text: definition.text,
+        speaker: td(definition.speakerName),
+        text: td(definition.text),
         choices: definition.choices.map((choice) => ({
           id: choice.id,
-          label: choice.label,
-          consequences: choice.consequences.map(describeConsequence).join(' · '),
+          label: td(choice.label),
+          consequences: choice.consequences.map((consequence) => td(describeConsequence(consequence))).join(' · '),
         })),
       };
     }),
@@ -41,9 +42,9 @@
 </script>
 
 {#if dialogue}
-  <Modal title={dialogue.speaker} kicker="Dialogue de la semaine" {onclose}>
+  <Modal title={dialogue.speaker} kicker={t('dialogue.kicker')} {onclose}>
     <p>{dialogue.text}</p>
-    <ul class="liste-nue" aria-label="Réponses possibles">
+    <ul class="liste-nue" aria-label={t('dialogue.answers')}>
       {#each dialogue.choices as choice (choice.id)}
         <li class="reponse">
           <Button onclick={() => reply(dialogue.speaker, choice.id)}>{choice.label}</Button>

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { t } from '../../i18n/t';
+  import { MENTALITY_LABEL } from '../screens/describe';
   import type { Mentality } from '../../domain/types';
   import Card from '../kit/Card.svelte';
   import type { MatchController } from './controller.svelte';
@@ -10,11 +12,7 @@
 
   let { controller }: Props = $props();
 
-  const MENTALITIES: { value: Mentality; label: string }[] = [
-    { value: 'defensive', label: 'Défensif' },
-    { value: 'balanced', label: 'Équilibré' },
-    { value: 'offensive', label: 'Offensif' },
-  ];
+  const MENTALITIES: { value: Mentality }[] = [{ value: 'defensive' }, { value: 'balanced' }, { value: 'offensive' }];
 
   const instructions = $derived.by(() => {
     void controller.version;
@@ -24,13 +22,13 @@
   const editable = $derived(!controller.running && !controller.finished);
 </script>
 
-<Card title="Consignes" tone="craie-2">
+<Card title={t('tactics.instructions')} tone="craie-2">
   {#if !editable && !controller.finished}
-    <p class="texte-s aide">Mets pause pour changer les consignes : on ne crie pas des schémas en pleine action.</p>
+    <p class="texte-s aide">{t('instructions.pauseFirst')}</p>
   {/if}
   <fieldset disabled={!editable}>
-    <legend class="tampon">Mentalité</legend>
-    <div class="choix" role="group" aria-label="Mentalité">
+    <legend class="tampon">{t('tactics.mentality')}</legend>
+    <div class="choix" role="group" aria-label={t('tactics.mentality')}>
       {#each MENTALITIES as option (option.value)}
         <button
           class="tampon option"
@@ -38,7 +36,7 @@
           disabled={!editable}
           onclick={() => controller.updateInstructions({ mentality: option.value })}
         >
-          {option.label}
+          {MENTALITY_LABEL[option.value]}
         </button>
       {/each}
     </div>
@@ -49,7 +47,7 @@
         disabled={!editable}
         onchange={(event) => controller.updateInstructions({ highPress: event.currentTarget.checked })}
       />
-      Pressing haut <span class="aide">(fatigue plus vite)</span>
+      {t('tactics.highPress')} <span class="aide">{t('instructions.tiresFaster')}</span>
     </label>
     <label class="bascule texte-s">
       <input
@@ -58,7 +56,7 @@
         disabled={!editable}
         onchange={(event) => controller.updateInstructions({ longBall: event.currentTarget.checked })}
       />
-      Jeu long
+      {t('tactics.longBall')}
     </label>
   </fieldset>
 </Card>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../../i18n/t';
   import { GAUGE_MAX } from '../../domain/match';
   import { GAUGE_RECHARGE_INTERVAL } from '../../domain/match/simulation';
   import Gauge from '../kit/Gauge.svelte';
@@ -23,13 +24,13 @@
 
 <section class="jauge" aria-labelledby="jauge-titre">
   <div class="entete">
-    <h2 id="jauge-titre" class="banderole-m">Gueulante</h2>
+    <h2 id="jauge-titre" class="banderole-m">{t('gauge.title')}</h2>
     <span class="stat valeur">{gauges.own}<span class="max">/{GAUGE_MAX}</span></span>
   </div>
   <div class="barre">
-    <Gauge value={gauges.own} max={GAUGE_MAX} segments={GAUGE_MAX} label="Jauge de Gueulante" />
+    <Gauge value={gauges.own} max={GAUGE_MAX} segments={GAUGE_MAX} label={t('activation.panel.gaugeLabel')} />
   </div>
-  <p class="texte-s aide">+1 toutes les {GAUGE_RECHARGE_INTERVAL} min, +1 quand tu encaisses. En face : <span class="tampon">{gauges.other}/{GAUGE_MAX}</span></p>
+  <p class="texte-s aide">{t('gauge.help', { minutes: GAUGE_RECHARGE_INTERVAL })} <span class="tampon">{gauges.other}/{GAUGE_MAX}</span></p>
 </section>
 
 <style>

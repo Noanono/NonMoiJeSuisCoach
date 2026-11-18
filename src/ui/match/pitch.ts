@@ -7,16 +7,16 @@ import { ratingAtPosition } from '../../domain/player/rating';
 import type { Position, Rarity } from '../../domain/types';
 import type { AvatarPlayer } from '../kit/avatar';
 import { POSITION_SHORT } from '../screens/describe';
+import { localized } from '../../i18n/localized';
+import { t, td } from '../../i18n/t';
 
 /** Ordre des lignes du coach, de son but vers l'attaque. L'adversaire est en miroir. */
 const LINE_ORDER: readonly Position[] = ['GK', 'DEF', 'MID', 'ATT'];
 
-export const LINE_LABEL: Record<Position, string> = {
-  GK: 'Gardien',
-  DEF: 'Défense',
-  MID: 'Milieu',
-  ATT: 'Attaque',
-};
+export const LINE_LABEL = localized<Position>({
+  fr: { GK: 'Gardien', DEF: 'Défense', MID: 'Milieu', ATT: 'Attaque' },
+  en: { GK: 'Goal', DEF: 'Defence', MID: 'Midfield', ATT: 'Attack' },
+});
 
 export interface PitchColumn {
   key: string;
@@ -52,11 +52,10 @@ export function benchPlayers(state: MatchState, side: Side): MatchPlayer[] {
 
 export type Availability = 'active' | 'sentOff' | 'injured' | 'knockedOut';
 
-export const AVAILABILITY_LABEL: Record<Exclude<Availability, 'active'>, string> = {
-  sentOff: 'Exclu',
-  injured: 'Blessé',
-  knockedOut: 'Au sol',
-};
+export const AVAILABILITY_LABEL = localized<Exclude<Availability, 'active'>>({
+  fr: { sentOff: 'Exclu', injured: 'Blessé', knockedOut: 'Au sol' },
+  en: { sentOff: 'Sent off', injured: 'Injured', knockedOut: 'Down' },
+});
 
 /** Pourquoi un joueur est grisé sur le terrain, `active` s'il joue. */
 export function availability(player: MatchPlayer, elapsed: number): Availability {
@@ -128,17 +127,17 @@ export interface TokenView {
   label: string;
 }
 
-const RARITY_WORD: Record<Rarity, string> = { common: 'commune', rare: 'rare', legendary: 'légendaire', mythic: 'mythique', foreign: 'étrangère' };
-
-const BENCH_REASON = 'Banc';
-const SUBBED_REASON = 'Sorti';
+const RARITY_WORD = localized<Rarity>({
+  fr: { common: 'commune', rare: 'rare', legendary: 'légendaire', mythic: 'mythique', foreign: 'étrangère' },
+  en: { common: 'common', rare: 'rare', legendary: 'legendary', mythic: 'mythic', foreign: 'foreign' },
+});
 
 /** Tout ce qu'un jeton affiche, calculé une fois par minute de jeu. */
 export function tokenView(state: MatchState, player: MatchPlayer, coachSide: Side): TokenView {
   const own = player.side === coachSide;
   const status = availability(player, state.elapsed);
   const benchOnly = player.line === null && player.ability?.position !== 'BENCH';
-  const reason = player.subbedOff ? SUBBED_REASON : status !== 'active' ? AVAILABILITY_LABEL[status] : benchOnly ? BENCH_REASON : null;
+  const reason = player.subbedOff ? t('pitch.subbed') : status !== 'active' ? AVAILABILITY_LABEL[status] : benchOnly ? t('pitch.bench') : null;
   const chips = effectChips(state, player.id);
   const focus = tokenFocus(state, player, coachSide);
   const ready = own && state.pending === null && state.status !== 'finished' && previewActivation(state, coachSide, player.id);
@@ -152,14 +151,14 @@ export function tokenView(state: MatchState, player: MatchPlayer, coachSide: Sid
   const energy = Math.round(100 - player.profile.fatigue);
   const position = POSITION_SHORT[player.profile.position];
   const displaced = player.line !== null && player.line !== player.profile.position;
-  const parts = [player.name, position, player.line ? LINE_LABEL[player.line] : 'remplaçant', `note ${rating}`, `énergie ${energy} %`];
-  if (displaced) parts.push('hors poste');
+  const parts = [player.name, position, player.line ? LINE_LABEL[player.line] : t('pitch.substitute'), t('pitch.rating', { rating }), t('pitch.energy', { energy })];
+  if (displaced) parts.push(t('lineup.outOfPosition'));
   if (reason) parts.push(reason);
   parts.push(...chips.map((chip) => chip.detail));
-  if (readyCost !== null) parts.push(`capacité prête, coût ${readyCost}`);
-  if (opponentRarity) parts.push(`capacité ${RARITY_WORD[opponentRarity]}`);
-  if (focus.chosen) parts.push('cible choisie');
-  else if (focus.highlighted) parts.push(state.pending ? 'cible valide' : 'peut agir maintenant');
+  if (readyCost !== null) parts.push(t('pitch.ready', { cost: readyCost }));
+  if (opponentRarity) parts.push(t('pitch.opponentAbility', { rarity: RARITY_WORD[opponentRarity] }));
+  if (focus.chosen) parts.push(t('pitch.chosen'));
+  else if (focus.highlighted) parts.push(state.pending ? t('pitch.validTarget') : t('pitch.canAct'));
   return { id: player.id, name: shortName(player), avatar, position, displaced, rating, energy, own, status, reason, chips, focus, readyCost, readyRarity, opponentRarity, halo, draggable: own && focus.interactive && state.pending === null && (canLeave(player) || canEnter(player)), label: parts.join(', ') };
 }
 
@@ -174,7 +173,7 @@ export function pitchView(state: MatchState, coachSide: Side): PitchView {
   return {
     columns: pitchColumns(state, coachSide).map((column) => ({
       key: column.key,
-      label: `${column.side === coachSide ? 'Ta' : 'Leur'} ligne : ${LINE_LABEL[column.line]}`,
+      label: column.side === coachSide ? t('pitch.ownLine', { line: LINE_LABEL[column.line] }) : t('pitch.theirLine', { line: LINE_LABEL[column.line] }),
       tokens: column.players.map(toView),
       line: column.side === coachSide ? column.line : null,
     })),
@@ -187,20 +186,36 @@ export function shortName(player: MatchPlayer): string {
   return player.profile.lastName || player.profile.firstName || player.name;
 }
 
-const STAT_LABEL: Record<ActiveEffectView['stat'], string> = {
-  all: 'toutes stats',
-  speed: 'vitesse',
-  technique: 'technique',
-  physical: 'physique',
-  shooting: 'tir',
-  defense: 'défense',
-  goalkeeping: 'arrêts',
-  concentration: 'concentration',
-  knockout: 'hors jeu',
-  swap: 'niveaux inversés',
-  shield: 'bouclier',
-  steady: 'impossible à mettre au sol',
-};
+const STAT_LABEL = localized<ActiveEffectView['stat']>({
+  fr: {
+    all: 'toutes stats',
+    speed: 'vitesse',
+    technique: 'technique',
+    physical: 'physique',
+    shooting: 'tir',
+    defense: 'défense',
+    goalkeeping: 'arrêts',
+    concentration: 'concentration',
+    knockout: 'hors jeu',
+    swap: 'niveaux inversés',
+    shield: 'bouclier',
+    steady: 'impossible à mettre au sol',
+  },
+  en: {
+    all: 'all stats',
+    speed: 'speed',
+    technique: 'technique',
+    physical: 'physical',
+    shooting: 'shooting',
+    defense: 'defending',
+    goalkeeping: 'saves',
+    concentration: 'focus',
+    knockout: 'out of action',
+    swap: 'levels swapped',
+    shield: 'shield',
+    steady: 'cannot be knocked down',
+  },
+});
 
 const PERCENT = 100;
 
@@ -223,19 +238,20 @@ export function effectChips(state: MatchState, playerId: string): EffectChip[] {
 export function toChip(effect: ActiveEffectView): EffectChip {
   const bonus = effect.value > 0;
   const sign = bonus ? '+' : '−';
-  const countdown = effect.remaining === null ? 'fin' : `${effect.remaining}'`;
-  const duration = effect.remaining === null ? "jusqu'au coup de sifflet" : `encore ${effect.remaining} min`;
+  const countdown = effect.remaining === null ? t('pitch.end') : `${effect.remaining}'`;
+  const duration = effect.remaining === null ? t('pitch.untilWhistle') : t('pitch.remaining', { minutes: effect.remaining });
+  const label = td(effect.label);
   if (effect.stat === 'shield' || effect.stat === 'steady') {
-    const what = effect.stat === 'shield' ? `annule ${effect.value > 1 ? `les ${effect.value} prochaines capacités adverses` : 'la prochaine capacité adverse'} qui le visent` : 'impossible à mettre au sol';
-    return { stat: effect.stat, tone: 'bonus', sign: '+', countdown, detail: `${effect.label} : ${what}, ${duration}` };
+    const what = effect.stat === 'shield' ? (effect.value > 1 ? t('pitch.shieldMany', { count: effect.value }) : t('pitch.shieldOne')) : STAT_LABEL.steady;
+    return { stat: effect.stat, tone: 'bonus', sign: '+', countdown, detail: `${label}${t('common.colon')}${what}, ${duration}` };
   }
-  const amount = effect.stat === 'knockout' || effect.stat === 'swap' ? '' : ` ${Math.round(Math.abs(effect.value) * PERCENT)} %`;
-  const marked = effect.markedBy ? ` (marqué par ${effect.markedBy}, tant qu'il est debout)` : '';
+  const amount = effect.stat === 'knockout' || effect.stat === 'swap' ? '' : ` ${t('pitch.percent', { value: Math.round(Math.abs(effect.value) * PERCENT) })}`;
+  const marked = effect.markedBy ? t('pitch.markedBy', { player: effect.markedBy }) : '';
   return {
     stat: effect.stat,
     tone: bonus ? 'bonus' : 'malus',
     sign,
     countdown,
-    detail: `${effect.label} : ${sign}${amount} ${STAT_LABEL[effect.stat]}${marked}, ${duration}`,
+    detail: `${label}${t('common.colon')}${sign}${amount} ${STAT_LABEL[effect.stat]}${marked}, ${duration}`,
   };
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, td } from '../../../i18n/t';
   import Button from '../../kit/Button.svelte';
   import Sticker from '../../kit/Sticker.svelte';
   import { store } from '../../store.svelte';
@@ -51,50 +52,49 @@
 
 <!-- Fermé pour l'instant : seul un changement déjà payé (ancienne sauvegarde) peut encore être choisi. -->
 {#if ABILITY_REROLL_OPEN || view.options}
-<section class="reroll" aria-label="Changer de capacité">
-  <h3 class="tampon">Changer de capacité</h3>
+<section class="reroll" aria-label={t('reroll.title')}>
+  <h3 class="tampon">{t('reroll.title')}</h3>
   {#if view.options}
-    <p class="texte-s">Payé. Choisis sa nouvelle capacité : elle repart au niveau 1.</p>
+    <p class="texte-s">{t('reroll.paid')}</p>
     <ul class="propositions">
       {#each view.options as option (option.ability.id)}
         <li class="carte">
           <header>
-            <strong>{option.ability.name}</strong>
-            <Sticker tone={RARITY_TONE[option.ability.rarity]}>{RARITY_LABEL[option.ability.rarity]}</Sticker>
+            <strong>{td(option.ability.name)}</strong>
+            <Sticker tone={RARITY_TONE[option.ability.rarity]}>{td(RARITY_LABEL[option.ability.rarity])}</Sticker>
           </header>
-          <p class="texte-s">{option.ability.description}</p>
+          <p class="texte-s">{td(option.ability.description)}</p>
           <p class="texte-s discret">
             {ABILITY_POSITION_LABEL[option.ability.position]} · {describeTrigger(option.ability.trigger)} · {option.targeting}
           </p>
           <ul class="effets texte-s">
             {#each option.effects as effect, index (index)}<li>{effect}</li>{/each}
           </ul>
-          <Button size="s" onclick={() => act(() => store.command('chooseRerolledAbility', option.ability.id))}>Choisir</Button>
+          <Button size="s" onclick={() => act(() => store.command('chooseRerolledAbility', option.ability.id))}>{t('reroll.choose')}</Button>
         </li>
       {/each}
     </ul>
-    <Button size="s" variant="ghost" onclick={() => act(() => store.command('chooseRerolledAbility', null))}>Garder l'ancienne capacité</Button>
+    <Button size="s" variant="ghost" onclick={() => act(() => store.command('chooseRerolledAbility', null))}>{t('reroll.keep')}</Button>
   {:else if view.price === null}
-    <p class="texte-s discret">Sa capacité est encore cachée : impossible de la changer avant de la découvrir.</p>
+    <p class="texte-s discret">{t('reroll.hidden')}</p>
   {:else if view.otherPending}
-    <p class="texte-s discret">Choisis d'abord la nouvelle capacité de {view.otherPending}.</p>
+    <p class="texte-s discret">{t('reroll.otherPending', { player: view.otherPending })}</p>
   {:else}
     <p class="texte-s">
-      Tu paies <span class="mono texte-fort">{formatEuros(view.price)}</span> avant de voir 3 nouvelles capacités. La nouvelle repart au niveau 1, et chacune a
-      {Math.round(REROLL_UPGRADE_CHANCE * 100)} % de chances d'être d'une rareté au-dessus.
+      {t('reroll.explain', { price: formatEuros(view.price), chance: Math.round(REROLL_UPGRADE_CHANCE * 100) })}
     </p>
     {#if confirming}
       <div class="ligne-actions">
-        <Button size="s" onclick={() => act(() => store.command('rerollAbility', playerId))}>Payer {formatEuros(view.price)}</Button>
-        <Button size="s" variant="ghost" onclick={() => (confirming = false)}>Annuler</Button>
+        <Button size="s" onclick={() => act(() => store.command('rerollAbility', playerId))}>{t('reroll.pay', { price: formatEuros(view.price) })}</Button>
+        <Button size="s" variant="ghost" onclick={() => (confirming = false)}>{t('common.cancel')}</Button>
       </div>
     {:else}
       <Button size="s" variant="ghost" disabled={view.budget < view.price} onclick={() => (confirming = true)}>
-        {view.budget < view.price ? 'Budget insuffisant' : 'Tirer 3 nouvelles capacités'}
+        {view.budget < view.price ? t('reroll.noBudget') : t('reroll.draw')}
       </Button>
     {/if}
   {/if}
-  <p class="texte-s texte-fort" role="status">{feedback ?? ''}</p>
+  <p class="texte-s texte-fort" role="status">{feedback ? td(feedback) : ''}</p>
 </section>
 {/if}
 

@@ -7,6 +7,10 @@
 - `src/domain/types.ts` est le contrat partagé. On ne le modifie qu'en concertation.
 - L'aléatoire passe toujours par `Rng` (`src/domain/core/rng.ts`), jamais par `Math.random`, pour des tests reproductibles.
 - Identifiants en anglais, commentaires et textes du jeu en français (tutoiement, ton vestiaire, voir le design system).
+- Le jeu est traduit en anglais (`src/i18n/`), langue choisie sur l'écran d'accueil et gardée dans le navigateur :
+  - textes de l'UI : jamais en dur dans un composant, mais `t('cle', { variables })` avec la clé dans `src/i18n/ui/fr.ts` **et** `en.ts` (même structure, vérifiée par TypeScript et par `i18n.test.ts`) ;
+  - textes du domaine (actualité, live, dialogues, capacités, refus…) : le domaine reste en français et la sauvegarde garde la phrase française ; l'UI l'affiche avec `td(texte)`, qui la reconnaît à son gabarit et la réécrit en anglais, variables comprises. Les anciennes sauvegardes et les ligues multijoueur se traduisent donc sans migration ;
+  - toute nouvelle phrase du domaine a sa version anglaise : par identifiant pour les tables (`dialogues.en.ts`, `abilities.en.ts`, `commentary.en.ts`), par gabarit français (`{nom}` à la place de `${…}`) dans `phrases.en.ts` ou `network.en.ts`. `i18n.test.ts` relève les textes écrits en dur dans le domaine et échoue s'il en manque un.
 
 ## Clean code
 

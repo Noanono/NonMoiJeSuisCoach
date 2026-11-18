@@ -20,6 +20,7 @@
 </script>
 
 <script lang="ts">
+  import { t } from '../../../i18n/t';
   import EnergyBar from '../../kit/EnergyBar.svelte';
   import PlayerAvatar from '../../kit/PlayerAvatar.svelte';
   import RarityTag from '../../kit/RarityTag.svelte';
@@ -47,7 +48,7 @@
   let { player, rating, positionPenalty = 0, selected = false, dragging = false, compact = false, onpointerdown, onclick, oninfo, ghost = false }: Props = $props();
   const shownRating = $derived(rating ?? player.overall);
   const label = $derived(
-    `${player.name}, ${POSITION_SHORT[player.position]}, note ${shownRating}, énergie ${100 - player.fatigue} %${positionPenalty > 0 ? `, hors poste, moins ${positionPenalty}` : ''}${player.availability ? `, ${player.availability}` : ''}${selected ? ', sélectionné' : ''}`,
+    `${t('card.label', { name: player.name, position: POSITION_SHORT[player.position], rating: shownRating, energy: 100 - player.fatigue })}${positionPenalty > 0 ? t('card.outOfPositionLabel', { penalty: positionPenalty }) : ''}${player.availability ? `, ${player.availability}` : ''}${selected ? t('card.selected') : ''}`,
   );
 </script>
 
@@ -62,7 +63,7 @@
   <span class="nom">{player.lastName}</span>
   <span class="capacite"><RarityTag rarity={player.rarity} text={player.abilityName} /></span>
   <EnergyBar energy={100 - player.fatigue} />
-  {#if positionPenalty > 0}<span class="tampon alerte">Hors poste −{positionPenalty}</span>{/if}
+  {#if positionPenalty > 0}<span class="tampon alerte">{t('card.outOfPosition', { penalty: positionPenalty })}</span>{/if}
   {#if player.availability}<span class="tampon indispo">{player.availability}</span>{/if}
 {/snippet}
 
@@ -86,7 +87,7 @@
       {@render face()}
     </button>
     {#if oninfo}
-      <button type="button" class="info tampon" aria-label="Fiche de {player.name}" title="Voir la fiche" onclick={oninfo}>i</button>
+      <button type="button" class="info tampon" aria-label={t('card.sheetOf', { name: player.name })} title={t('card.seeSheet')} onclick={oninfo}>i</button>
     {/if}
   </div>
 {/if}

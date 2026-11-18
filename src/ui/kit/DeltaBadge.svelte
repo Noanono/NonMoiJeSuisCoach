@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../../i18n/t';
   /** Évolution de la note depuis le début de la saison : vert si elle monte, rouge si elle baisse. */
   interface Props {
     value: number;
@@ -6,7 +7,7 @@
 
   let { value }: Props = $props();
   const label = $derived(value > 0 ? `+${value}` : value < 0 ? `−${Math.abs(value)}` : '=');
-  const title = $derived(value === 0 ? 'Note stable depuis le début de la saison' : `${label} depuis le début de la saison`);
+  const title = $derived(value === 0 ? t('kit.deltaStable') : t('kit.delta', { delta: label }));
 </script>
 
 <span class="delta tampon" class:hausse={value > 0} class:baisse={value < 0} {title}>{label}</span>

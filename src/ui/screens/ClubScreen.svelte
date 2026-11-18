@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, td } from '../../i18n/t';
   import './parts/screens.css';
   import Button from '../kit/Button.svelte';
   import Card from '../kit/Card.svelte';
@@ -38,41 +39,41 @@
 
 <div class="ecran">
   <div class="colonnes">
-    <Card title="Le président">
+    <Card title={t('dashboard.president')}>
       <PresidentPanel speech />
       {#if club.rival}
-        <p class="rival texte-s"><span class="tampon pastille-derby">Rival</span> Cette saison, l'ennemi juré s'appelle <span class="texte-fort">{club.rival}</span>. Les derbys comptent double pour le président et les sponsors.</p>
+        <p class="rival texte-s"><span class="tampon pastille-derby">{t('club.rival')}</span> {t('club.rivalBefore')}<span class="texte-fort">{club.rival}</span>{t('club.rivalAfter')}</p>
       {/if}
     </Card>
 
-    <Card title="Installations">
+    <Card title={t('club.facilities')}>
       {#snippet actions()}
-        <span class="tampon">Budget {formatEuros(club.budget)}</span>
+        <span class="tampon">{t('club.budget', { budget: formatEuros(club.budget) })}</span>
       {/snippet}
       <ul class="liste-nue installations">
         {#each club.facilities as facility (facility.id)}
           <li>
             <div class="titre">
-              <span class="texte-fort">{facility.label}</span>
-              <span class="niveaux" aria-label={`Niveau ${facility.level} sur ${MAX_FACILITY_LEVEL}`}>
+              <span class="texte-fort">{td(facility.label)}</span>
+              <span class="niveaux" aria-label={t('club.levelOf', { level: facility.level, max: MAX_FACILITY_LEVEL })}>
                 {#each Array.from({ length: MAX_FACILITY_LEVEL }, (_, index) => index) as index (index)}
                   <span class="cran" class:plein={index < facility.level}></span>
                 {/each}
               </span>
             </div>
-            <p class="texte-s discret">{facility.description}</p>
+            <p class="texte-s discret">{td(facility.description)}</p>
             <p class="texte-s">
-              {#if facility.level > 0}<span class="bonus">Actuel : {facility.effect(facility.level)}</span>{:else}<span class="discret">Pas encore construit.</span>{/if}
+              {#if facility.level > 0}<span class="bonus">{t('club.current', { effect: td(facility.effect(facility.level)) })}</span>{:else}<span class="discret">{t('club.notBuilt')}</span>{/if}
             </p>
             {#if facility.cost !== null}
               <div class="ligne-actions">
-                <span class="texte-s">Niveau {facility.level + 1} : {facility.effect(facility.level + 1)}</span>
+                <span class="texte-s">{t('club.nextLevel', { level: facility.level + 1, effect: td(facility.effect(facility.level + 1)) })}</span>
                 <Button size="s" disabled={club.budget < facility.cost} onclick={() => upgrade(facility.id)}>
-                  Améliorer · {formatEuros(facility.cost)}
+                  {t('club.upgrade', { cost: formatEuros(facility.cost) })}
                 </Button>
               </div>
             {:else}
-              <p class="tampon">Niveau maximum</p>
+              <p class="tampon">{t('club.maxLevel')}</p>
             {/if}
           </li>
         {/each}
@@ -80,22 +81,22 @@
     </Card>
   </div>
 
-  <Card title="Historique">
+  <Card title={t('club.history')}>
     {#if history.length === 0}
-      <p class="vide">Première saison en cours : rien d'écrit pour l'instant.</p>
+      <p class="vide">{t('club.historyEmpty')}</p>
     {:else}
       <div class="defilant">
         <table class="tableau">
-          <caption class="sr-only">Bilan des saisons précédentes</caption>
+          <caption class="sr-only">{t('club.historyCaption')}</caption>
           <thead>
             <tr>
-              <th scope="col" class="num">Saison</th>
-              <th scope="col">Club</th>
-              <th scope="col">Division</th>
-              <th scope="col" class="num">Place</th>
-              <th scope="col" class="num">Tours de coupe</th>
-              <th scope="col" class="num">Primes</th>
-              <th scope="col">Verdict</th>
+              <th scope="col" class="num">{t('club.col.season')}</th>
+              <th scope="col">{t('shell.tabs.club')}</th>
+              <th scope="col">{t('club.col.division')}</th>
+              <th scope="col" class="num">{t('club.col.position')}</th>
+              <th scope="col" class="num">{t('club.col.cupRounds')}</th>
+              <th scope="col" class="num">{t('club.col.prizes')}</th>
+              <th scope="col">{t('club.col.verdict')}</th>
             </tr>
           </thead>
           <tbody>
@@ -103,11 +104,11 @@
               <tr>
                 <td class="num">{record.season}</td>
                 <td>{record.clubName ?? '–'}</td>
-                <td>{record.divisionName}</td>
-                <td class="num">{record.position}e</td>
+                <td>{td(record.divisionName)}</td>
+                <td class="num">{t('common.rank', { position: record.position })}</td>
                 <td class="num">{record.cupRoundsWon}</td>
                 <td class="num">{record.prizeMoney === undefined ? '–' : formatEuros(record.prizeMoney)}</td>
-                <td>{record.verdict}</td>
+                <td>{td(record.verdict)}</td>
               </tr>
             {/each}
           </tbody>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../../../i18n/t';
   import Button from '../../kit/Button.svelte';
   import { store } from '../../store.svelte';
   import { formatEuros } from '../../format';
@@ -11,13 +12,13 @@
   function describe(game: GameState, offer: CoachOffer, otherClubId: string) {
     const player = game.players[offer.playerId];
     const coachId = coachOfClub(game, otherClubId);
-    const coach = game.coaches?.find((entry) => entry.id === coachId)?.name ?? 'Un coach';
+    const coach = game.coaches?.find((entry) => entry.id === coachId)?.name ?? t('offers.aCoach');
     const value = player ? playerValue(seenByCoach(game, player), getAbility(player.ability.abilityId).rarity) : 0;
     return {
       id: offer.id,
       coach,
       club: game.clubs[otherClubId]?.name ?? '',
-      player: player ? fullName(player) : 'Joueur parti',
+      player: player ? fullName(player) : t('offers.playerGone'),
       amount: offer.amount,
       value,
       gap: value > 0 ? Math.round(((offer.amount - value) / value) * 100) : 0,
@@ -43,28 +44,28 @@
 </script>
 
 {#if view.received.length > 0 || view.sent.length > 0}
-  <section class="coachs" aria-label="Offres entre coachs">
+  <section class="coachs" aria-label={t('offers.betweenCoaches')}>
     {#each view.received as offer (offer.id)}
       <div class="offre recue">
-        <p class="tampon">Offre de {offer.coach} · {offer.club}</p>
-        <p><span class="texte-fort">{offer.player}</span> contre <span class="mono texte-fort">{formatEuros(offer.amount)}</span></p>
+        <p class="tampon">{t('offers.from', { coach: offer.coach })} · {offer.club}</p>
+        <p><span class="texte-fort">{offer.player}</span> {t('offers.for')} <span class="mono texte-fort">{formatEuros(offer.amount)}</span></p>
         <p class="texte-s">
-          Valeur <span class="mono">{formatEuros(offer.value)}</span>
-          <span class:bonus={offer.gap >= 0} class:malus={offer.gap < 0}>({offer.gap >= 0 ? '+' : ''}{offer.gap} %)</span>
-          · expire semaine <span class="mono">{offer.expiresWeek}</span>
+          {t('sheet.value')} <span class="mono">{formatEuros(offer.value)}</span>
+          <span class:bonus={offer.gap >= 0} class:malus={offer.gap < 0}>({offer.gap >= 0 ? '+' : ''}{t('band.percent', { value: offer.gap })})</span>
+          · {t('offers.expiresLower')} <span class="mono">{offer.expiresWeek}</span>
         </p>
         <div class="ligne-actions">
-          <Button size="s" disabled={!view.windowOpen} onclick={() => answer(offer.id, true)}>Accepter</Button>
-          <Button size="s" variant="ghost" onclick={() => answer(offer.id, false)}>Refuser</Button>
+          <Button size="s" disabled={!view.windowOpen} onclick={() => answer(offer.id, true)}>{t('offers.accept')}</Button>
+          <Button size="s" variant="ghost" onclick={() => answer(offer.id, false)}>{t('offers.refuse')}</Button>
         </div>
       </div>
     {/each}
     {#each view.sent as offer (offer.id)}
       <div class="offre envoyee">
-        <p class="tampon discret">Ton offre à {offer.coach}</p>
-        <p><span class="texte-fort">{offer.player}</span> pour <span class="mono">{formatEuros(offer.amount)}</span> · en attente de sa réponse</p>
+        <p class="tampon discret">{t('offers.yourOfferTo', { coach: offer.coach })}</p>
+        <p><span class="texte-fort">{offer.player}</span> {t('offers.for')} <span class="mono">{formatEuros(offer.amount)}</span> · {t('offers.awaiting')}</p>
         <div class="ligne-actions">
-          <Button size="s" variant="ghost" onclick={() => withdraw(offer.id)}>Retirer l'offre</Button>
+          <Button size="s" variant="ghost" onclick={() => withdraw(offer.id)}>{t('offers.withdraw')}</Button>
         </div>
       </div>
     {/each}

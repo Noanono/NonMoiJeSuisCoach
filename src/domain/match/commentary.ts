@@ -5,7 +5,7 @@
  */
 import type { Rng } from '../core/rng';
 
-const LINES = {
+export const COMMENTARY_LINES = {
   kickoff: [
     "Coup d'envoi entre {team} et {opponent}. La buvette est ouverte, les crampons sont lacés, c'est parti.",
     "C'est parti entre {team} et {opponent} ! L'arbitre a sifflé, le chien du voisin a aboyé.",
@@ -178,7 +178,7 @@ const LINES = {
   ],
 } as const satisfies Record<string, readonly string[]>;
 
-export type CommentaryKey = keyof typeof LINES;
+export type CommentaryKey = keyof typeof COMMENTARY_LINES;
 
 export type CommentaryVars = Partial<
   Record<'player' | 'team' | 'opponent' | 'score' | 'ability' | 'label' | 'minutes' | 'n' | 'weeks', string | number>
@@ -188,7 +188,7 @@ const PLACEHOLDER = /\{(\w+)\}/g;
 
 /** Tire une variante pour l'événement et remplit ses champs. */
 export function comment(rng: Rng, key: CommentaryKey, vars: CommentaryVars = {}): string {
-  return fill(rng.pick(LINES[key]), vars);
+  return fill(rng.pick(COMMENTARY_LINES[key]), vars);
 }
 
 /** Raisons d'indisponibilité affichées au coach (CAP-07). */

@@ -18,6 +18,7 @@
   import type { Rarity } from '../../domain/types';
   import { availabilityLabel, fullName, POSITION_LABEL, POSITION_ORDER, POSITION_SHORT } from './describe';
   import { sortRows, type SortDirection } from './views';
+  import { t, td, type MessageKey } from '../../i18n/t';
 
   /** Tableau de l'effectif (EFF-01 à EFF-08, CLUB-08) et accès à la fiche joueur. */
   const RARITY_ORDER: Record<Rarity, number> = { common: 1, rare: 2, legendary: 3, mythic: 4, foreign: 5 };
@@ -51,7 +52,7 @@
 
   interface Column {
     key: SortKey;
-    label: string;
+    label: MessageKey;
     numeric: boolean;
     sortValue: (row: SquadRow) => number | string;
     /** Premier tri proposé au clic sur la colonne. */
@@ -59,19 +60,19 @@
   }
 
   const COLUMNS: Column[] = [
-    { key: 'name', label: 'Nom', numeric: false, sortValue: (row) => row.name, firstDirection: 'asc' },
-    { key: 'position', label: 'Poste', numeric: false, sortValue: (row) => row.positionOrder * 100 - row.overall, firstDirection: 'asc' },
-    { key: 'age', label: 'Âge', numeric: true, sortValue: (row) => row.age, firstDirection: 'asc' },
-    { key: 'overall', label: 'Note', numeric: true, sortValue: (row) => row.overall, firstDirection: 'desc' },
-    { key: 'evolution', label: 'Évol.', numeric: true, sortValue: (row) => row.evolution, firstDirection: 'desc' },
-    { key: 'matches', label: 'MJ', numeric: true, sortValue: (row) => row.matches, firstDirection: 'desc' },
-    { key: 'goals', label: 'Buts', numeric: true, sortValue: (row) => row.goals, firstDirection: 'desc' },
-    { key: 'assists', label: 'PD', numeric: true, sortValue: (row) => row.assists, firstDirection: 'desc' },
-    { key: 'cards', label: 'Cartons', numeric: true, sortValue: (row) => row.redCards * 10 + row.yellowCards, firstDirection: 'desc' },
-    { key: 'fatigue', label: 'Fatigue', numeric: true, sortValue: (row) => row.fatigue, firstDirection: 'desc' },
-    { key: 'availability', label: 'Dispo', numeric: false, sortValue: (row) => row.availability ?? '', firstDirection: 'desc' },
-    { key: 'ability', label: 'Capacité', numeric: false, sortValue: (row) => row.rarityOrder * 1000 - row.overall, firstDirection: 'desc' },
-    { key: 'value', label: 'Valeur', numeric: true, sortValue: (row) => row.value, firstDirection: 'desc' },
+    { key: 'name', label: 'squad.col.name', numeric: false, sortValue: (row) => row.name, firstDirection: 'asc' },
+    { key: 'position', label: 'squad.col.position', numeric: false, sortValue: (row) => row.positionOrder * 100 - row.overall, firstDirection: 'asc' },
+    { key: 'age', label: 'squad.col.age', numeric: true, sortValue: (row) => row.age, firstDirection: 'asc' },
+    { key: 'overall', label: 'squad.col.overall', numeric: true, sortValue: (row) => row.overall, firstDirection: 'desc' },
+    { key: 'evolution', label: 'squad.col.evolution', numeric: true, sortValue: (row) => row.evolution, firstDirection: 'desc' },
+    { key: 'matches', label: 'squad.col.matches', numeric: true, sortValue: (row) => row.matches, firstDirection: 'desc' },
+    { key: 'goals', label: 'squad.col.goals', numeric: true, sortValue: (row) => row.goals, firstDirection: 'desc' },
+    { key: 'assists', label: 'squad.col.assists', numeric: true, sortValue: (row) => row.assists, firstDirection: 'desc' },
+    { key: 'cards', label: 'squad.col.cards', numeric: true, sortValue: (row) => row.redCards * 10 + row.yellowCards, firstDirection: 'desc' },
+    { key: 'fatigue', label: 'squad.col.fatigue', numeric: true, sortValue: (row) => row.fatigue, firstDirection: 'desc' },
+    { key: 'availability', label: 'squad.col.availability', numeric: false, sortValue: (row) => row.availability ?? '', firstDirection: 'desc' },
+    { key: 'ability', label: 'squad.col.ability', numeric: false, sortValue: (row) => row.rarityOrder * 1000 - row.overall, firstDirection: 'desc' },
+    { key: 'value', label: 'squad.col.value', numeric: true, sortValue: (row) => row.value, firstDirection: 'desc' },
   ];
 
   const squad = $derived(
@@ -92,8 +93,8 @@
           fatigue: player.fatigue,
           availability: availabilityLabel(player),
           avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position, nationality: player.nationality },
-          abilityName: known ? ability.name : UNKNOWN_ABILITY,
-          rarity: known ? RARITY_LABEL[ability.rarity] : '',
+          abilityName: known ? td(ability.name) : UNKNOWN_ABILITY,
+          rarity: known ? td(RARITY_LABEL[ability.rarity]) : '',
           rarityKey: known ? ability.rarity : null,
           rarityOrder: known ? RARITY_ORDER[ability.rarity] : 0,
           value: playerValue(player, ability.rarity),
@@ -126,28 +127,28 @@
 </script>
 
 <div class="ecran">
-  <Card title="Effectif">
+  <Card title={t('shell.tabs.squad')}>
     {#snippet actions()}
-      <span class="tampon">{squad.rows.length} joueurs · valeur totale {formatEuros(squad.totalValue)} · salaires {formatEuros(squad.wages)} / sem.</span>
+      <span class="tampon">{t('squad.summary', { count: squad.rows.length, value: formatEuros(squad.totalValue), wages: formatEuros(squad.wages) })}</span>
     {/snippet}
     <div class="tri-barre">
       <label class="champ">
-        <span class="tampon">Trier par</span>
+        <span class="tampon">{t('squad.sortBy')}</span>
         <select bind:value={sortKey}>
-          {#each COLUMNS as column (column.key)}<option value={column.key}>{column.label}</option>{/each}
+          {#each COLUMNS as column (column.key)}<option value={column.key}>{t(column.label)}</option>{/each}
         </select>
       </label>
-      <button type="button" class="sens tampon" onclick={() => (direction = direction === 'asc' ? 'desc' : 'asc')}>{direction === 'asc' ? 'Croissant' : 'Décroissant'}</button>
+      <button type="button" class="sens tampon" onclick={() => (direction = direction === 'asc' ? 'desc' : 'asc')}>{direction === 'asc' ? t('squad.ascending') : t('squad.descending')}</button>
     </div>
     <div class="defilant">
       <table class="tableau">
-        <caption class="texte-s discret">Clique sur un nom pour ouvrir sa fiche. Évol. : points gagnés ou perdus depuis le début de la saison. MJ : matchs joués cette saison. Cartons : jaunes puis rouges.</caption>
+        <caption class="texte-s discret">{t('squad.caption')}</caption>
         <thead>
           <tr>
             {#each COLUMNS as column (column.key)}
               <th scope="col" class:num={column.numeric} aria-sort={ariaSort(column.key)}>
                 <button class="tri" onclick={() => sortBy(column)}>
-                  {column.label}{#if sortKey === column.key}<span aria-hidden="true">{direction === 'asc' ? ' ▲' : ' ▼'}</span>{/if}
+                  {t(column.label)}{#if sortKey === column.key}<span aria-hidden="true">{direction === 'asc' ? ' ▲' : ' ▼'}</span>{/if}
                 </button>
               </th>
             {/each}
@@ -167,7 +168,7 @@
               <td class="num"><span class="jaune">{row.yellowCards}</span> <span class="rouge">{row.redCards}</span></td>
               <td class="num">{row.fatigue}</td>
               <td>
-                {#if row.availability}<span class="malus">{row.availability}</span>{:else}<span class="discret">Apte</span>{/if}
+                {#if row.availability}<span class="malus">{row.availability}</span>{:else}<span class="discret">{t('squad.fit')}</span>{/if}
               </td>
               <td>
                 <RarityTag rarity={row.rarityKey} text={row.rarity ? `${row.abilityName} · ${row.rarity}` : row.abilityName} />

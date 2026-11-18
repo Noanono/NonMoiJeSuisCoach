@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, td } from '../../i18n/t';
   /**
    * @deprecated Ligue sur le réseau local (`npm run serveur`, MULTI-09) : n'apparaît que si le jeu est servi
    * par ce serveur. Remplacée par le pair-à-pair (« Héberger » / « Rejoindre ») et vouée à disparaître.
@@ -30,7 +31,7 @@
 
   async function giveCode(id: string): Promise<void> {
     const reply = await lanServer.claimCode(id);
-    hostFeedback = reply.message ?? (reply.ok ? null : 'Refusé.');
+    hostFeedback = reply.message ?? (reply.ok ? null : t('lan.refused'));
   }
 
   async function claim(): Promise<void> {
@@ -46,47 +47,47 @@
   async function hostAction(action: 'open' | 'delete', slot: number): Promise<void> {
     confirmLeagueDelete = null;
     const reply = await lanServer.hostAction(action, slot);
-    hostFeedback = reply.message ?? (reply.ok ? null : 'Refusé.');
+    hostFeedback = reply.message ?? (reply.ok ? null : t('lan.refused'));
     await onrefresh();
     hostSlots = await lanServer.slots();
   }
 
   function leagueLine(league: NonNullable<SlotInfo['league']>): string {
-    const when = league.phase === 'lobby' ? 'salle d’attente' : `saison ${league.season}, semaine ${league.week}`;
-    return `${when} · ${league.coaches.map((coach) => coach.name).join(', ') || 'aucun coach'}`;
+    const when = league.phase === 'lobby' ? t('host.lobby') : t('host.seasonWeek', { season: league.season ?? '?', week: league.week ?? '?' });
+    return `${when} · ${league.coaches.map((coach) => coach.name).join(', ') || t('host.noCoach')}`;
   }
 </script>
 
-<Card title="Réseau local">
-  <p><Sticker>obsolète</Sticker></p>
-  <p class="texte-s meta">Ce mode (<code>npm run serveur</code>) sera supprimé : héberge plutôt depuis l'accueil, en pair-à-pair.</p>
+<Card title={t('lan.title')}>
+  <p><Sticker>{t('lan.obsolete')}</Sticker></p>
+  <p class="texte-s meta">{t('lan.deprecatedBefore')}<code>npm run serveur</code>{t('lan.deprecatedAfter')}</p>
   {#if server.host}
-    <p class="texte-s meta">Tu es sur le PC du serveur : choisis la ligue que tes amis rejoindront.</p>
+    <p class="texte-s meta">{t('lan.onServer')}</p>
     <ul class="ligues">
       {#each hostSlots as entry (entry.slot)}
         <li class:ouverte={entry.active}>
-          <p class="texte-fort">Ligue {entry.slot} {#if entry.active}<Sticker>ouverte</Sticker>{/if}</p>
+          <p class="texte-fort">{t('host.league', { slot: entry.slot })} {#if entry.active}<Sticker>{t('lan.openSticker')}</Sticker>{/if}</p>
           {#if entry.status === 'ok' && entry.league}
             <p class="texte-s meta">{leagueLine(entry.league)}</p>
           {:else if entry.status === 'error'}
-            <p class="texte-s erreur">Sauvegarde illisible.</p>
+            <p class="texte-s erreur">{t('host.unreadable')}</p>
           {:else}
-            <p class="texte-s meta">Emplacement vide.</p>
+            <p class="texte-s meta">{t('host.emptySlot')}</p>
           {/if}
           <div class="row">
             {#if entry.status === 'empty'}
-              <Button size="s" onclick={() => hostAction('open', entry.slot)}>Nouvelle ligue</Button>
+              <Button size="s" onclick={() => hostAction('open', entry.slot)}>{t('host.newLeague')}</Button>
             {:else if entry.status === 'ok'}
               <Button size="s" variant={entry.active ? 'ghost' : 'primary'} disabled={entry.active} onclick={() => hostAction('open', entry.slot)}>
-                {entry.active ? 'Ouverte' : 'Ouvrir'}
+                {entry.active ? t('lan.opened') : t('lan.open')}
               </Button>
             {/if}
             {#if entry.status !== 'empty' && !entry.active}
               {#if confirmLeagueDelete === entry.slot}
-                <Button size="s" onclick={() => hostAction('delete', entry.slot)}>Confirmer</Button>
-                <Button size="s" variant="ghost" onclick={() => (confirmLeagueDelete = null)}>Annuler</Button>
+                <Button size="s" onclick={() => hostAction('delete', entry.slot)}>{t('common.confirm')}</Button>
+                <Button size="s" variant="ghost" onclick={() => (confirmLeagueDelete = null)}>{t('common.cancel')}</Button>
               {:else}
-                <Button size="s" variant="ghost" onclick={() => (confirmLeagueDelete = entry.slot)}>Supprimer</Button>
+                <Button size="s" variant="ghost" onclick={() => (confirmLeagueDelete = entry.slot)}>{t('common.delete')}</Button>
               {/if}
             {/if}
           </div>
@@ -94,34 +95,34 @@
       {/each}
     </ul>
     {#if server.league && server.league.coaches.length > 0}
-      <p class="texte-s meta">Un ami a changé de navigateur et voit « Rejoindre » ? Donne-lui un code de reprise.</p>
+      <p class="texte-s meta">{t('lan.claimHelp')}</p>
       <ul class="ligues">
         {#each server.league.coaches as coach (coach.id)}
           <li class="row">
             <span class="texte-s"><span class="texte-fort">{coach.name}</span> · {coach.clubName}</span>
-            <Button size="s" variant="ghost" onclick={() => giveCode(coach.id)}>Code de reprise</Button>
+            <Button size="s" variant="ghost" onclick={() => giveCode(coach.id)}>{t('host.claimCode')}</Button>
           </li>
         {/each}
       </ul>
     {/if}
-    <p class="texte-s texte-fort" role="status">{hostFeedback ?? ''}</p>
+    <p class="texte-s texte-fort" role="status">{hostFeedback ? td(hostFeedback) : ''}</p>
   {/if}
   {#if !server.league}
-    <p class="texte-s meta">{server.host ? 'Ouvre une ligue ci-dessus : elle apparaîtra ici.' : 'L’hôte n’a pas encore ouvert de ligue. Patience…'}</p>
+    <p class="texte-s meta">{server.host ? t('lan.openAbove') : t('lan.notOpened')}</p>
   {:else}
-    <p class="texte-fort">Ligue {server.league.slot}</p>
+    <p class="texte-fort">{t('host.league', { slot: server.league.slot })}</p>
     <p class="texte-s meta">{leagueLine(server.league)}</p>
     <div class="row">
-      <Button variant="primary" onclick={() => store.openMultiplayer(() => new SseTransport(localCoachId, server.host))}>{known ? 'Continuer' : 'Rejoindre'}</Button>
+      <Button variant="primary" onclick={() => store.openMultiplayer(() => new SseTransport(localCoachId, server.host))}>{known ? t('lan.continue') : t('title.join.button')}</Button>
     </div>
     {#if !known && server.league.coaches.length > 0}
       <form class="row" onsubmit={(event) => { event.preventDefault(); void claim(); }}>
-        <label class="texte-s" for="code-reprise-lan">Tu avais déjà un club ? Code de l’hôte :</label>
+        <label class="texte-s" for="code-reprise-lan">{t('lan.hadClub')}</label>
         <input id="code-reprise-lan" inputmode="numeric" maxlength="6" size="7" bind:value={claimCode} autocomplete="off" />
-        <Button size="s" type="submit" disabled={claimCode.trim().length !== 6}>Reprendre mon club</Button>
+        <Button size="s" type="submit" disabled={claimCode.trim().length !== 6}>{t('lobby.reclaim')}</Button>
       </form>
     {/if}
-    {#if claimFeedback}<p class="texte-s texte-fort" role="status">{claimFeedback}</p>{/if}
+    {#if claimFeedback}<p class="texte-s texte-fort" role="status">{td(claimFeedback)}</p>{/if}
   {/if}
 </Card>
 

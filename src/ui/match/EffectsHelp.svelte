@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, type MessageKey } from '../../i18n/t';
   import type { ActiveStat } from '../../domain/match';
   import StatIcon from '../kit/StatIcon.svelte';
   import type { MatchController } from './controller.svelte';
@@ -10,17 +11,17 @@
 
   let { controller }: Props = $props();
 
-  const EFFECTS: { stat: ActiveStat; name: string; impact: string }[] = [
-    { stat: 'shooting', name: 'Tir', impact: 'Plus de chances de marquer, et le joueur reçoit plus de ballons.' },
-    { stat: 'defense', name: 'Défense', impact: 'Moins d’occasions adverses.' },
-    { stat: 'goalkeeping', name: 'Arrêts', impact: 'Le gardien encaisse moins de tirs.' },
-    { stat: 'speed', name: 'Vitesse', impact: 'Pèse sur toutes les lignes, et à moitié sur le tir et les arrêts.' },
-    { stat: 'technique', name: 'Technique', impact: 'Comme la vitesse : pèse sur toutes les lignes.' },
-    { stat: 'physical', name: 'Physique', impact: 'Comme la vitesse : pèse sur toutes les lignes.' },
-    { stat: 'concentration', name: 'Concentration', impact: 'Comme la vitesse : pèse sur toutes les lignes.' },
-    { stat: 'all', name: 'Tout', impact: 'Toutes les stats à la fois, tir et arrêts compris.' },
-    { stat: 'knockout', name: 'Hors jeu', impact: 'Le joueur ne compte plus pendant le compte à rebours.' },
-    { stat: 'swap', name: 'Niveaux inversés', impact: 'Les deux équipes échangent leur niveau.' },
+  const EFFECTS: { stat: ActiveStat & string; name: MessageKey; impact: MessageKey }[] = [
+    { stat: 'shooting', name: 'help.shooting.name', impact: 'help.shooting.impact' },
+    { stat: 'defense', name: 'help.defense.name', impact: 'help.defense.impact' },
+    { stat: 'goalkeeping', name: 'help.goalkeeping.name', impact: 'help.goalkeeping.impact' },
+    { stat: 'speed', name: 'help.speed.name', impact: 'help.speed.impact' },
+    { stat: 'technique', name: 'help.technique.name', impact: 'help.likeSpeed' },
+    { stat: 'physical', name: 'help.physical.name', impact: 'help.likeSpeed' },
+    { stat: 'concentration', name: 'help.concentration.name', impact: 'help.likeSpeed' },
+    { stat: 'all', name: 'help.all.name', impact: 'help.all.impact' },
+    { stat: 'knockout', name: 'help.knockout.name', impact: 'help.knockout.impact' },
+    { stat: 'swap', name: 'help.swap.name', impact: 'help.swap.impact' },
   ];
 
   function closeOnEscape(event: KeyboardEvent): void {
@@ -31,25 +32,25 @@
 <svelte:window onkeydown={closeOnEscape} />
 
 <button class="ouvrir tampon" aria-expanded={controller.helpOpen} onclick={() => (controller.helpOpen = !controller.helpOpen)}>
-  ? Effets
+  ? {t('help.button')}
 </button>
 
 {#if controller.helpOpen}
-  <div class="aide" role="dialog" aria-label="Rappel des effets">
+  <div class="aide" role="dialog" aria-label={t('help.label')}>
     <div class="titre">
-      <h2 class="banderole-m">Les effets</h2>
-      <button class="tampon fermer" onclick={() => (controller.helpOpen = false)}>Fermer</button>
+      <h2 class="banderole-m">{t('help.title')}</h2>
+      <button class="tampon fermer" onclick={() => (controller.helpOpen = false)}>{t('common.close')}</button>
     </div>
-    <p class="texte-s">Halo <span class="vert">vert</span> : bonus. Halo <span class="rouge">rouge</span> : malus. Le chiffre : minutes restantes.</p>
+    <p class="texte-s">{t('help.halo')} <span class="vert">{t('help.green')}</span>{t('help.bonus')} {t('help.halo')} <span class="rouge">{t('help.red')}</span>{t('help.malus')}</p>
     <ul>
       {#each EFFECTS as effect (effect.stat)}
         <li class="texte-s">
           <span class="picto"><StatIcon stat={effect.stat} size={14} /></span>
-          <span><span class="texte-fort">{effect.name}.</span> {effect.impact}</span>
+          <span><span class="texte-fort">{t(effect.name)}.</span> {t(effect.impact)}</span>
         </li>
       {/each}
     </ul>
-    <p class="texte-s">La barre sous le nom montre l'énergie restante : un joueur à bout joue moins bien et se blesse plus. Le carré indique le coût de sa capacité quand elle est prête. Pour un changement, glisse un remplaçant sur un joueur du terrain.</p>
+    <p class="texte-s">{t('help.footer')}</p>
   </div>
 {/if}
 

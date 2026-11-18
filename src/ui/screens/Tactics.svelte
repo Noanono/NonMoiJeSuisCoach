@@ -14,6 +14,7 @@
   import type { Formation, Instructions, Mentality } from '../../domain/types';
   import { availabilityLabel, fullName, MENTALITY_LABEL, POSITION_ORDER } from './describe';
   import { emptyLineup, movePlayer, type LineupDrop } from './lineupEdit';
+  import { t, td } from '../../i18n/t';
 
   /** Formation, onze, banc et consignes (EFF-03, MATCH-05). */
   const DEFAULT_FORMATION: Formation = '4-4-2';
@@ -36,7 +37,7 @@
             availability: availabilityLabel(player),
             fatigue: player.fatigue,
             avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position, nationality: player.nationality },
-            abilityName: player.ability.revealed ? ability.name : UNKNOWN_ABILITY,
+            abilityName: player.ability.revealed ? td(ability.name) : UNKNOWN_ABILITY,
             rarity: player.ability.revealed ? ability.rarity : null,
             ratingAt: {
               GK: Math.round(ratingAtPosition(player, 'GK')),
@@ -56,7 +57,7 @@
           const limits = rarityLimits(divisionOf(game, game.humanClubId).tier);
           const listed = lineup ? [...lineup.starters, ...lineup.bench].map((id) => game.players[id]).filter((player) => player !== undefined) : [];
           const counts = countRarities(listed, (id) => getAbility(id).rarity);
-          return (Object.keys(limits) as (keyof RarityLimits)[]).map((rarity) => ({ label: RARITY_QUOTA_LABEL[rarity], used: counts[rarity], max: limits[rarity] }));
+          return (Object.keys(limits) as (keyof RarityLimits)[]).map((rarity) => ({ label: td(RARITY_QUOTA_LABEL[rarity]), used: counts[rarity], max: limits[rarity] }));
         })(),
       };
     }),
@@ -79,7 +80,7 @@
     const before = currentLineup();
     const after = movePlayer(before, playerId, drop);
     if (after !== before) save(after);
-    else if (drop.kind === 'bench' && benchFull) store.notify('Banc plein : lâche la carte sur un remplaçant pour échanger.');
+    else if (drop.kind === 'bench' && benchFull) store.notify(t('tactics.benchFull'));
   }
 
   function changeFormation(option: Formation): void {
@@ -93,7 +94,7 @@
 
   function assistantPick(): void {
     const errors = store.command('autoPickLineup');
-    store.notify(errors.length === 0 ? 'L’adjoint a fait la compo. Il a même pensé au gardien.' : errors[0]!.message);
+    store.notify(errors.length === 0 ? t('tactics.assistantPicked') : errors[0]!.message);
   }
 
   let openPlayerId = $state<string | null>(null);
@@ -104,12 +105,12 @@
 <div class="ecran">
   <LineupBoard {formation} {starters} {bench} squad={view.squad} onmove={move} oninfo={(playerId) => (openPlayerId = playerId)}>
     {#snippet aside()}
-      <Card title="Le onze">
+      <Card title={t('tactics.eleven')}>
         {#snippet actions()}
-          <Button size="s" onclick={assistantPick}>Compo de l'adjoint</Button>
+          <Button size="s" onclick={assistantPick}>{t('dashboard.assistantLineup')}</Button>
         {/snippet}
         <div class="pile-serree">
-          <div class="formations" role="group" aria-label="Formation">
+          <div class="formations" role="group" aria-label={t('tactics.formation')}>
             {#each FORMATIONS as option (option)}
               <button type="button" class="interrupteur tampon" aria-pressed={formation === option} onclick={() => changeFormation(option)}>{option}</button>
             {/each}
@@ -117,25 +118,25 @@
           <div aria-live="polite">
             {#if view.errors.length > 0}
               <ul class="erreurs texte-s">
-                {#each view.errors as error, index (index)}<li>{error}</li>{/each}
+                {#each view.errors as error, index (index)}<li>{td(error)}</li>{/each}
               </ul>
             {:else}
-              <p class="texte-s texte-fort">Compo valide : {placed} / {STARTERS_COUNT} titulaires et {bench.length} remplaçants.</p>
+              <p class="texte-s texte-fort">{t('tactics.valid', { placed, total: STARTERS_COUNT, bench: bench.length })}</p>
             {/if}
           </div>
           <p class="texte-s">
-            <span class="tampon">Raretés sur la feuille</span>
+            <span class="tampon">{t('tactics.rarities')}</span>
             {#each view.quotas as quota, index (quota.label)}{index > 0 ? ' · ' : ' '}<span class="mono" class:depasse={quota.used > quota.max}>{quota.label} {quota.used}/{quota.max}</span>{/each}
           </p>
-          <p class="texte-s discret">Glisse les cartes. Le « i » ouvre la fiche du joueur. Titulaires et remplaçants comptent dans les quotas de ta division.</p>
+          <p class="texte-s discret">{t('tactics.help')}</p>
         </div>
       </Card>
 
-      <Card title="Consignes">
+      <Card title={t('tactics.instructions')}>
         {#if view.lineup}
           {@const instructions = view.lineup.instructions}
           <fieldset class="champ">
-            <legend class="tampon">Mentalité</legend>
+            <legend class="tampon">{t('tactics.mentality')}</legend>
             <div class="ligne-actions">
               {#each MENTALITIES as mentality (mentality)}
                 <label class="choix">
@@ -154,16 +155,16 @@
           <div class="ligne-actions consignes">
             <label class="choix">
               <input type="checkbox" checked={instructions.highPress} onchange={(event) => updateInstructions({ highPress: event.currentTarget.checked })} />
-              Pressing haut
+              {t('tactics.highPress')}
             </label>
             <label class="choix">
               <input type="checkbox" checked={instructions.longBall} onchange={(event) => updateInstructions({ longBall: event.currentTarget.checked })} />
-              Jeu long
+              {t('tactics.longBall')}
             </label>
           </div>
-          <p class="texte-s discret">Les consignes comptent pour le prochain match et se changent aussi à la pause.</p>
+          <p class="texte-s discret">{t('tactics.instructionsHelp')}</p>
         {:else}
-          <p class="vide">Fais d'abord une compo : les consignes s'accrochent au onze.</p>
+          <p class="vide">{t('tactics.noLineup')}</p>
         {/if}
       </Card>
     {/snippet}

@@ -1,0 +1,96 @@
+/**
+ * Messages du multijoueur en anglais (MULTI-01 à MULTI-11) : réponses de l'hôte (`src/server`)
+ * et du transport pair-à-pair (`src/ui/net`). Ils voyagent en français entre navigateurs
+ * (un hôte et ses invités peuvent avoir choisi des langues différentes) et sont traduits à l'affichage.
+ */
+export const NETWORK_EN: Record<string, string> = {
+  // --- Match en direct entre coachs (src/server/duel.ts)
+  'Ce n’est pas ton match.': "This isn't your match.",
+  'Le match n’a pas commencé : on attend ton adversaire.': "The match hasn't started: waiting for your opponent.",
+  'Le match est terminé.': 'The match is over.',
+  'Le match est déjà en pause.': 'The match is already paused.',
+  'Plus de pause : tu as utilisé tes trois.': "No pauses left: you've used all three.",
+  'Seul celui qui a demandé la pause peut reprendre.': 'Only whoever called the pause can resume.',
+  'Ce n’est pas la mi-temps.': "It isn't half-time.",
+  'Ton adversaire choisit sa cible : attends une seconde.': 'Your opponent is picking a target: hang on a second.',
+  'C’est au tour de ton adversaire de décider.': "It's your opponent's turn to decide.",
+  'Pas maintenant.': 'Not now.',
+  'Aucun ciblage en cours.': 'No targeting in progress.',
+  'Ce n’est pas à toi de décider.': "It's not your call.",
+  'Pas de coup franc pour toi.': 'No free kick for you.',
+  'Pas de coup franc contre toi.': 'No free kick against you.',
+  'Pas de penalty pour toi.': 'No penalty for you.',
+  'Pas de penalty contre toi.': 'No penalty against you.',
+  'Ce changement n’est pas possible.': "That substitution isn't possible.",
+  'Consignes invalides.': 'Invalid instructions.',
+  'Commande de match inconnue : {command}': 'Unknown match command: {command}',
+
+  // --- Moteur de l'hôte (src/server/hostEngine.ts)
+  'Emplacement inconnu.': 'Unknown slot.',
+  'Sauvegarde illisible : supprime-la pour libérer la place.': 'Unreadable save: delete it to free up the slot.',
+  'L’hôte a ouvert une autre ligue.': 'The host has opened another league.',
+  'Ligue {slot} reprise.': 'League {slot} resumed.',
+  'Ligue {slot} créée : salle d’attente ouverte.': 'League {slot} created: waiting room open.',
+  'Cette ligue est ouverte : ferme-la avant de la supprimer.': 'This league is open: close it before deleting it.',
+  'Emplacement déjà vide.': 'Slot already empty.',
+  'Ligue {slot} rangée à la corbeille.': 'League {slot} moved to the bin.',
+  'Sauvegarde impossible : {reason}': 'Could not save: {reason}',
+  'L’hôte n’a pas encore ouvert de ligue.': "The host hasn't opened a league yet.",
+  'Identité invalide.': 'Invalid identity.',
+  'Ce club appartient à un autre coach. Demande un code de reprise à l’hôte.': 'This club belongs to another coach. Ask the host for a reclaim code.',
+  'Ce club est déjà dans la ligue : demande un code de reprise à l’hôte.': 'This club is already in the league: ask the host for a reclaim code.',
+  'Coach introuvable dans la ligue ouverte.': 'Coach not found in the open league.',
+  'Code de reprise pour {coach} : {code} (valable dix minutes).': 'Reclaim code for {coach}: {code} (valid for ten minutes).',
+  'Code inconnu ou expiré : demande-en un nouveau à l’hôte.': 'Unknown or expired code: ask the host for a new one.',
+  'Ce coach n’est plus dans la ligue ouverte.': 'This coach is no longer in the open league.',
+  'Bon retour, {coach} !': 'Welcome back, {coach}!',
+
+  // --- Ligue (src/server/hub.ts)
+  '{coach} rejoint la ligue avec {club}.': '{coach} joins the league with {club}.',
+  'La ligue a déjà commencé.': 'The league has already started.',
+  'Inscris-toi avant de lancer la ligue.': 'Sign up before starting the league.',
+  'La ligue démarre avec {n} coach(s) !': 'The league kicks off with {n} coach(es)!',
+  'La ligue n’a pas encore commencé.': "The league hasn't started yet.",
+  'Coach inconnu.': 'Unknown coach.',
+  'Commande inconnue : {command}': 'Unknown command: {command}',
+  'Arguments invalides.': 'Invalid arguments.',
+  'Ton match en direct n’est pas fini.': "Your live match isn't finished.",
+  "Semaine {week} : c'est reparti !": "Week {week}: here we go again!",
+  'Pas de match contre un autre coach cette semaine.': 'No match against another coach this week.',
+  'Ce match a déjà été joué.': 'This match has already been played.',
+  'Tu n’as pas de match en cours.': "You don't have a match in progress.",
+
+  // --- Serveur du réseau local (src/server/main.ts), obsolète
+  'Ta ligue existante est maintenant la ligue 1.': 'Your existing league is now league 1.',
+  'Réservé à l’hôte, sur le PC du serveur.': 'Host only, on the server PC.',
+  'Méthode non autorisée.': 'Method not allowed.',
+  'Route inconnue.': 'Unknown route.',
+  'Seul l’hôte lance la ligue.': 'Only the host can start the league.',
+  'Jeu introuvable : lance « npm run serveur », qui construit le jeu avant de démarrer.': 'Game not found: run "npm run serveur", which builds the game before starting.',
+
+  // --- Hôte pair-à-pair (src/ui/net/peerHost.svelte.ts)
+  'Stockage du navigateur indisponible : impossible d’héberger ici.': "Browser storage unavailable: can't host from here.",
+  'Impossible de joindre les relais de mise en relation. Vérifie ta connexion.': "Can't reach the matchmaking relays. Check your connection.",
+  'L’hôte a arrêté le serveur.': 'The host has stopped the server.',
+  'Serveur complet.': 'Server full.',
+  'Doucement : trop d’actions d’un coup.': 'Easy there: too many actions at once.',
+  'Requête illisible.': 'Unreadable request.',
+  'Requête invalide.': 'Invalid request.',
+  'Trop d’essais : demande un nouveau code à l’hôte, puis reconnecte-toi.': 'Too many attempts: ask the host for a new code, then reconnect.',
+  'Ton club a été repris dans un autre navigateur.': 'Your club has been taken over in another browser.',
+  'Action inconnue.': 'Unknown action.',
+  'Présente-toi d’abord à l’hôte.': 'Introduce yourself to the host first.',
+  'Ta version du jeu n’est pas celle de l’hôte : recharge la page (Ctrl+Maj+R), et demande-lui d’en faire autant.': "Your version of the game doesn't match the host's: reload the page (Ctrl+Shift+R), and ask them to do the same.",
+  'Serveur arrêté.': 'Server stopped.',
+  'l’hôte': 'the host',
+  'Ligue de {name}': "{name}'s league",
+  'Annuaire public injoignable pour l’instant : ton code marche toujours.': 'Public directory unreachable for now: your code still works.',
+
+  // --- Transport (src/ui/net/peerTransport.ts, transport.ts, multiClient.svelte.ts)
+  'L’hôte a refusé la connexion.': 'The host refused the connection.',
+  'Pas encore connecté à l’hôte. Patience…': 'Not connected to the host yet. Patience…',
+  'Réponse illisible de l’hôte.': 'Unreadable reply from the host.',
+  'Hôte injoignable : il a peut-être fermé l’onglet.': 'Host unreachable: they may have closed the tab.',
+  'Serveur injoignable. L’hôte a peut-être éteint son PC.': 'Server unreachable. The host may have switched off their PC.',
+  'Serveur injoignable.': 'Server unreachable.',
+};

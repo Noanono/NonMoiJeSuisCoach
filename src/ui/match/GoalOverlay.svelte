@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../../i18n/t';
   import Button from '../kit/Button.svelte';
   import PlayerAvatar from '../kit/PlayerAvatar.svelte';
   import type { GoalAlert } from './verdict';
@@ -22,12 +23,12 @@
       <PlayerAvatar player={goal.avatar} size={88} />
       <p>
         <span class="nom">{goal.scorer}</span>
-        <span class="detail tampon">{goal.minute} · {goal.team}{goal.penalty ? ' · sur penalty' : ''}{goal.double ? ' · compte double' : ''}</span>
-        {#if goal.assist}<span class="detail tampon">Passe de {goal.assist}</span>{/if}
+        <span class="detail tampon">{goal.minute} · {goal.team}{goal.penalty ? t('goal.penalty') : ''}{goal.double ? t('goal.double') : ''}</span>
+        {#if goal.assist}<span class="detail tampon">{t('goal.assist', { player: goal.assist })}</span>{/if}
       </p>
     </div>
     <p class="score"><span class="equipe">{goal.ownName}</span> {goal.ownGoals} - {goal.otherGoals} <span class="equipe">{goal.otherName}</span></p>
-    <Button variant="primary" onclick={onresume}>Reprendre le match</Button>
+    <Button variant="primary" onclick={onresume}>{t('goal.resume')}</Button>
   </div>
 </div>
 
