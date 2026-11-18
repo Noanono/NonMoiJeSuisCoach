@@ -7,6 +7,7 @@ import type { AbilityTrigger } from '../types';
 import { checkAvailability } from './activation';
 import { aiReactToTrigger } from './ai';
 import { comment, TRIGGER_LABEL } from './commentary';
+import { setShootoutOrder } from './liveShootout';
 import { beginRun, endRun, findPlayer, opponentSide, pushEvent, teamOf, type Run } from './state';
 import { replaceKeeper } from './substitutions';
 import type { EventWindow, MatchState, Side } from './types';
@@ -125,6 +126,11 @@ export function refreshWindow(state: MatchState): void {
 
 /** Le coach laisse passer la fenêtre (CAP-19) : rien n'est consommé. */
 export function dismissEventWindow(state: MatchState): void {
+  // Tirs au but : le coach garde l'ordre proposé.
+  if (state.awaiting?.shootoutOrder) {
+    setShootoutOrder(state, state.awaiting.side, null);
+    return;
+  }
   // Gardien blessé : le coach laisse filer, le jeu fait entrer le remplaçant.
   const keeper = state.awaiting?.keeper ? findPlayer(state, state.awaiting.keeper.injuredId) : undefined;
   if (keeper && keeper.line === 'GK') {

@@ -4,6 +4,7 @@
 import { scoreLine } from './actions';
 import { comment } from './commentary';
 import { computeXpGains } from './impact';
+import { startLiveShootout } from './liveShootout';
 import { runShootout, shootoutConversion } from './shootout';
 import { isActive, keeperOf, pushEvent, refreshRating, teamOf, type Run } from './state';
 import { shootingValue, ABSENT_KEEPER_RATING } from './strength';
@@ -76,7 +77,20 @@ export function startSecondHalf(run: Run): void {
 
 function finishMatch(run: Run): void {
   const { state } = run;
-  if (state.knockout && state.home.goals === state.away.goals) playShootout(run);
+  if (state.knockout && state.home.goals === state.away.goals) {
+    // Un coach humain joue la séance tir par tir (TAB-01) ; entre IA, elle se tire d'un coup.
+    if (state.home.isHuman || state.away.isHuman) {
+      startLiveShootout(run);
+      return;
+    }
+    playShootout(run);
+  }
+  closeMatch(run);
+}
+
+/** Coup de sifflet final : plus rien en attente, XP calculée. */
+export function closeMatch(run: Run): void {
+  const { state } = run;
   state.status = 'finished';
   state.awaiting = null;
   state.pending = null;

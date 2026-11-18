@@ -57,6 +57,8 @@
       };
     }
     const window = match.awaiting;
+    // Tirs au but : l'ordre se règle dans le panneau de la séance, et on regarde le tir partir avant le suivant.
+    if (window?.shootoutOrder || (match.status === 'shootout' && controller.kickReveal)) return null;
     if (window && window.side === controller.coachSide) {
       const play = match.pendingPlay;
       const distance = play?.kind === 'freeKick' ? (play.distance ?? 'medium') : null;
@@ -124,8 +126,12 @@
       if (chances.malus > 0) details.push(t('band.penalty.keeperAbility', { value: Math.round(chances.malus * 100) }));
       if (chances.retake) details.push(t('band.penalty.retake'));
     }
+    const shooter = chances?.shooterName ?? '?';
+    const kickNumber = (match.liveShootout?.kicks.filter((kick) => kick.side === shootingSide).length ?? 0) + 1;
+    const shootoutTitle = match.status === 'shootout' ? (role === 'attack' ? t('shootout.attackTitle', { n: kickNumber, player: shooter }) : t('shootout.defenseTitle', { n: kickNumber, player: shooter })) : null;
     return {
       role,
+      title: shootoutTitle ?? (role === 'attack' ? t('band.penalty.attackTitle') : t('band.penalty.defenseTitle')),
       keeper: habit && keeper
         ? t('band.penalty.habit', { keeper: keeper.name, habit: td(KEEPER_HABIT_LABEL[habit]), stay: percent(chances?.keeperStay ?? 0) })
         : t('band.penalty.habitUnknown'),
@@ -230,7 +236,7 @@
       {@const penalty = prompt.penalty}
       <div class="coup-franc">
         <p class="consigne" aria-live="polite">
-          <span class="banderole-titre">{penalty.role === 'attack' ? t('band.penalty.attackTitle') : t('band.penalty.defenseTitle')}</span>
+          <span class="banderole-titre">{penalty.title}</span>
           {#if penalty.role === 'attack'}<span class="texte-s">{penalty.keeper}</span>{/if}
           {#each penalty.details as detail (detail)}<span class="texte-s mono">{detail}</span>{/each}
           {#if prompt.hasAbilities}<span class="texte-s">{t('band.abilityCanHelp')}</span>{/if}

@@ -15,6 +15,7 @@ import {
   moveToLine,
   selectTarget,
   setInstructions,
+  setShootoutOrder,
   startActivation,
   substitutePlayer,
   swapPositions,
@@ -30,6 +31,8 @@ export const DUEL_PAUSE_MS = 10_000;
 export const DUEL_DECISION_MS = 10_000;
 export const DUEL_HALFTIME_MS = 20_000;
 export const DUEL_ANNOUNCE_MS = 5_000;
+/** Tirs au but : le temps de ranger ses tireurs. */
+export const DUEL_SHOOTOUT_ORDER_MS = 20_000;
 
 /** Ce que chaque coach voit du match en plus de l'état du moteur. */
 export interface DuelView {
@@ -161,7 +164,7 @@ export class LiveDuel {
     const key = this.currentDecisionKey();
     if (key !== this.decisionKey) {
       this.decisionKey = key;
-      this.decisionUntil = now + DUEL_DECISION_MS;
+      this.decisionUntil = now + (this.match.awaiting?.shootoutOrder ? DUEL_SHOOTOUT_ORDER_MS : DUEL_DECISION_MS);
       return true;
     }
     if (now < this.decisionUntil) return false;
@@ -241,6 +244,8 @@ export class LiveDuel {
         return chooseWall(match, side, text(0) as never) ? { ok: true } : refused('Pas de coup franc contre toi.');
       case 'choosePenaltyStyle':
         return choosePenaltyStyle(match, side, text(0) as never) ? { ok: true } : refused('Pas de penalty pour toi.');
+      case 'setShootoutOrder':
+        return setShootoutOrder(match, side, list.filter((id): id is string => typeof id === 'string')) ? { ok: true } : refused('Ordre des tireurs refusé.');
       case 'chooseKeeperDive':
         return chooseKeeperDive(match, side, text(0) as never) ? { ok: true } : refused('Pas de penalty contre toi.');
       case 'substitute':

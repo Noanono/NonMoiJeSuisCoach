@@ -32,6 +32,7 @@ function physicalReason(state: MatchState, player: MatchPlayer, ability: Prepare
 }
 
 function timingReason(state: MatchState, side: Side, ability: PreparedAbility): string | null {
+  if (state.status === 'shootout' && ability.trigger === 'anytime') return UNAVAILABLE.shootout;
   if (ability.trigger !== 'anytime' && !triggerIsOpen(ability.trigger, state.triggers[side])) {
     return fill(UNAVAILABLE.trigger, { label: TRIGGER_LABEL[ability.trigger] });
   }

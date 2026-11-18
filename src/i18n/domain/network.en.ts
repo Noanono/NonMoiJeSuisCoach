@@ -20,6 +20,7 @@ export const NETWORK_EN: Record<string, string> = {
   'Pas de coup franc pour toi.': 'No free kick for you.',
   'Pas de coup franc contre toi.': 'No free kick against you.',
   'Pas de penalty pour toi.': 'No penalty for you.',
+  'Ordre des tireurs refusé.': 'Penalty order refused.',
   'Pas de penalty contre toi.': 'No penalty against you.',
   'Ce changement n’est pas possible.': "That substitution isn't possible.",
   'Consignes invalides.': 'Invalid instructions.',

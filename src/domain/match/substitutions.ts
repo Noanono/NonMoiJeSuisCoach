@@ -44,7 +44,7 @@ export function substitutePlayer(state: MatchState, side: Side, leavingId: strin
   const team = teamOf(state, side);
   const leaving = findPlayer(state, leavingId);
   const entering = findPlayer(state, enteringId);
-  if (state.status === 'finished' || state.pending !== null || substitutionsLeft(team) <= 0) return false;
+  if (state.status === 'finished' || state.status === 'shootout' || state.pending !== null || substitutionsLeft(team) <= 0) return false;
   if (!leaving || !entering || leaving.side !== side || entering.side !== side) return false;
   if (!canLeave(leaving) || !canEnter(entering)) return false;
   const run = beginRun(state);
@@ -122,7 +122,7 @@ export function canReposition(player: MatchPlayer): boolean {
 }
 
 function editable(state: MatchState): boolean {
-  return state.status !== 'finished' && state.pending === null;
+  return state.status !== 'finished' && state.status !== 'shootout' && state.pending === null;
 }
 
 function lineCount(team: TeamState, line: Position): number {

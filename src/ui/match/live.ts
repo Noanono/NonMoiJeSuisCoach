@@ -23,6 +23,7 @@ const PERIOD_LABEL: Record<MatchState['status'], MessageKey> = {
   firstHalf: 'live.period.firstHalf',
   halftime: 'live.period.halftime',
   secondHalf: 'live.period.secondHalf',
+  shootout: 'live.period.shootout',
   finished: 'live.period.finished',
 };
 

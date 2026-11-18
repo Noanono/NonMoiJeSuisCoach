@@ -60,7 +60,7 @@ export interface MatchOptions {
 // État
 // ---------------------------------------------------------------------------
 
-export type MatchStatus = 'firstHalf' | 'halftime' | 'secondHalf' | 'finished';
+export type MatchStatus = 'firstHalf' | 'halftime' | 'secondHalf' | 'shootout' | 'finished';
 
 /** Statistique touchée par un effet actif : stats de jeu, mise hors jeu ou niveaux inversés. */
 export type ActiveStat = MatchStat | 'knockout' | 'swap';
@@ -265,6 +265,8 @@ export interface EventWindow {
   penalty?: 'attack' | 'defense';
   /** Gardien blessé (MATCH-08) : le coach choisit qui entre ; s'il laisse filer, le jeu choisit pour lui. */
   keeper?: { injuredId: string };
+  /** Tirs au but en direct (TAB-01) : le coach fixe l'ordre de ses tireurs ; s'il laisse filer, l'ordre proposé. */
+  shootoutOrder?: boolean;
 }
 
 /** Activation en cours de ciblage (CAP-16, CAP-17, CAP-20). */
@@ -304,10 +306,35 @@ export interface PendingPlay {
   dive?: KeeperDive;
 }
 
+/** Un penalty de la séance de tirs au but (TAB-01). */
+export interface ShootoutKick {
+  side: Side;
+  playerId: string;
+  keeperId: string | null;
+  style: PenaltyStyle;
+  dive: KeeperDive;
+  /** Côté visé par le tireur. */
+  aim: KeeperDive;
+  scored: boolean;
+}
+
+/** Séance de tirs au but jouée en direct (TAB-01). */
+export interface LiveShootout {
+  /** Camp qui tire en premier (pile ou face). */
+  first: Side;
+  /** Ordre des tireurs de chaque camp ; on recommence au début après le dernier. */
+  order: Record<Side, string[]>;
+  /** Camps humains qui n'ont pas encore validé leur ordre. */
+  ordering: Side[];
+  kicks: ShootoutKick[];
+}
+
 export interface ShootoutResult {
   home: number;
   away: number;
   winner: Side;
+  /** Tir par tir, quand la séance s'est jouée en direct. */
+  kicks?: ShootoutKick[];
 }
 
 export interface MatchState {
@@ -347,6 +374,8 @@ export interface MatchState {
   /** Deux coachs humains (multi) : la fenêtre du second camp attend que le premier ait choisi (MULTI-07). */
   windowQueue?: Side[];
   shootout: ShootoutResult | null;
+  /** Séance de tirs au but en cours (TAB-01). */
+  liveShootout?: LiveShootout;
   /** Gardiens dont le staff a percé les habitudes au penalty (après en avoir affronté un). */
   scoutedKeeperIds?: string[];
   /** XP gagnée par joueur (CAP-10), calculée au coup de sifflet final. */

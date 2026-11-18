@@ -15,6 +15,7 @@
   import MiniMap from './MiniMap.svelte';
   import Pitch from './Pitch.svelte';
   import Scoreboard from './Scoreboard.svelte';
+  import ShootoutPanel from './ShootoutPanel.svelte';
   import { store } from '../store.svelte';
 
   interface Props {
@@ -72,6 +73,8 @@
     <DuelBand {controller} />
     <CoachBand {controller} />
   </div>
+
+  <ShootoutPanel {controller} />
 
   <div class="disposition" class:grise={controller.opponentDeciding}>
     <Pitch {controller} />

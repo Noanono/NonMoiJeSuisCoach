@@ -12,6 +12,7 @@ import { playChances, playFouls, resolvePendingPlay, rollInjury } from './plays'
 import { beginRun, endRun, isOnPitch, pushEvent, refreshRating, teamOf, type Run } from './state';
 import { createStrength, measureTeam, swapStrengths } from './strength';
 import type { MatchEvent, MatchState, Side, TeamState } from './types';
+import { prepareNextKick } from './liveShootout';
 import { clearTriggers } from './windows';
 
 /** Recharge de la Jauge de Gueulante : +1 toutes les 10 minutes (CAP-05). */
@@ -43,6 +44,11 @@ export function tick(state: MatchState): MatchEvent[] {
   clearTriggers(state);
   if (state.pendingPlay) {
     resolvePendingPlay(run);
+    return endRun(run);
+  }
+  if (state.status === 'shootout') {
+    // Séance reprise sans penalty posé (ancienne sauvegarde) : on pose le suivant.
+    prepareNextKick(run);
     return endRun(run);
   }
   if (state.status === 'halftime') startSecondHalf(run);

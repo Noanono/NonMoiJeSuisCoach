@@ -18,6 +18,7 @@ import {
   isPaused,
   selectTarget,
   setInstructions,
+  setShootoutOrder,
   startActivation,
   substitutePlayer,
   substitutionsLeft,
@@ -46,6 +47,8 @@ export const FX_DURATION_MS = 5000;
 const FX_QUEUE_LIMIT = 3;
 /** Match en direct : durée de l'annonce d'un but, le match continuant sur le serveur. */
 const REMOTE_GOAL_MS = 3000;
+/** Tirs au but : le temps de voir partir le ballon avant le tir suivant (TAB-01). */
+export const KICK_REVEAL_MS = 1800;
 
 /** Capacité en cours de mise en scène sur le terrain. */
 export interface ActivationFx {
@@ -78,7 +81,11 @@ export class MatchController {
   dragging = $state(false);
   /** But à annoncer : le match attend que le coach reprenne. */
   goal = $state.raw<GoalAlert | null>(null);
+  /** Tirs au but : un tir vient de partir, on le regarde avant de choisir le suivant. */
+  kickReveal = $state(false);
   #goalsSeen = 0;
+  #kicksSeen = 0;
+  #kickTimer: ReturnType<typeof setTimeout> | undefined;
   #fxQueue: ActivationRecord[] = [];
   #fxSeen = 0;
   #fxTimer: ReturnType<typeof setTimeout> | undefined;
@@ -90,6 +97,7 @@ export class MatchController {
     this.remote = remote;
     this.#fxSeen = match.activations.length;
     this.#goalsSeen = match.goals.length;
+    this.#kicksSeen = match.liveShootout?.kicks.length ?? 0;
   }
 
   /** Lecture abonnée au moteur : à appeler dans chaque `$derived` qui lit `match`. */
@@ -109,7 +117,7 @@ export class MatchController {
   });
 
   /** L'horloge tourne : une seule boucle active, coupée dès que quelque chose attend (green code). */
-  readonly running = $derived(this.isLocal() && !this.paused && this.inspectedId === null && !this.engineWaiting && this.fx === null && !this.helpOpen && this.goal === null && !this.dragging);
+  readonly running = $derived(this.isLocal() && !this.paused && this.inspectedId === null && !this.engineWaiting && this.fx === null && !this.helpOpen && this.goal === null && !this.dragging && !this.kickReveal);
 
   /** Une minute de jeu (MATCH-02). Pause automatique à la mi-temps pour les consignes (MATCH-05). */
   step(): void {
@@ -249,6 +257,13 @@ export class MatchController {
     store.touchMatch();
   }
 
+  /** Tirs au but : ordre des tireurs validé (`null` : l'ordre proposé). */
+  setShootoutOrder(ids: string[] | null): void {
+    if (this.remote) return ids ? this.remote('setShootoutOrder', ids) : this.remote('dismissWindow');
+    setShootoutOrder(this.match, this.coachSide, ids);
+    store.touchMatch();
+  }
+
   /** Penalty adverse : plongeon du gardien. */
   chooseKeeperDive(dive: KeeperDive): void {
     if (this.remote) return this.remote('chooseKeeperDive', [dive]);
@@ -293,6 +308,7 @@ export class MatchController {
   /** Repère les capacités parties depuis le dernier appel et les met en file d'affichage. */
   #collectFx(): void {
     this.#collectGoal();
+    this.#collectKick();
     const fresh = this.match.activations.slice(this.#fxSeen);
     if (fresh.length === 0) return;
     this.#fxSeen = this.match.activations.length;
@@ -312,6 +328,16 @@ export class MatchController {
       clearTimeout(this.#goalTimer);
       this.#goalTimer = setTimeout(() => (this.goal = null), REMOTE_GOAL_MS);
     }
+  }
+
+  /** Un tir au but vient d'être tiré : le bandeau attend la fin de l'animation. */
+  #collectKick(): void {
+    const kicks = this.match.liveShootout?.kicks.length ?? 0;
+    if (kicks <= this.#kicksSeen) return;
+    this.#kicksSeen = kicks;
+    this.kickReveal = true;
+    clearTimeout(this.#kickTimer);
+    this.#kickTimer = setTimeout(() => (this.kickReveal = false), KICK_REVEAL_MS);
   }
 
   resumeAfterGoal(): void {
@@ -356,6 +382,7 @@ export class MatchController {
   dispose(): void {
     clearTimeout(this.#fxTimer);
     clearTimeout(this.#goalTimer);
+    clearTimeout(this.#kickTimer);
   }
 
   /** Coup de sifflet final : reporte le match sur la partie (MATCH-06). */

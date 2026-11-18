@@ -172,6 +172,18 @@ export const COMMENTARY_LINES = {
     "Pause : {label}. C'est à toi de décider, maintenant ou jamais.",
     "Le match s'arrête un instant : {label}. Tes joueurs te regardent, à toi de jouer.",
   ],
+  shootoutStart: [
+    "Tirs au but ! Pile ou face : {team} tire en premier. Les cœurs fragiles sont priés de rentrer chez eux.",
+    "On ne se départage pas : tirs au but. {team} commence, la buvette arrête de servir.",
+  ],
+  shootoutGoal: [
+    '{player} marque pour {team}. Séance : {score}.',
+    'Filet ! {player} ne tremble pas. Séance : {score}.',
+  ],
+  shootoutMiss: [
+    '{player} rate ! {team} grimace. Séance : {score}.',
+    'Arrêté ! Le tir de {player} ne passe pas. Séance : {score}.',
+  ],
   shootout: [
     "Tirs au but : {team} l'emporte {score}. Les cœurs fragiles sont priés de rentrer chez eux.",
     "{team} gagne la séance de tirs au but, {score}. Le gardien sera porté jusqu'à la buvette.",
@@ -194,6 +206,7 @@ export function comment(rng: Rng, key: CommentaryKey, vars: CommentaryVars = {})
 /** Raisons d'indisponibilité affichées au coach (CAP-07). */
 export const UNAVAILABLE = {
   finished: 'Le match est fini, range ta gueulante pour la buvette.',
+  shootout: 'Pendant les tirs au but, seules les capacités de penalty comptent.',
   noAbility: "Pas de capacité connue chez lui. À part boire des coups, il ne sait rien faire de spécial.",
   sentOff: "Il est déjà sous la douche. Il chante faux, mais il ne peut plus rien pour toi.",
   subbedOff: "Il est sorti : il regarde le match en mangeant des chips.",

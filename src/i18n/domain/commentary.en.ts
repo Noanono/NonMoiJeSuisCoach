@@ -173,6 +173,18 @@ export const COMMENTARY_LINES_EN: SameShape<typeof COMMENTARY_LINES> = {
     "Pause: {label}. It's your call, now or never.",
     'The match stops for a moment: {label}. Your players are looking at you, your move.',
   ],
+  shootoutStart: [
+    'Penalties! Coin toss: {team} shoot first. The faint-hearted are asked to go home.',
+    "Nobody can be separated: penalties. {team} go first, the bar stops serving.",
+  ],
+  shootoutGoal: [
+    '{player} scores for {team}. Shootout: {score}.',
+    "Net! {player} doesn't flinch. Shootout: {score}.",
+  ],
+  shootoutMiss: [
+    '{player} misses! {team} wince. Shootout: {score}.',
+    "Saved! {player}'s kick doesn't go in. Shootout: {score}.",
+  ],
   shootout: [
     '{team} win the shoot-out {score}. The faint-hearted are asked to go home.',
     '{team} win on penalties, {score}. The keeper will be carried shoulder-high to the bar.',
@@ -181,6 +193,7 @@ export const COMMENTARY_LINES_EN: SameShape<typeof COMMENTARY_LINES> = {
 
 export const UNAVAILABLE_EN: SameShape<typeof UNAVAILABLE> = {
   finished: "The match is over, save your rant for the bar.",
+  shootout: 'During the shootout, only penalty abilities count.',
   noAbility: "No known ability on this one. Apart from having a drink, he can't do anything special.",
   sentOff: "He's already in the shower. He sings off-key, and he can't help you any more.",
   subbedOff: "He's been subbed off: he's watching the game eating crisps.",

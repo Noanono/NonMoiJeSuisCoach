@@ -13,6 +13,7 @@ import { creditActive, IMPACT } from './impact';
 import { isActive, opponentSide, pushEvent, teamOf, type Run } from './state';
 import { createStrength, measureTeam, shootingBoost, shootingValue, type TeamStrength } from './strength';
 import { addGauge } from './actions';
+import { recordShootoutKick } from './liveShootout';
 import { AI_STYLE_SHARE, aimFor, aiPenaltyStyle, KEEPER_STAY_CHANCE, keeperDive, keeperHabit, keeperRead, PANENKA_GAUGE_SWING, PENALTY_STYLE_CHANCE, PENALTY_STYLE_LABEL, type KeeperRead } from './penaltyKick';
 import type { ChanceKind, FreeKickDistance, FreeKickOption, KeeperDive, MatchPlayer, MatchState, PenaltyStyle, PendingPlay, Side, TeamState, WallSize } from './types';
 import { openTriggers } from './windows';
@@ -395,7 +396,8 @@ export function resolvePendingPlay(run: Run): void {
     return;
   }
   if (play.kind === 'penalty') {
-    resolvePenalty(run, attacking, play);
+    if (state.status === 'shootout') resolveShootoutKick(run, attacking, play);
+    else resolvePenalty(run, attacking, play);
     return;
   }
   const shooter = chooseTaker(run, attacking, play.kind, play.takerId);
@@ -440,9 +442,18 @@ function resolveFreeKick(run: Run, attacking: TeamState, play: PendingPlay, boos
  * sort (pas de choix de côté) ; la Panenka va au centre. Une Panenka fait basculer la gueulante.
  */
 function resolvePenalty(run: Run, attacking: TeamState, play: PendingPlay): void {
+  const duel = penaltyDuel(run, attacking, play);
+  if (!duel) return;
+  const { shooter, style, read } = duel;
+  const scored = takeShot(run, { attacking, shooter, kind: 'penalty', keeper: scratchStrength.keeper, base: PENALTY_STYLE_CHANCE[style][read] });
+  swingAfterPanenka(run, attacking, shooter, style, scored);
+}
+
+/** Tireur, gardien, frappe et plongeon d'un penalty ; le staff retient les habitudes du gardien. */
+function penaltyDuel(run: Run, attacking: TeamState, play: PendingPlay) {
   const { state, rng } = run;
   const shooter = chooseTaker(run, attacking, 'penalty', play.takerId);
-  if (!shooter) return;
+  if (!shooter) return null;
   const defending = teamOf(state, opponentSide(attacking.side));
   const keeper = defending.players.find((player) => player.line === 'GK' && isActive(player, state.elapsed));
   const style = play.style ?? aiPenaltyStyle(rng);
@@ -451,8 +462,35 @@ function resolvePenalty(run: Run, attacking: TeamState, play: PendingPlay): void
   const read = keeperRead(aim, dive);
   if (keeper && !(state.scoutedKeeperIds ?? []).includes(keeper.id)) state.scoutedKeeperIds = [...(state.scoutedKeeperIds ?? []), keeper.id];
   pushEvent(run, 'ambiance', attacking.side, comment(rng, `penaltyDuel_${read}`, { player: shooter.name, team: attacking.name, label: PENALTY_STYLE_LABEL[style] }));
-  const scored = takeShot(run, { attacking, shooter, kind: 'penalty', keeper: scratchStrength.keeper, base: PENALTY_STYLE_CHANCE[style][read] });
+  return { shooter, defending, keeper, style, dive, aim, read };
+}
+
+/**
+ * Penalty d'une séance de tirs au but (TAB-01) : mêmes chances qu'en match (bonus du tireur, malus du
+ * gardien, penalty à retirer), mais le but compte pour la séance, pas pour le score du match.
+ */
+function resolveShootoutKick(run: Run, attacking: TeamState, play: PendingPlay): void {
+  const { rng } = run;
+  const duel = penaltyDuel(run, attacking, play);
+  if (!duel) return;
+  const { shooter, defending, keeper, style, dive, aim, read } = duel;
+  const base = PENALTY_STYLE_CHANCE[style][read];
+  const boost = attacking.chanceBoosts.shift();
+  let scored = rng.chance(shotChance(shooter, scratchStrength.keeper, 'penalty', base, boost?.value ?? 0, consumeShotMalus(defending)));
+  if (scored && defending.retakePenalties > 0) {
+    defending.retakePenalties--;
+    pushEvent(run, 'penalty', attacking.side, comment(rng, 'penaltyRetaken', { player: shooter.name, team: attacking.name, opponent: defending.name }));
+    scored = rng.chance(shotChance(shooter, scratchStrength.keeper, 'penalty', base, 0, consumeShotMalus(defending)));
+  }
+  swingAfterPanenka(run, attacking, shooter, style, scored);
+  recordShootoutKick(run, { side: attacking.side, playerId: shooter.id, keeperId: keeper?.id ?? null, style, dive, aim, scored });
+}
+
+/** Une Panenka fait basculer la gueulante : fierté d'un côté, honte de l'autre. */
+function swingAfterPanenka(run: Run, attacking: TeamState, shooter: MatchPlayer, style: PenaltyStyle, scored: boolean): void {
   if (style !== 'panenka') return;
+  const { state, rng } = run;
+  const defending = teamOf(state, opponentSide(attacking.side));
   const winner = scored ? attacking : defending;
   const loser = scored ? defending : attacking;
   addGauge(winner, PANENKA_GAUGE_SWING);
