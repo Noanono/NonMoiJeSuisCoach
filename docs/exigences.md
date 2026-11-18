@@ -265,3 +265,15 @@ Section à compléter.
 | MULTI-13 | L'hôte peut ouvrir son serveur au public, avec un nom. Les serveurs publics s'affichent en liste sous le champ du code (nom, hôte, coachs, saison et semaine, version) ; un serveur muet depuis 45 s disparaît. Une annonce n'est retenue que si elle vient de l'hôte désigné par le code. |
 | MULTI-14 | Sécurité : le code contient un secret de 80 bits (nom de salle et clé de la mise en relation) et l'identité cryptographique de l'hôte ; seuls ses messages sont écoutés. Chaque coach prouve son identité par un secret dont l'hôte ne garde que l'empreinte : personne ne joue le club d'un autre. L'hôte vérifie chaque action, limite le débit et les essais de code de reprise ; les actions d'hôte ne sont pas exposées. |
 | MULTI-15 | Seul l'hôte lance la ligue. Ensuite, la semaine passe automatiquement dès que tous les coachs sont prêts (MULTI-04). |
+
+## Publication sur CrazyGames
+
+| ID | Exigence |
+|---|---|
+| PLAT-01 | Une version du jeu est construite pour CrazyGames (`bun run build:crazygames`, chemins relatifs) : elle charge le SDK CrazyGames v3. Hors CrazyGames, le SDK n'est pas chargé et le jeu se comporte comme avant ; s'il ne répond pas en 8 s, on joue sans lui. |
+| PLAT-02 | Pas de compte propre au jeu : un joueur connecté à CrazyGames voit son pseudo et son avatar sur l'accueil, et son pseudo est son nom de coach en ligue. Un invité joue sans compte ; il peut se connecter par un bouton discret en haut à droite, jamais imposé. |
+| PLAT-03 | Les 3 emplacements de partie solo et l'identité du coach sont rangés dans le compte CrazyGames (module « data », 1 Mo max), parties compressées (~60 Ko chacune) : le joueur les retrouve sur tous ses appareils, et retrouve son club dans la ligue d'un ami sans code de reprise. Les données d'avant le SDK sont recopiées dans un compte vide. Les ligues hébergées restent dans le navigateur de l'hôte (MULTI-11). |
+| PLAT-04 | Le jeu signale à CrazyGames le chargement, le début et la fin du jeu (accueil et salle d'attente = menus) et fête une montée en division. |
+| PLAT-05 | La ligue où se trouve le joueur (hébergée ou rejointe) est annoncée à CrazyGames comme salle, ouverte tant qu'elle compte moins de 10 coachs : ses amis CrazyGames peuvent l'y rejoindre ou être invités. Une invitation acceptée, au lancement ou en pleine partie, mène directement dans la salle d'attente de la ligue (la partie solo en cours est sauvegardée) ; un joueur connecté y est inscrit tout seul. Le lien d'invitation mène à la page CrazyGames du jeu. |
+| PLAT-06 | Multijoueur instantané : lancé depuis l'accueil multijoueur de CrazyGames, le joueur héberge tout de suite une nouvelle ligue privée et entre dans sa salle d'attente, joignable par ses amis. |
+| PLAT-07 | Sur CrazyGames, un appui long sur tablette ne sélectionne pas la page (champs et codes restent sélectionnables). Le jeu n'a ni son, ni chat, ni bouton plein écran. |

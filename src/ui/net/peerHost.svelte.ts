@@ -11,7 +11,7 @@ import { MAX_COACHES } from '../../domain/game/multiplayer';
 import type { SlotInfo } from '../../server/hub';
 import { HostEngine, isClientRoute, type Listener, type OpenLeague } from '../../server/hostEngine';
 import { DirectoryAnnouncer } from './directory.svelte';
-import { adoptIdentity, localCoachId, localCoachSecret, savedProfile } from './identity';
+import { adoptIdentity, defaultCoachName, localCoachId, localCoachSecret } from './identity';
 import { idbSlotStore, readSlotSecret, writeSlotSecret } from './idbSlotStore';
 import { joinLeagueRoom, type LeagueRoom } from './p2p';
 import { SERVER_NAME_MAX, type Announcement } from './publicDirectory';
@@ -143,7 +143,7 @@ export class PeerHost {
   /** Ouvre le serveur au public (annuaire) ou le referme aux seuls détenteurs du code. */
   async setPublic(open: boolean, name: string): Promise<void> {
     this.serverName = name.trim().slice(0, SERVER_NAME_MAX);
-    this.#hostName = savedProfile().name;
+    this.#hostName = defaultCoachName();
     this.isPublic = open;
     if (open) await this.#announce();
     else await this.#announcer.withdraw();

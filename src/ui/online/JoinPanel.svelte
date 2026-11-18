@@ -10,8 +10,6 @@
   import { store } from '../store.svelte';
   import { GAME_VERSION } from '../../domain/game';
   import { DirectoryWatcher } from '../net/directory.svelte';
-  import { PeerTransport } from '../net/peerTransport';
-  import { formatCode, parseCode } from '../net/serverCode';
   import type { PublicServer } from '../net/publicDirectory';
 
   let { initialCode = '' }: { initialCode?: string } = $props();
@@ -24,13 +22,7 @@
   onDestroy(() => watcher.stop());
 
   function join(raw: string): void {
-    const parsed = parseCode(raw);
-    if (!parsed) {
-      error = 'Code incomplet ou mal copié : il ressemble à « ABCD-EFGH-JKMN-PQRS.xxxxxxxxxxxxxxxxxxxxxx ».';
-      return;
-    }
-    error = null;
-    store.openMultiplayer(() => new PeerTransport(parsed), formatCode(parsed));
+    error = store.joinServer(raw) ? null : 'Code incomplet ou mal copié : il ressemble à « ABCD-EFGH-JKMN-PQRS.xxxxxxxxxxxxxxxxxxxxxx ».';
   }
 
   function submit(event: SubmitEvent): void {

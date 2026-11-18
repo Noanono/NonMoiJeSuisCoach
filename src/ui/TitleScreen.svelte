@@ -11,6 +11,7 @@
   import JoinPanel from './online/JoinPanel.svelte';
   import LanLeague from './lan/LanLeague.svelte';
   import { peerHost } from './net/peerHost.svelte';
+  import { crazyGames } from './platform/crazygames.svelte';
 
   const DIFFICULTY_IDS = Object.keys(DIFFICULTIES) as Difficulty[];
   const JOIN_LINK = /^#rejoindre=(.+)$/;
@@ -40,6 +41,8 @@
   }
 
   async function refreshLan(): Promise<void> {
+    // Sur CrazyGames, aucun serveur du réseau local ne sert le jeu : inutile de le chercher.
+    if (crazyGames.enabled) return;
     lan = await lanServer.info();
   }
 
@@ -67,6 +70,17 @@
 </script>
 
 <div class="title">
+  {#if crazyGames.enabled && crazyGames.accountAvailable}
+    <!-- Compte CrazyGames (PLAT-02) : en coin, jamais un passage obligé. -->
+    <div class="compte">
+      {#if crazyGames.user}
+        <img src={crazyGames.user.profilePictureUrl} alt="" width="32" height="32" />
+        <span class="texte-s texte-fort">{crazyGames.user.username}</span>
+      {:else}
+        <Button size="s" variant="ghost" onclick={() => crazyGames.login()}>Se connecter avec CrazyGames</Button>
+      {/if}
+    </div>
+  {/if}
   <header>
     <h1 class="banderole-xl">NON, MOI JE<br />SUIS COACH</h1>
     <p class="accroche texte-fort">Le jeu de gestion pour tous ceux qui savaient mieux que le sélectionneur.</p>
@@ -76,7 +90,7 @@
   {#if mode === 'choice'}
   <div class="modes">
     <Card title="Solo">
-      <p class="texte-s meta">Ton club, ta carrière, trois vestiaires de sauvegarde sur ce PC.</p>
+      <p class="texte-s meta">{crazyGames.user ? 'Ton club, ta carrière, trois vestiaires de sauvegarde rangés dans ton compte CrazyGames.' : 'Ton club, ta carrière, trois vestiaires de sauvegarde sur ce PC.'}</p>
       <div class="row"><Button variant="primary" onclick={() => (mode = 'solo')}>Jouer en solo</Button></div>
     </Card>
     <Card title="Héberger une partie">
@@ -153,11 +167,24 @@
 
 <style>
   .title {
+    position: relative;
     display: grid;
     gap: var(--space-10);
     padding: var(--marge-page);
     max-width: 1100px;
     margin: 0 auto;
+  }
+  .compte {
+    position: absolute;
+    top: var(--space-4);
+    right: var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .compte img {
+    border-radius: 50%;
+    border: var(--trait-fin) solid var(--encre);
   }
   header {
     display: grid;
