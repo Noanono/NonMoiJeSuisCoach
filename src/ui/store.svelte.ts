@@ -27,7 +27,7 @@ import { MultiClient } from './multiClient.svelte';
 import type { Transport } from './net/transport';
 import type { SaveSlot, SlotSummary } from '../domain/save/saveSlots';
 
-export type Screen = 'title' | 'lobby' | 'dashboard' | 'squad' | 'tactics' | 'training' | 'market' | 'club' | 'competitions' | 'stats' | 'match';
+export type Screen = 'title' | 'lobby' | 'dashboard' | 'squad' | 'tactics' | 'training' | 'market' | 'club' | 'competitions' | 'stats' | 'album' | 'match';
 
 /** Délai d'écriture après une action de gestion : on regroupe les clics (green code). */
 const AUTOSAVE_DELAY_MS = 1500;

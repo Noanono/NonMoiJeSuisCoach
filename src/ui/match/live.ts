@@ -31,6 +31,15 @@ export function periodLabel(state: MatchState): string {
   return t(PERIOD_LABEL[state.status]);
 }
 
+/**
+ * Chrono (M5) : minutes mortes encore à jouer, sans occasion ni faute. 0 quand le jeu est normal.
+ * `deadUntil` est la dernière minute écoulée concernée ; celle qu'on vient de jouer est déjà passée.
+ */
+export function frozenMinutes(state: MatchState): number {
+  if (state.status !== 'firstHalf' && state.status !== 'secondHalf') return 0;
+  return Math.max(0, (state.deadUntil ?? -1) - state.elapsed);
+}
+
 /** Lignes du live affichées par défaut : au-delà, « tout voir » (green code). */
 export const LIVE_LIMIT = 60;
 

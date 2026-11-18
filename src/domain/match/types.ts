@@ -231,6 +231,8 @@ export interface FloatingText {
   playerId: string;
   text: string;
   tone: 'bonus' | 'malus';
+  /** Mise en scène particulière : roue du pari (gagné, perdu), bouclier qui éclate. */
+  kind?: 'gambleWon' | 'gambleLost' | 'shield';
 }
 
 export interface ActivationRecord {

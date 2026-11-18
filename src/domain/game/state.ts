@@ -73,6 +73,8 @@ export interface GameState {
   friendly?: FriendlyMatch | null;
   /** Reroll de capacité payé, en attente du choix du coach (CAP-23). Absent des anciennes sauvegardes. */
   abilityReroll?: AbilityRerollOffer | null;
+  /** Album des capacités (ENC-01) : capacités vues partir dans les matchs du coach. Absent des anciennes sauvegardes. */
+  seenAbilityIds?: string[];
   /** Ce que la cellule de scouts du coach sait des joueurs des autres clubs (CLUB-10). Absent des anciennes sauvegardes. */
   scouting?: ScoutingState;
   /** Partie multijoueur (MULTI-01) : la fiche de chaque coach ; absent en solo. */

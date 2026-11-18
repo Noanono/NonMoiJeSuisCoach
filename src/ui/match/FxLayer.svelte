@@ -25,7 +25,28 @@
     arrows: { from: Point; to: Point }[];
     zone: { x: number; y: number; width: number; height: number } | null;
     floats: { id: number; at: Point; text: string; tone: 'bonus' | 'malus'; delay: number }[];
+    /** Boucliers qui éclatent, au centre du jeton protégé. */
+    shields: { id: number; at: Point }[];
   }
+
+  /** Roue du pari : 8 cases, vertes (gagné) et rouges (perdu) en alternance, pointeur en haut. */
+  const WHEEL_SEGMENTS = 8;
+  const WHEEL_TURNS = 4;
+  const SEGMENT_ANGLE = 360 / WHEEL_SEGMENTS;
+  /** Rotation finale : la case visée (paire = verte, impaire = rouge) s'arrête sous le pointeur. */
+  const wheelStop = (won: boolean) => WHEEL_TURNS * 360 - (won ? 2 : 3) * SEGMENT_ANGLE - SEGMENT_ANGLE / 2;
+  function segmentPath(index: number): string {
+    const point = (angle: number) => {
+      const radians = ((angle - 90) * Math.PI) / 180;
+      return `${(50 + 46 * Math.cos(radians)).toFixed(2)} ${(50 + 46 * Math.sin(radians)).toFixed(2)}`;
+    };
+    return `M50 50 L${point(index * SEGMENT_ANGLE)} A46 46 0 0 1 ${point((index + 1) * SEGMENT_ANGLE)} Z`;
+  }
+  /** Éclats du bouclier : six morceaux qui partent chacun dans sa direction. */
+  const SHARDS = Array.from({ length: 6 }, (_, index) => {
+    const angle = (index * 60 * Math.PI) / 180;
+    return { dx: Math.round(Math.cos(angle) * 46), dy: Math.round(Math.sin(angle) * 46), turn: index % 2 === 0 ? 140 : -160 };
+  });
 
   const ZONE_MARGIN = 8;
   const FLOAT_LINE_HEIGHT = 22;
@@ -61,7 +82,11 @@
       stackHeight.set(entry.playerId, stacked + 1);
       return [{ id, at: { x: centerOf(box).x, y: box.y - stacked * FLOAT_LINE_HEIGHT }, text: entry.text, tone: entry.tone, delay: id * FLOAT_STAGGER_MS }];
     });
-    return { key: record.id, width: origin.width, height: origin.height, arrows, floats, zone: record.zone ? zoneBox(record.floats.map((entry) => rectOf(entry.playerId))) : null };
+    const shields = record.floats.flatMap((entry, id) => {
+      const box = entry.kind === 'shield' ? rectOf(entry.playerId) : null;
+      return box ? [{ id, at: centerOf(box) }] : [];
+    });
+    return { key: record.id, width: origin.width, height: origin.height, arrows, floats, shields, zone: record.zone ? zoneBox(record.floats.map((entry) => rectOf(entry.playerId))) : null };
   }
 
   function zoneBox(boxes: (DOMRect | null)[]): Staging['zone'] {
@@ -105,6 +130,14 @@
           <line class="fleche" class:leur={!fx.own} x1={arrow.from.x} y1={arrow.from.y} x2={arrow.to.x} y2={arrow.to.y} marker-end="url(#pointe-fx)" />
         {/each}
       </svg>
+      {#each staging.shields as shield (shield.id)}
+        <svg class="bouclier" viewBox="-60 -60 120 120" style:left="{shield.at.x}px" style:top="{shield.at.y}px" aria-hidden="true">
+          <path class="bulle" d="M0 -40 L35 -20 L35 20 L0 40 L-35 20 L-35 -20 Z" />
+          {#each SHARDS as shard, index (index)}
+            <path class="eclat" d="M-6 -4 L6 -6 L2 7 Z" style="--dx: {shard.dx}px; --dy: {shard.dy}px; --tourne: {shard.turn}deg" />
+          {/each}
+        </svg>
+      {/each}
       {#each staging.floats as entry (entry.id)}
         <span class="flottant tampon {entry.tone}" style:left="{entry.at.x}px" style:top="{entry.at.y}px" style:animation-delay="{entry.delay}ms">{td(entry.text)}</span>
       {/each}
@@ -119,6 +152,20 @@
             <span class="capacite">{td(fx.record.abilityName)}</span>
           </span>
         </span>
+        {#if fx.gamble}
+          <span class="pari">
+            <svg class="roue" viewBox="0 -14 100 114" aria-hidden="true">
+              <g class="disque" style="--arret: {wheelStop(fx.gamble === 'won')}deg">
+                {#each Array.from({ length: WHEEL_SEGMENTS }, (_, index) => index) as index (index)}
+                  <path d={segmentPath(index)} class:gagne={index % 2 === 0} class:perdu={index % 2 === 1} />
+                {/each}
+                <circle cx="50" cy="50" r="8" />
+              </g>
+              <path class="pointeur" d="M38 -13 L62 -13 L50 10 Z" />
+            </svg>
+            <span class="verdict-pari tampon {fx.gamble}">{fx.gamble === 'won' ? t('fx.gambleWon') : t('fx.gambleLost')}</span>
+          </span>
+        {/if}
         <span class="description">{td(fx.description)}</span>
         <span class="effets texte-fort">
           {#each fx.effects as line, index (index)}<span>{line}</span>{/each}
@@ -178,6 +225,74 @@
   .malus {
     background: var(--carton);
     color: var(--craie-fixe);
+  }
+  .bouclier {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    translate: -50% -50%;
+    overflow: visible;
+  }
+  .bulle {
+    fill: color-mix(in srgb, var(--victoire) 25%, transparent);
+    stroke: var(--victoire);
+    stroke-width: 5;
+    stroke-linejoin: round;
+  }
+  .eclat {
+    fill: var(--victoire);
+    stroke: var(--encre-fixe);
+    stroke-width: 1.5;
+    opacity: 0;
+  }
+  .pari {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+  .roue {
+    width: 110px;
+    height: 110px;
+    flex: none;
+    overflow: visible;
+  }
+  .disque path {
+    stroke: var(--encre-fixe);
+    stroke-width: 1.5;
+  }
+  .disque .gagne {
+    fill: var(--victoire);
+  }
+  .disque .perdu {
+    fill: var(--carton);
+  }
+  .disque circle {
+    fill: var(--craie-fixe);
+    stroke: var(--encre-fixe);
+    stroke-width: 2;
+  }
+  .disque {
+    transform-box: view-box;
+    transform-origin: 50px 50px;
+    transform: rotate(var(--arret));
+  }
+  .pointeur {
+    fill: var(--encre-fixe);
+    stroke: var(--craie-fixe);
+    stroke-width: 2;
+    stroke-linejoin: round;
+  }
+  .verdict-pari {
+    font-size: 22px;
+    padding: 2px var(--space-2);
+    color: var(--craie-fixe);
+    border: var(--trait-fin) solid var(--encre-fixe);
+  }
+  .verdict-pari.won {
+    background: var(--victoire);
+  }
+  .verdict-pari.lost {
+    background: var(--carton);
   }
   .annonce {
     position: fixed;
@@ -270,6 +385,53 @@
     }
     .fleche {
       animation: avance 500ms linear infinite;
+    }
+    .disque {
+      animation: roue 1600ms cubic-bezier(0.15, 0.6, 0.2, 1) both;
+    }
+    .verdict-pari {
+      animation: tampon 220ms 1600ms ease-out both;
+    }
+    .bulle {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: bulle 700ms ease-out both;
+    }
+    .eclat {
+      animation: eclat 900ms 450ms ease-out both;
+    }
+  }
+  @keyframes roue {
+    from {
+      transform: rotate(0deg);
+    }
+  }
+  @keyframes bulle {
+    0% {
+      scale: 0.3;
+      opacity: 0;
+    }
+    35% {
+      scale: 1.1;
+      opacity: 1;
+    }
+    60% {
+      scale: 1;
+      opacity: 1;
+    }
+    100% {
+      scale: 1.35;
+      opacity: 0;
+    }
+  }
+  @keyframes eclat {
+    0% {
+      opacity: 1;
+      transform: translate(0, 0) rotate(0deg);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(var(--dx), var(--dy)) rotate(var(--tourne));
     }
   }
   @keyframes ecoule {

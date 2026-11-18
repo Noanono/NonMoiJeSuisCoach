@@ -4,6 +4,7 @@
  * jeune de cette nation, un peu meilleur qu'un jeune de son centre de formation, avec une capacité étrangère.
  * Rien au classement ; la fatigue, les blessures et l'XP de capacité comptent.
  */
+import { recordSeenAbilities } from './album';
 import { ABILITIES, getAbility } from '../abilities/catalog';
 import { AI_STYLE_PLAN } from '../club/aiStyle';
 import { facilitiesOf, facilityBonus } from '../club/facilities';
@@ -165,6 +166,7 @@ export function applyFriendlySummary(state: GameState, summary: MatchSummary, rn
     const player = state.players[injury.playerId];
     if (player && player.clubId === state.humanClubId) player.injuryWeeks = Math.max(player.injuryWeeks, injury.weeks);
   }
+  recordSeenAbilities(state, summary);
   const [own, theirs] = [summary.homeGoals, summary.awayGoals];
   friendly.score = [own, theirs];
   friendly.status = own > theirs ? 'won' : own === theirs ? 'drawn' : 'lost';

@@ -7,6 +7,8 @@
   import { substitutionFromDrag } from './activation';
   import { pitchView, type TokenView } from './pitch';
   import FxLayer from './FxLayer.svelte';
+  import MarkLayer from './MarkLayer.svelte';
+  import { frozenMinutes } from './live';
   import PlayerToken from './PlayerToken.svelte';
 
   interface Props {
@@ -21,6 +23,11 @@
   });
 
   let root = $state<HTMLElement>();
+  /** Chrono (M5) : le terrain gèle pendant les minutes mortes. */
+  const frozen = $derived.by(() => {
+    void controller.version;
+    return frozenMinutes(controller.match) > 0;
+  });
 
   /** Distance à parcourir avant qu'un appui devienne un glisser. */
   const DRAG_THRESHOLD_PX = 6;
@@ -122,7 +129,7 @@
 <svelte:window onpointermove={moveDrag} onpointerup={endDrag} onpointercancel={endDrag} onkeydown={cancelDrag} />
 
 <section class="terrain" bind:this={root} aria-label={t('pitchView.label')}>
-  <div class="lignes">
+  <div class="lignes" class:gele={frozen}>
     {#each view.columns as column (column.key)}
       <div
         class="ligne"
@@ -150,6 +157,7 @@
     </div>
   {/if}
 
+  <MarkLayer {controller} {root} />
   <FxLayer {controller} {root} />
 </section>
 
@@ -186,6 +194,16 @@
     left: 50%;
     border-left: var(--trait-epais) solid var(--ligne);
     pointer-events: none;
+  }
+  /* Minutes mortes : givre sur les bords, le jeu est à l'arrêt. */
+  .lignes.gele::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 28px 6px rgb(191 230 245 / 0.85);
+    background: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.08) 0 6px, transparent 6px 18px);
+    transition: opacity 400ms;
   }
   .ligne {
     position: relative;

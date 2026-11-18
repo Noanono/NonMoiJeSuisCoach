@@ -12,6 +12,7 @@
   import ClubScreen from './screens/ClubScreen.svelte';
   import Competitions from './screens/Competitions.svelte';
   import Stats from './screens/Stats.svelte';
+  import Album from './screens/Album.svelte';
   import LangSwitch from './kit/LangSwitch.svelte';
   import { t, td, type MessageKey } from '../i18n/t';
 
@@ -24,6 +25,7 @@
     { screen: 'club', label: 'shell.tabs.club' },
     { screen: 'competitions', label: 'shell.tabs.competitions' },
     { screen: 'stats', label: 'shell.tabs.stats' },
+    { screen: 'album', label: 'shell.tabs.album' },
   ];
 
   /** Licencié : plus d'accès aux écrans du club, seul le Bureau (et son écran de fin) reste. */
@@ -103,6 +105,7 @@
     {:else if store.screen === 'club'}<ClubScreen />
     {:else if store.screen === 'competitions'}<Competitions />
     {:else if store.screen === 'stats'}<Stats />
+    {:else if store.screen === 'album'}<Album />
     {/if}
   </main>
 </div>

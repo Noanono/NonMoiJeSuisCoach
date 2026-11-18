@@ -24,6 +24,7 @@ export const COACH_FIELDS = [
   'status',
   'jobOffers',
   'rivalId',
+  'seenAbilityIds',
 ] as const satisfies readonly (keyof GameState)[];
 
 type CoachField = (typeof COACH_FIELDS)[number];

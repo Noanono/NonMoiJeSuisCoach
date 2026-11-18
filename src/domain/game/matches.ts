@@ -1,4 +1,5 @@
 import { gainXp } from '../abilities/progression';
+import { recordSeenAbilities } from './album';
 import type { Rng } from '../core/rng';
 import { autoLineup, validateLineup, type LineupError } from '../league/lineup';
 import { createMatch, simulateQuick, summarize } from '../match';
@@ -168,6 +169,7 @@ function applyCoachSide(state: GameState, fixture: Fixture, summary: MatchSummar
   for (const consequence of summary.consequences[humanSide]) applyConsequence(state, consequence);
   // L'adversaire affronté est connu de la cellule de scouts (CLUB-10).
   scoutOpponents(state, humanSide === 'home' ? fixture.awayId : fixture.homeId);
+  recordSeenAbilities(state, summary);
 }
 
 function toResult(summary: MatchSummary, fixture: Fixture): MatchResult {

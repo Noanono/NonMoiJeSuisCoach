@@ -21,6 +21,9 @@ export const PHRASES_EN: Record<string, string> = {
   'Trop de capacités {rarity} sur la feuille de match : {count} pour {limit} autorisée(s) dans cette division.':
     'Too many {rarity} abilities on the team sheet: {count} for {limit} allowed in this division.',
 
+  // --- Album des capacités (ENC-01)
+  'Album des capacités : {n} nouvelle(s) capacité(s) découverte(s) en match.': 'Ability album: {n} new ability(ies) discovered in a match.',
+
   // --- Styles des coachs IA (MATCH-07)
   'le bétonneur': 'the bus-parker',
   'le fou d’attaque': 'the attack-mad one',

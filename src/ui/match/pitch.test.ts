@@ -3,7 +3,8 @@ import { getLegacyAbility } from '../../domain/testing/legacyAbilities';
 import { createMatch, selectTarget, startActivation } from '../../domain/match';
 import { makeSheet, testMatchOptions } from '../../domain/match/fixtures';
 import { findPlayer } from '../../domain/match/state';
-import { availability, benchPlayers, pitchColumns, pitchView, toChip, tokenFocus, tokenView } from './pitch';
+import { availability, benchPlayers, markLinks, pitchColumns, pitchView, toChip, tokenFocus, tokenView } from './pitch';
+import { frozenMinutes } from './live';
 
 function match() {
   return createMatch(
@@ -13,6 +14,33 @@ function match() {
     ),
   );
 }
+
+describe('mécaniques visibles sur le terrain', () => {
+  test('un marquage en cours relie le marqueur à sa cible, et disparaît quand le marqueur sort', () => {
+    const state = match();
+    const marker = findPlayer(state, 'a-5')!;
+    const target = findPlayer(state, 'h-9')!;
+    target.effects.push({ label: 'Marquage', stat: 'shooting', value: -0.3, endsAt: state.elapsed + 10, markerId: marker.id });
+    expect(markLinks(state, 'away')).toEqual([{ markerId: 'a-5', targetId: 'h-9', own: true }]);
+    expect(markLinks(state, 'home')[0]!.own).toBe(false);
+    marker.injured = true;
+    expect(markLinks(state, 'away')).toEqual([]);
+  });
+
+  test('le chrono figé compte les minutes mortes encore à jouer', () => {
+    const state = match();
+    state.status = 'firstHalf';
+    state.elapsed = 20;
+    expect(frozenMinutes(state)).toBe(0);
+    state.deadUntil = 24;
+    expect(frozenMinutes(state)).toBe(4);
+    state.elapsed = 24;
+    expect(frozenMinutes(state)).toBe(0);
+    state.deadUntil = 30;
+    state.status = 'halftime';
+    expect(frozenMinutes(state)).toBe(0);
+  });
+});
 
 describe('terrain en direct (CAP-03)', () => {
   test('un adversaire porte le liseré de la rareté de sa capacité, sauf si elle est cachée', () => {

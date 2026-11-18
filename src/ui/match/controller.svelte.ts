@@ -59,6 +59,8 @@ export interface ActivationFx {
   description: string;
   /** Ce que fait la capacité, au niveau du joueur. */
   effects: string[];
+  /** Pari (M9) : la roue tourne dans l'annonce et s'arrête sur le résultat. */
+  gamble: 'won' | 'lost' | null;
 }
 
 /** Match en direct contre un autre coach : les actions partent au serveur, qui fait tourner le match (MULTI-07). */
@@ -360,6 +362,7 @@ export class MatchController {
       own: record.side === this.coachSide,
       description: player.ability?.description ?? '',
       effects: player.ability?.effects.map(describeEffect) ?? [],
+      gamble: record.floats.some((entry) => entry.kind === 'gambleWon') ? 'won' : record.floats.some((entry) => entry.kind === 'gambleLost') ? 'lost' : null,
     };
     this.#fxTimer = setTimeout(() => this.#showNextFx(), FX_DURATION_MS);
   }

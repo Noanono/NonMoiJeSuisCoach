@@ -44,8 +44,8 @@ function scoped(context: EffectContext, effect: Extract<Effect, { scope: unknown
   return resolveScope({ state: context.run.state, ...context }, effect.scope);
 }
 
-function float(context: EffectContext, player: MatchPlayer, text: string, tone: FloatingText['tone']): void {
-  context.activation.floats.push({ playerId: player.id, text, tone });
+function float(context: EffectContext, player: MatchPlayer, text: string, tone: FloatingText['tone'], kind?: FloatingText['kind']): void {
+  context.activation.floats.push({ playerId: player.id, text, tone, ...(kind ? { kind } : {}) });
 }
 
 function percentText(value: number): string {
@@ -186,7 +186,7 @@ export function applyEffect(context: EffectContext, effect: Effect): void {
       return applyMark(context, effect);
     case 'gamble': {
       const success = run.rng.chance(effect.chance);
-      float(context, source, success ? 'PARI GAGNÉ !' : 'PARI PERDU…', success ? 'bonus' : 'malus');
+      float(context, source, success ? 'PARI GAGNÉ !' : 'PARI PERDU…', success ? 'bonus' : 'malus', success ? 'gambleWon' : 'gambleLost');
       pushEvent(run, 'effect', side, success ? `Pari gagné pour ${source.name} !` : `Pari perdu pour ${source.name}…`, { playerId: source.id });
       applyEffects(context, success ? effect.success : effect.failure);
       return;
@@ -291,7 +291,7 @@ function blockedByShield(run: Run, player: MatchPlayer, activation?: ActivationR
   if (shield.charges <= 0) return false;
   shield.charges -= 1;
   shield.absorbing = activation;
-  activation?.floats.push({ playerId: player.id, text: 'BOUCLIER !', tone: 'bonus' });
+  activation?.floats.push({ playerId: player.id, text: 'BOUCLIER !', tone: 'bonus', kind: 'shield' });
   pushEvent(run, 'effect', player.side, `${player.name} était protégé : rien ne l’atteint.`, { playerId: player.id });
   return true;
 }

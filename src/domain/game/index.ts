@@ -16,3 +16,4 @@ export * from './multiplayer';
 export * from './commands';
 export * from './scouting';
 export * from './friendly';
+export * from './album';

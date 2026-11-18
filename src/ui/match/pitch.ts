@@ -25,6 +25,31 @@ export interface PitchColumn {
   players: MatchPlayer[];
 }
 
+/** Marquage (M1) en cours : qui colle qui. `own` : le marqueur est au coach. */
+export interface MarkLink {
+  markerId: string;
+  targetId: string;
+  own: boolean;
+}
+
+const onPitch = (player: MatchPlayer) => player.line !== null && !player.sentOff && !player.injured && !player.subbedOff;
+
+/** Marquages en cours sur le terrain, un trait par paire marqueur → cible. */
+export function markLinks(state: MatchState, coachSide: Side): MarkLink[] {
+  if (state.status === 'finished') return [];
+  const links = new Map<string, MarkLink>();
+  for (const target of [...state.home.players, ...state.away.players]) {
+    if (!onPitch(target)) continue;
+    for (const effect of target.effects) {
+      if (!effect.markerId || effect.endsAt < state.elapsed) continue;
+      const marker = [...state.home.players, ...state.away.players].find((player) => player.id === effect.markerId);
+      if (!marker || !onPitch(marker)) continue;
+      links.set(`${marker.id}>${target.id}`, { markerId: marker.id, targetId: target.id, own: marker.side === coachSide });
+    }
+  }
+  return [...links.values()];
+}
+
 export function opposite(side: Side): Side {
   return side === 'home' ? 'away' : 'home';
 }

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { t } from '../../i18n/t';
   import type { MatchController } from './controller.svelte';
-  import { minuteLabel, periodLabel, SPEEDS } from './live';
+  import { frozenMinutes, minuteLabel, periodLabel, SPEEDS } from './live';
 
   interface Props {
     controller: MatchController;
@@ -43,6 +43,7 @@
       minute: minuteLabel(match.minute, match.addedMinute),
       period: periodLabel(match),
       derby: match.derby,
+      frozen: frozenMinutes(match),
       shootout: match.shootout && (coachIsHome ? `${match.shootout.home}-${match.shootout.away}` : `${match.shootout.away}-${match.shootout.home}`),
     };
   });
@@ -68,8 +69,9 @@
     <p class="score" aria-label={t('scoreboard.scoreLabel', { own: board.ownGoals, other: board.otherGoals })}>
       <span>{board.ownGoals}</span><span aria-hidden="true">-</span><span>{board.otherGoals}</span>
     </p>
-    <p class="horloge tampon">
-      <span class="minute">{board.minute}</span>
+    <p class="horloge tampon" class:gele={board.frozen > 0}>
+      <span class="minute">{#if board.frozen > 0}<span class="flocon" aria-hidden="true">❄</span>{/if}{board.minute}</span>
+      {#if board.frozen > 0}<span class="glace">{t('scoreboard.frozen', { n: board.frozen })}</span>{/if}
       <span>{board.period}</span>
       {#if board.shootout}<span>{t('scoreboard.shootout', { score: board.shootout })}</span>{/if}
     </p>
@@ -181,6 +183,48 @@
     color: var(--craie-fixe);
     padding: 0 var(--space-1);
     font-variant-numeric: tabular-nums;
+  }
+  /* Chrono figé (M5) : l'horloge prend la glace le temps des minutes mortes. */
+  .gele .minute {
+    background: #bfe6f5;
+    color: #0b3b52;
+    outline: var(--trait-fin) solid #0b3b52;
+    box-shadow: inset 0 0 6px #ffffff, 0 0 10px #7fd0ef;
+  }
+  .flocon {
+    display: inline-block;
+    margin-right: 2px;
+  }
+  .glace {
+    padding: 0 var(--space-1);
+    background: #0b3b52;
+    color: #e6f7fd;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .gele .minute {
+      animation: frisson 1600ms ease-in-out infinite;
+    }
+    .flocon {
+      animation: flocon 4s linear infinite;
+    }
+  }
+  @keyframes frisson {
+    0%,
+    86%,
+    100% {
+      translate: 0 0;
+    }
+    90% {
+      translate: -1px 0;
+    }
+    94% {
+      translate: 1px 0;
+    }
+  }
+  @keyframes flocon {
+    to {
+      rotate: 360deg;
+    }
   }
   .commandes {
     grid-column: 1 / -1;
