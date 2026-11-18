@@ -227,14 +227,13 @@ export const COMMON_ABILITIES: readonly Ability[] = [
     description: 'Klaxon de deux-chevaux à chaque relance adverse. Ils en ont mal aux jambes.',
     effects: [{ type: 'drain', scope: 'opponents', value: 18 }],
   }),
-  common(7, {
+  common(3, {
     id: 'la-tournee-generale',
     name: 'La Tournée générale',
     category: 'sabotage',
     position: 'BENCH',
-    targeting: { kind: 'randomOpponent', count: 6 },
-    levelGain: 2,
-    description: 'Une tournée offerte au vestiaire adverse avant le match. Six d’entre eux ne retrouvent plus le terrain.',
-    effects: [{ type: 'knockout', scope: 'targets', duration: 35 }],
+    targeting: { kind: 'randomOpponent', count: 3 },
+    description: 'Une tournée offerte au vestiaire adverse avant le match. Trois d’entre eux cherchent encore le chemin du terrain.',
+    effects: [{ type: 'knockout', scope: 'targets', duration: 22 }],
   }),
 ];

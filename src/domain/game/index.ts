@@ -15,3 +15,4 @@ export * from './coaches';
 export * from './multiplayer';
 export * from './commands';
 export * from './scouting';
+export * from './friendly';

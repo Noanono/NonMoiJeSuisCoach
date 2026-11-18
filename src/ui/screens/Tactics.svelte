@@ -35,7 +35,7 @@
             available: isAvailable(player),
             availability: availabilityLabel(player),
             fatigue: player.fatigue,
-            avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position },
+            avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position, nationality: player.nationality },
             abilityName: player.ability.revealed ? ability.name : UNKNOWN_ABILITY,
             rarity: player.ability.revealed ? ability.rarity : null,
             ratingAt: {

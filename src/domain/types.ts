@@ -2,6 +2,7 @@
  * Contrat partagé du domaine. Tout le jeu est de la donnée sérialisable (JSON)
  * pour la sauvegarde locale (TECH-03). Aucune dépendance au DOM ici.
  */
+import type { NationId } from './world/nations';
 
 // ---------------------------------------------------------------------------
 // Joueurs (EFF-01 à EFF-08)
@@ -52,6 +53,8 @@ export interface Player {
   injuryWeeks: number;
   suspendedMatches: number;
   ability: AbilityProgress;
+  /** Joueur venu d'une nation étrangère (UNIV-10) : son nom et sa trombine en viennent. */
+  nationality?: NationId;
   /** Salaire hebdomadaire en euros. */
   salary: number;
   /** Dépanneur : son contrat prend fin à l'ouverture du prochain mercato, sauf si le club le garde. */
@@ -86,7 +89,7 @@ export interface Lineup {
 // Capacités (CAP-01 à CAP-20, CAT-01)
 // ---------------------------------------------------------------------------
 
-export type Rarity = 'common' | 'rare' | 'legendary' | 'mythic';
+export type Rarity = 'common' | 'rare' | 'legendary' | 'mythic' | 'foreign';
 export type AbilityPosition = Position | 'ANY' | 'BENCH';
 /** Sert à l'IA pour choisir selon le score. */
 export type AbilityCategory = 'attack' | 'defense' | 'sabotage' | 'support' | 'legendary';

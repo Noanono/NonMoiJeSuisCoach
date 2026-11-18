@@ -22,7 +22,7 @@
   const PAGE_SIZE = 40;
   const POSITIONS = Object.keys(POSITION_LABEL) as Position[];
   const RARITIES = Object.keys(RARITY_LABEL) as Rarity[];
-  const RARITY_ORDER: Record<Rarity, number> = { common: 1, rare: 2, legendary: 3, mythic: 4 };
+  const RARITY_ORDER: Record<Rarity, number> = { common: 1, rare: 2, legendary: 3, mythic: 4, foreign: 5 };
 
   const transferWindow = $derived(
     store.select((game) => {
@@ -47,7 +47,7 @@
         return {
           id: listing.playerId,
           name: fullName(player),
-          avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position },
+          avatar: { id: player.id, age: player.age, clubId: player.clubId, position: player.position, nationality: player.nationality },
           position: player.position,
           age: player.age,
           overall: listing.overall,

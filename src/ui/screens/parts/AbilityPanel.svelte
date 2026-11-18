@@ -13,7 +13,7 @@
 
   let { ability, progress }: Props = $props();
 
-  const RARITY_TONE: Record<Rarity, 'craie' | 'scotch' | 'fumigene' | 'mythique'> = { common: 'craie', rare: 'scotch', legendary: 'fumigene', mythic: 'mythique' };
+  const RARITY_TONE: Record<Rarity, 'craie' | 'scotch' | 'fumigene' | 'mythique' | 'etranger'> = { common: 'craie', rare: 'scotch', legendary: 'fumigene', mythic: 'mythique', foreign: 'etranger' };
 
   interface LevelColumn {
     level: number;

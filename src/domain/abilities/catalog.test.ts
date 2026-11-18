@@ -15,8 +15,9 @@ function slugify(name: string): string {
 }
 
 describe('catalogue des capacités (CAT-01)', () => {
-  test('69 capacités : 23 communes, 22 rares, 16 légendaires, 8 mythiques', () => {
-    expect(ABILITIES).toHaveLength(69);
+  test('77 capacités : 23 communes, 22 rares, 16 légendaires, 8 mythiques, 8 étrangères', () => {
+    expect(ABILITIES).toHaveLength(77);
+    expect(abilitiesByRarity('foreign')).toHaveLength(8);
     expect(abilitiesByRarity('common')).toHaveLength(23);
     expect(abilitiesByRarity('rare')).toHaveLength(22);
     expect(abilitiesByRarity('legendary')).toHaveLength(16);
@@ -41,7 +42,7 @@ describe('catalogue des capacités (CAT-01)', () => {
   });
 
   test('aucune recharge : chaque capacité sert une fois par match', () => {
-    expect(RARITY_COOLDOWN).toEqual({ common: 0, rare: 0, legendary: 0, mythic: 0 });
+    expect(RARITY_COOLDOWN).toEqual({ common: 0, rare: 0, legendary: 0, mythic: 0, foreign: 0 });
   });
 
   test('un descriptif ne contient aucun chiffre : les valeurs dépendent du niveau', () => {
