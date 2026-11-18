@@ -15,6 +15,7 @@
     "serveur": "vite build && vite build --ssr src/server/main.ts --outDir dist-server --emptyOutDir && node dist-server/main.js"
   },
   "devDependencies": {
+    "@netlify/functions": "^6.1.1",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@tsconfig/svelte": "^5.0.8",
     "@types/bun": "^1.4.4",
@@ -27,10 +28,14 @@
     "@fontsource/anton": "^5.3.0",
     "@fontsource/archivo": "^5.3.0",
     "@fontsource/space-mono": "^5.3.0",
+    "@netlify/blobs": "^11.1.9",
     "trystero": "^0.27.0"
   },
   "packageManager": "bun@1.4.4",
   "engines": {
     "bun": ">=1.4"
+  },
+  "patchedDependencies": {
+    "@trystero-p2p/core@0.27.0": "patches/@trystero-p2p%2Fcore@0.27.0.patch"
   }
 }

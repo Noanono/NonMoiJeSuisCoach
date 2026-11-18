@@ -24,6 +24,8 @@ Le jeu tourne entièrement dans le navigateur, hors ligne une fois chargé. Les 
 
 Pas de serveur à lancer : sur l'accueil, l'hôte choisit **Héberger une partie**, ouvre une ligue et partage le **code** affiché (ou le lien). Les amis le collent dans **Rejoindre une partie**. L'hôte peut aussi **ouvrir son serveur au public** : il apparaît alors dans la liste sous le champ du code. Les navigateurs se parlent en pair-à-pair (WebRTC, via [Trystero](https://github.com/dmotz/trystero)) ; l'onglet de l'hôte doit rester ouvert.
 
+Entre deux réseaux stricts (4G, box en mode strict, école, entreprise), la connexion directe échoue : le trafic passe alors par un relais TURN de [Metered](https://www.metered.ca/stun-turn). Le jeu demande des identifiants temporaires à la fonction Netlify `/api/turn` ([netlify/functions/turn.ts](netlify/functions/turn.ts)), qui garde la clé secrète et fait tourner les identifiants (48 h de validité, un nouveau toutes les 24 h). À configurer dans les variables d'environnement du site Netlify : `METERED_DOMAIN` (ex. `monapp.metered.live`) et `METERED_SECRET_KEY` (marquée secrète). La version CrazyGames appelle la fonction du site Netlify (`VITE_TURN_ENDPOINT` dans `.env.crazygames`). Sans relais, le jeu marche comme avant, en connexion directe seule.
+
 ### Version CrazyGames
 
 ```bash

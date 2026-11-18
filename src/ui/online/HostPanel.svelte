@@ -11,6 +11,7 @@
   import { crazyGames } from '../platform/crazygames.svelte';
   import { SERVER_NAME_MAX } from '../net/publicDirectory';
   import type { SlotInfo } from '../../server/hub';
+  import LinkBanner from './LinkBanner.svelte';
 
   const host = peerHost;
   let confirmDelete = $state<number | null>(null);
@@ -92,6 +93,7 @@
 </script>
 
 {#if online && host.league}
+  <LinkBanner coach={false} />
   <div class="colonnes">
     <Card title="Ton serveur" scotch>
       <p class="texte-s meta">Ligue {host.league.slot} · {leagueLine(host.league)}</p>
@@ -116,7 +118,10 @@
       <div class="row">
         <Button variant="primary" onclick={play}>Jouer dans ma ligue</Button>
       </div>
-      <p class="texte-s alerte">Garde cet onglet ouvert : c'est lui le serveur. Le fermer renvoie tout le monde à l'accueil (la ligue reste sauvegardée ici).</p>
+      <p class="texte-s alerte">
+        Garde cet onglet ouvert et au premier plan : c'est lui le serveur. En arrière-plan, le navigateur le ralentit et tes amis rament ; le fermer
+        renvoie tout le monde à l'accueil (la ligue reste sauvegardée ici).
+      </p>
     </Card>
 
     <Card title="Coachs">

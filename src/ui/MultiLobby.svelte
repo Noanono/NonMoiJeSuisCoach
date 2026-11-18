@@ -6,6 +6,7 @@
   import { savedProfile } from './multiClient.svelte';
   import { peerHost } from './net/peerHost.svelte';
   import { crazyGames } from './platform/crazygames.svelte';
+  import LinkBanner from './online/LinkBanner.svelte';
 
   /**
    * Salle d'attente de la ligue entre amis (MULTI-02, MULTI-03) : chacun crée son club, puis l'un d'eux
@@ -82,15 +83,22 @@
     busy = false;
   }
 
-  const STATUS_LABEL = { idle: 'Déconnecté', connecting: 'Connexion à l’hôte…', online: 'Connecté à l’hôte', offline: 'Hôte injoignable' } as const;
+  const STATUS_LABEL = { idle: 'Déconnecté', connecting: 'Connexion à l’hôte…', online: 'Connecté à l’hôte', offline: 'Hôte injoignable', blocked: 'Réseau bloqué' } as const;
 </script>
 
 <div class="salle">
   <header>
     <h1 class="banderole-xl">LIGUE ENTRE<br />AMIS</h1>
     <Sticker tilted>{client ? STATUS_LABEL[client.status] : 'Déconnecté'}</Sticker>
+    <LinkBanner coach={false} />
     {#if client?.status === 'offline'}
       <p class="texte-s texte-fort" role="alert">L'hôte ne répond pas : il a peut-être fermé son onglet, ou vos réseaux ne se laissent pas joindre. On continue d'essayer.</p>
+      <Button size="s" onclick={() => client.reconnect()}>Réessayer maintenant</Button>
+    {:else if client?.status === 'blocked'}
+      <p class="texte-s texte-fort" role="alert">
+        L'hôte est bien là, mais vos deux réseaux refusent de se relier directement (box en mode strict, 4G, réseau d'école ou
+        d'entreprise). Essayez depuis un autre réseau, par exemple le partage de connexion d'un téléphone. On continue d'essayer.
+      </p>
     {/if}
     {#if shareCode}
       <p class="texte-s">Code du serveur : <span class="code">{shareCode}</span></p>

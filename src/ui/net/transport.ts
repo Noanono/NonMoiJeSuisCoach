@@ -7,7 +7,11 @@
  */
 import type { ServerMessage } from '../../server/hub';
 
-export type ConnectionStatus = 'idle' | 'connecting' | 'online' | 'offline';
+/**
+ * `offline` : l'hôte reste introuvable. `blocked` : on l'a trouvé, mais vos réseaux refusent la connexion
+ * directe (NAT strict des deux côtés, sans relais TURN).
+ */
+export type ConnectionStatus = 'idle' | 'connecting' | 'online' | 'offline' | 'blocked';
 
 export interface ApiResult {
   ok: boolean;
@@ -28,6 +32,8 @@ export interface Transport {
   request(route: string, body: Record<string, unknown>): Promise<ApiResult>;
   /** Redemande la partie en entier (une différence est arrivée sans partie de départ). */
   resync(): void;
+  /** Liaison perdue : retente tout de suite, sans attendre le prochain essai prévu. */
+  reconnect(): void;
   close(): void;
 }
 
@@ -89,6 +95,10 @@ export class SseTransport implements Transport {
     const handlers = this.#handlers;
     this.close();
     if (handlers) this.connect(handlers);
+  }
+
+  reconnect(): void {
+    this.resync();
   }
 
   close(): void {

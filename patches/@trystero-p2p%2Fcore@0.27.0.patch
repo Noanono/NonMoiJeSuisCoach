@@ -1,0 +1,39 @@
+diff --git a/dist/internal-types.d.mts b/dist/internal-types.d.mts
+index a9a860f8ebb71f9e00e8037b7ebd752c05bf311b..f4172103c2df4deb2f90d65192543ba1e6de8b59 100644
+--- a/dist/internal-types.d.mts
++++ b/dist/internal-types.d.mts
+@@ -14,6 +14,8 @@ export interface BaseRoomConfig {
+   maxReceiveBytes?: number;
+   password?: string;
+   passive?: boolean;
++  /** Patch local : annonce au plus à cet intervalle (ms) au lieu de toutes les 60 s en régime établi. */
++  announceIntervalMs?: number;
+   relayConfig?: BaseRelayConfig;
+   trickleIce?: boolean;
+   rtcConfig?: RTCConfiguration;
+diff --git a/dist/topic-strategy.mjs b/dist/topic-strategy.mjs
+index 1cb4283f5ecc40375c1db65b5daeea5e354a2a0a..2b28a56726ab7cbd817cec20c59f18ad76c8842a 100644
+--- a/dist/topic-strategy.mjs
++++ b/dist/topic-strategy.mjs
+@@ -43,16 +43,18 @@ var topic_strategy_default = ({ defaultConfig, steadyAnnounceIntervalMs = defaul
+ 	},
+ 	announce: async (relay, rootTopic, selfTopic, context) => {
+ 		const result = await publishTopic(relay, rootTopic, { peerId: context.peerId }, makeTopicContext(context, "announce", rootTopic, selfTopic));
+-		if (typeof result === "number") return result;
++		const fastMs = context.config?.announceIntervalMs;
++		const pace = (ms) => typeof fastMs === "number" && fastMs > 0 ? Math.min(ms, fastMs) : ms;
++		if (typeof result === "number") return pace(result);
+ 		if (typeof result === "object" && result !== null) {
+ 			if ("stopAnnouncing" in result) return result;
+ 			return {
+-				nextAnnounceMs: result.nextAnnounceMs ?? steadyAnnounceIntervalMs,
++				nextAnnounceMs: pace(result.nextAnnounceMs ?? steadyAnnounceIntervalMs),
+ 				reannounceOnDisconnect: result.reannounceOnDisconnect ?? reannounceOnDisconnect
+ 			};
+ 		}
+ 		return {
+-			nextAnnounceMs: steadyAnnounceIntervalMs,
++			nextAnnounceMs: pace(steadyAnnounceIntervalMs),
+ 			reannounceOnDisconnect
+ 		};
+ 	}
