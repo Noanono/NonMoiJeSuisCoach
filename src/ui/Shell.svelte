@@ -12,6 +12,7 @@
   import ClubScreen from './screens/ClubScreen.svelte';
   import Competitions from './screens/Competitions.svelte';
   import Stats from './screens/Stats.svelte';
+  import LinkBanner from './online/LinkBanner.svelte';
 
   const TABS: { screen: Screen; label: string }[] = [
     { screen: 'dashboard', label: 'Bureau' },
@@ -29,6 +30,9 @@
   $effect(() => {
     if (fired && store.screen !== 'dashboard') store.go('dashboard');
   });
+
+  /** Liaison avec l'hôte coupée : on peut encore regarder les écrans, mais pas agir (l'action se perdrait). */
+  const linkLost = $derived(store.multi !== null && !store.multi.host && !store.multi.connected);
 
   const header = $derived(
     store.select((game) => ({
@@ -67,6 +71,8 @@
     <button class="quitter tampon" onclick={() => store.quitToTitle()}>Quitter</button>
   </header>
 
+  <LinkBanner />
+
   {#if !fired}
   <nav aria-label="Écrans du club">
     {#each TABS as tab (tab.screen)}
@@ -89,7 +95,7 @@
   </section>
   {/if}
 
-  <main>
+  <main inert={linkLost} class:gele={linkLost}>
     {#if store.screen === 'dashboard'}<Dashboard />
     {:else if store.screen === 'squad'}<Squad />
     {:else if store.screen === 'tactics'}<Tactics />
@@ -103,6 +109,10 @@
 </div>
 
 <style>
+  main.gele {
+    opacity: 0.6;
+    filter: grayscale(0.4);
+  }
   .ligue {
     display: flex;
     flex-wrap: wrap;

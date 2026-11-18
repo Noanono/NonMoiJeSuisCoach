@@ -65,6 +65,8 @@ async function post(url: string, body: Record<string, unknown>): Promise<ApiResu
   }
 }
 
+const OFFLINE_MESSAGE = 'Liaison avec l’hôte coupée : on se reconnecte. Ton action n’est pas partie.';
+
 export class MultiClient {
   readonly id = localCoachId();
   status = $state<ConnectionStatus>('idle');
@@ -105,8 +107,24 @@ export class MultiClient {
     return this.coaches.find((coach) => coach.id === this.id);
   }
 
+  /** Relié à l'hôte : sans ça, les actions sont refusées (elles se perdraient) et l'écran le dit. */
+  get connected(): boolean {
+    return this.status === 'online';
+  }
+
   connect(): void {
     this.#transport.connect({ message: (message) => this.#receive(message), status: (status) => (this.status = status) });
+  }
+
+  /** « Réessayer maintenant » : relance la connexion sans attendre le prochain essai. */
+  reconnect(): void {
+    this.#transport.reconnect();
+  }
+
+  /** Action vers l'hôte, refusée tant que la liaison est coupée. */
+  #request(route: string, body: Record<string, unknown>): Promise<ApiResult> {
+    if (!this.connected) return Promise.resolve({ ok: false, message: OFFLINE_MESSAGE });
+    return this.#transport.request(route, body);
   }
 
   disconnect(): void {
@@ -115,33 +133,33 @@ export class MultiClient {
 
   join(profile: CoachProfile): Promise<ApiResult> {
     saveProfile(profile);
-    return this.#transport.request('join', { name: profile.name, clubName: profile.clubName });
+    return this.#request('join', { name: profile.name, clubName: profile.clubName });
   }
 
   start(): Promise<ApiResult> {
-    return this.#transport.request('start', {});
+    return this.#request('start', {});
   }
 
   command(name: string, args: unknown[]): Promise<ApiResult> {
-    return this.#transport.request('command', { name, args });
+    return this.#request('command', { name, args });
   }
 
   setReady(ready: boolean): Promise<ApiResult> {
-    return this.#transport.request('ready', { ready });
+    return this.#request('ready', { ready });
   }
 
   /** Entre dans son match contre un autre coach : le coup d'envoi attend les deux. */
   joinDuel(): Promise<ApiResult> {
-    return this.#transport.request('duel/join', {});
+    return this.#request('duel/join', {});
   }
 
   duelCommand(name: string, args: unknown[] = []): Promise<ApiResult> {
-    return this.#transport.request('duel/command', { name, args });
+    return this.#request('duel/command', { name, args });
   }
 
   /** Code de reprise de l'hôte (C10) : ce navigateur devient celui du coach (il faut ensuite se reconnecter). */
   async claim(code: string): Promise<ApiResult> {
-    const reply = await this.#transport.request('claim', { code });
+    const reply = await this.#request('claim', { code });
     const value = reply.value as { coachId: string; name: string; clubName: string; secret?: string } | undefined;
     if (reply.ok && value) adoptIdentity(value);
     return reply;

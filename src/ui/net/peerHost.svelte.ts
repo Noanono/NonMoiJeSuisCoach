@@ -13,6 +13,7 @@ import { HostEngine, isClientRoute, type Listener, type OpenLeague } from '../..
 import { DirectoryAnnouncer } from './directory.svelte';
 import { adoptIdentity, defaultCoachName, localCoachId, localCoachSecret } from './identity';
 import { idbSlotStore, readSlotSecret, writeSlotSecret } from './idbSlotStore';
+import { packMessage } from './gzip';
 import { joinLeagueRoom, type LeagueRoom } from './p2p';
 import { SERVER_NAME_MAX, type Announcement } from './publicDirectory';
 import { formatCode, newSecret, roomIdOf, type ServerCode } from './serverCode';
@@ -29,6 +30,12 @@ const MAX_CLAIM_TRIES = 5;
 const REFRESH_MS = 1_000;
 const COACH_ID = /^[\w-]{1,64}$/;
 const HOST_ONLY_START = 'Seul l’hôte lance la ligue.';
+/** Onglet caché plus longtemps que ça : on prévient l'hôte à son retour que ses amis ont pu ramer. */
+const HIDDEN_NOTICE_MS = 10_000;
+/** Un envoi à un coach est attendu au plus ce temps avant de passer au suivant. */
+const SEND_TIMEOUT_MS = 15_000;
+const BASE_TITLE = typeof document === 'undefined' ? '' : document.title;
+const HIDDEN_TITLE = '⚠ Garde-moi au premier plan · ';
 
 interface Session {
   coachId: string | null;
@@ -36,6 +43,10 @@ interface Session {
   tokens: number;
   refilledAt: number;
   claimTries: number;
+  /** Le coach sait relire une partie compressée (il l'a dit en se présentant). */
+  gzip: boolean;
+  /** Envois en cours, dans l'ordre : la partie entière (compressée) passe avant les différences qui la suivent. */
+  outbox: Promise<void>;
 }
 
 export type HostStatus = 'off' | 'starting' | 'online' | 'error';
@@ -51,8 +62,15 @@ export class PeerHost {
   peers = $state(0);
   isPublic = $state(false);
   serverName = $state('');
+  /**
+   * Durée de la dernière absence de l'onglet (caché, en arrière-plan), si elle a été assez longue pour que les
+   * navigateurs le ralentissent : affichée au retour de l'hôte, jusqu'à ce qu'il la ferme.
+   */
+  hiddenFor = $state(0);
   /** Nom de l'hôte dans l'annuaire, figé quand il ouvre au public. */
   #hostName = '';
+  #wakeLock: WakeLockSentinel | null = null;
+  #hiddenAt: number | null = null;
   #room: LeagueRoom | null = null;
   readonly #sessions = new Map<string, Session>();
   readonly #announcer = new DirectoryAnnouncer();
@@ -184,7 +202,7 @@ export class PeerHost {
     let session = this.#sessions.get(peerId);
     if (!session) {
       if (this.#sessions.size >= MAX_PEERS) return { ok: false, message: 'Serveur complet.' };
-      session = { coachId: null, detach: null, tokens: BURST, refilledAt: Date.now(), claimTries: 0 };
+      session = { coachId: null, detach: null, tokens: BURST, refilledAt: Date.now(), claimTries: 0, gzip: false, outbox: Promise.resolve() };
       this.#sessions.set(peerId, session);
     }
     if (!this.#spend(session)) return { ok: false, message: 'Doucement : trop d’actions d’un coup.' };
@@ -222,9 +240,18 @@ export class PeerHost {
     const room = this.#room;
     if (!room) return { ok: false, message: 'Serveur arrêté.' };
     session.detach?.();
+    session.gzip = body.gzip === true;
     const listener: Listener = {
       coachId,
-      send: (payload) => void room.message.send(payload, { target: peerId }).catch(() => {}),
+      // La partie entière (~500 Ko) part compressée (~75 Ko) : 5 à 6 fois plus rapide, et autant de relais TURN épargné.
+      send: (payload) => {
+        session.outbox = session.outbox.then(async () => {
+          const data = await packMessage(payload, session.gzip).catch(() => payload);
+          if (this.#room !== room) return;
+          // Un envoi qui ne finit jamais (liaison à moitié morte) ne doit pas bloquer les suivants indéfiniment.
+          await Promise.race([room.message.send(data, { target: peerId }).catch(() => {}), new Promise((resolve) => setTimeout(resolve, SEND_TIMEOUT_MS))]);
+        });
+      },
       close: () => {
         session.detach?.();
         session.detach = null;
@@ -282,19 +309,64 @@ export class PeerHost {
     if (this.isPublic) await this.#announcer.withdraw();
   }
 
-  /** Fermer l'onglet arrête le serveur : on prévient, et on sauvegarde au départ. */
+  /**
+   * L'onglet de l'hôte fait tourner la ligue de tout le monde :
+   * - le fermer arrête le serveur : on prévient, et on sauvegarde au départ ;
+   * - caché, le navigateur le ralentit et les amis rament : le titre de l'onglet le rappelle, et on le dit au retour ;
+   * - l'écran reste allumé tant que le serveur tourne (Wake Lock), sinon la mise en veille coupe tout.
+   */
   #guardUnload(): void {
     if (this.#unload || typeof window === 'undefined') return;
     const warn = (event: BeforeUnloadEvent) => {
       if (this.status === 'online') event.preventDefault();
     };
     const save = () => void this.engine.flush();
+    const visibility = () => this.#onVisibility();
     window.addEventListener('beforeunload', warn);
     window.addEventListener('pagehide', save);
+    document.addEventListener('visibilitychange', visibility);
+    void this.#keepAwake();
     this.#unload = () => {
       window.removeEventListener('beforeunload', warn);
       window.removeEventListener('pagehide', save);
+      document.removeEventListener('visibilitychange', visibility);
+      document.title = BASE_TITLE;
+      this.#hiddenAt = null;
+      this.hiddenFor = 0;
+      void this.#wakeLock?.release().catch(() => {});
+      this.#wakeLock = null;
     };
+  }
+
+  #onVisibility(): void {
+    if (this.status !== 'online') return;
+    if (document.visibilityState === 'hidden') {
+      this.#hiddenAt = Date.now();
+      document.title = HIDDEN_TITLE + BASE_TITLE;
+      return;
+    }
+    document.title = BASE_TITLE;
+    const hiddenFor = this.#hiddenAt === null ? 0 : Date.now() - this.#hiddenAt;
+    this.#hiddenAt = null;
+    if (hiddenFor >= HIDDEN_NOTICE_MS && this.peers > 0) this.hiddenFor = hiddenFor;
+    // Le verrou d'écran tombe tout seul quand l'onglet est caché : on le reprend.
+    void this.#keepAwake();
+  }
+
+  /** L'hôte a lu l'avertissement. */
+  dismissHiddenNotice(): void {
+    this.hiddenFor = 0;
+  }
+
+  async #keepAwake(): Promise<void> {
+    if (this.#wakeLock && !this.#wakeLock.released) return;
+    if (typeof navigator === 'undefined' || !('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
+    try {
+      this.#wakeLock = await navigator.wakeLock.request('screen');
+    } catch {
+      // Refusé (batterie faible, cadre sans permission) : tant pis, l'avertissement d'onglet reste.
+      this.#wakeLock = null;
+    }
   }
 
   // --- L'hôte joue aussi ------------------------------------------------------------------
@@ -363,6 +435,10 @@ class LoopbackTransport implements Transport {
     this.#detach?.();
     this.#detach = null;
     void this.#attach();
+  }
+
+  reconnect(): void {
+    this.resync();
   }
 
   close(): void {

@@ -5,17 +5,13 @@
  * lecture reste synchrone (les emplacements de sauvegarde n'attendent pas).
  */
 import type { SaveStorage } from '../../domain/save/saveSlots';
+import { gunzipText, gzipText } from '../net/gzip';
 
 /** Marque d'une valeur compressée : une valeur sans elle est lue telle quelle (anciennes données, petites clés). */
 const COMPRESSED_PREFIX = 'gz1:';
 /** En dessous, la compression ne vaut pas le coût (identité du coach, profil). */
 const COMPRESS_FROM_LENGTH = 2_048;
 const BASE64_CHUNK = 0x8000;
-
-async function pipe(bytes: Uint8Array, transform: CompressionStream | DecompressionStream): Promise<Uint8Array> {
-  const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(transform);
-  return new Uint8Array(await new Response(stream).arrayBuffer());
-}
 
 function toBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -34,14 +30,12 @@ function fromBase64(text: string): Uint8Array {
 
 export async function encodeValue(value: string): Promise<string> {
   if (value.length < COMPRESS_FROM_LENGTH) return value;
-  const packed = await pipe(new TextEncoder().encode(value), new CompressionStream('gzip'));
-  return COMPRESSED_PREFIX + toBase64(packed);
+  return COMPRESSED_PREFIX + toBase64(await gzipText(value));
 }
 
 export async function decodeValue(stored: string): Promise<string> {
   if (!stored.startsWith(COMPRESSED_PREFIX)) return stored;
-  const bytes = await pipe(fromBase64(stored.slice(COMPRESSED_PREFIX.length)), new DecompressionStream('gzip'));
-  return new TextDecoder().decode(bytes);
+  return gunzipText(fromBase64(stored.slice(COMPRESSED_PREFIX.length)));
 }
 
 export interface CloudStorage extends SaveStorage {

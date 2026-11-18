@@ -10,6 +10,7 @@
   import { store } from '../store.svelte';
   import { GAME_VERSION } from '../../domain/game';
   import { DirectoryWatcher } from '../net/directory.svelte';
+  import { prewarm } from '../net/p2p';
   import type { PublicServer } from '../net/publicDirectory';
 
   let { initialCode = '' }: { initialCode?: string } = $props();
@@ -17,9 +18,14 @@
   // svelte-ignore state_referenced_locally
   let code = $state(initialCode);
   let error = $state<string | null>(null);
+  // Liaison préparée avant le clic : Trystero chargé, identifiants TURN demandés, relais Nostr ouverts.
+  const cooldown = prewarm();
   const watcher = new DirectoryWatcher();
   void watcher.start();
-  onDestroy(() => watcher.stop());
+  onDestroy(() => {
+    watcher.stop();
+    cooldown();
+  });
 
   function join(raw: string): void {
     error = store.joinServer(raw) ? null : 'Code incomplet ou mal copié : il ressemble à « ABCD-EFGH-JKMN-PQRS.xxxxxxxxxxxxxxxxxxxxxx ».';
