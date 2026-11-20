@@ -87,12 +87,28 @@ jobs:
       group: netlify-production
       cancel-in-progress: false
     steps:
+      # Le code source est nécessaire pour empaqueter les fonctions Netlify (netlify/functions, ex. /api/turn) :
+      # sans lui, seul le site statique part et les fonctions répondent 404.
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist
 
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Cache des dépendances
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+
+      # Les fonctions importent @netlify/blobs : il doit être installé pour être empaqueté avec elles.
+      - name: Installation
+        run: bun install --frozen-lockfile --production
 
       - name: Déploiement
         id: deploy
@@ -100,9 +116,16 @@ jobs:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         run: |
-          bunx netlify-cli deploy --prod --no-build --dir=dist \
+          bunx netlify-cli deploy --prod --no-build --dir=dist --functions=netlify/functions \
             --message "${{ github.sha }}" --json > deploy.json
           echo "url=$(jq -r '.url' deploy.json)" >> "$GITHUB_OUTPUT"
+
+      # Garde-fou : la fonction des identifiants TURN doit répondre (503 tant que Metered n'est pas configuré).
+      - name: Vérification de /api/turn
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$(jq -r '.deploy_url' deploy.json)/api/turn")
+          echo "/api/turn -> $code"
+          if [ "$code" = "404" ]; then echo "::error::La fonction /api/turn n'a pas été déployée."; exit 1; fi
 
   release:
     name: Tag et release
